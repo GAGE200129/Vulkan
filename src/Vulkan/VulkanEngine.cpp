@@ -10,6 +10,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "ECS/Components.hpp"
 
+#include "VulkanTexture.hpp"
+
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -105,7 +107,7 @@ void VulkanEngine::initGraphicsPipeline()
   dynamicStateCI.setDynamicStates(dynamicStates);
   vk::PipelineVertexInputStateCreateInfo vertexInputCI;
 
-  //Position, normal, uv
+  // Position, normal, uv
   std::array<vk::VertexInputBindingDescription, 3> vertexInputBindingDescriptions;
   vertexInputBindingDescriptions[0].setBinding(0).setStride(sizeof(glm::vec3)).setInputRate(vk::VertexInputRate::eVertex);
   vertexInputBindingDescriptions[1].setBinding(1).setStride(sizeof(glm::vec3)).setInputRate(vk::VertexInputRate::eVertex);
@@ -176,7 +178,9 @@ void VulkanEngine::initGraphicsPipeline()
   vk::PushConstantRange ps;
   ps.setOffset(0).setSize(sizeof(glm::mat4x4)).setStageFlags(vk::ShaderStageFlagBits::eVertex);
   vk::PipelineLayoutCreateInfo pipelineLayoutCI;
-  pipelineLayoutCI.setSetLayouts(mDescriptorLayout)
+
+  auto layouts = std::array{mGlobalDescriptorLayout, mImageDescriptorLayout};
+  pipelineLayoutCI.setSetLayouts(layouts)
       .setPushConstantRanges(ps);
 
   mPipelineLayout = mDevice.createPipelineLayout(pipelineLayoutCI);
@@ -206,7 +210,6 @@ void VulkanEngine::initGraphicsPipeline()
   mDevice.destroyShaderModule(vertexModule);
   mDevice.destroyShaderModule(fragmentModule);
 }
-
 
 uint32_t VulkanEngine::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags props)
 {
@@ -512,7 +515,7 @@ void VulkanEngine::joint()
   mDevice.waitIdle();
 }
 
-void VulkanEngine::render()
+void VulkanEngine::render(VulkanTexture &texture)
 {
   constexpr uint64_t UINT64_T_MAX = std::numeric_limits<uint64_t>::max();
   if (mDevice.waitForFences(mInFlightLocker, true, UINT64_MAX) != vk::Result::eSuccess)
@@ -538,7 +541,7 @@ void VulkanEngine::render()
     throw std::runtime_error("Failed to record cmd buffer !");
 
   vk::ClearValue clearValue;
-  clearValue.setColor({0.5f, 0.0f, 0.0f, 1.0f});
+  clearValue.setColor({0.1f, 0.1f, 0.1f, 1.0f});
   vk::RenderPassBeginInfo renderpassBeginInfo;
   renderpassBeginInfo.setRenderPass(mRenderPass)
       .setFramebuffer(mSwapchainFramebuffers[imageIndex])
@@ -559,7 +562,6 @@ void VulkanEngine::render()
   scissor.setOffset({0, 0})
       .setExtent(mSwapExtent);
   cmdBuffer.setScissor(0, scissor);
-  cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, mPipelineLayout, 0, mDescriptorSet, {});
 
   auto enttView = mEntt.view<TransformComponent, ModelComponent>();
 
@@ -574,9 +576,10 @@ void VulkanEngine::render()
     cmdBuffer.bindIndexBuffer(model->mIndexBuffer.getBuffer(), 0, vk::IndexType::eUint32);
     glm::mat4x4 modelMat = glm::translate(glm::mat4(1.0f), transform.position);
     cmdBuffer.pushConstants(mPipelineLayout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(modelMat), &modelMat);
-    for(const auto& mesh : model->mMeshes)
+    for (const auto &mesh : model->mMeshes)
     {
-      cmdBuffer.drawIndexed(mesh.numIndices, 1, mesh.baseIndex, mesh.baseVertex,  0);
+      cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, mPipelineLayout, 0, {mGlobalDescriptorSet, texture.mDescriptorSet}, {});
+      cmdBuffer.drawIndexed(mesh.numIndices, 1, mesh.baseIndex, mesh.baseVertex, 0);
     }
   }
 
@@ -637,25 +640,29 @@ void VulkanEngine::updateUniformBuffer()
 
 void VulkanEngine::initDescriptor()
 {
-  vk::DescriptorPoolSize dps;
-  dps.setDescriptorCount(1)
+  std::array<vk::DescriptorPoolSize, 2> dps;
+  dps[0].setDescriptorCount(1)
       .setType(vk::DescriptorType::eUniformBuffer);
+  dps[1].setDescriptorCount(1)
+      .setType(vk::DescriptorType::eCombinedImageSampler);
+
   vk::DescriptorPoolCreateInfo descriptorPoolCI;
   descriptorPoolCI.setPoolSizes(dps)
-      .setMaxSets(1);
+      .setMaxSets(1024);
 
   mDescriptorPool = mDevice.createDescriptorPool(descriptorPoolCI);
 
+
   vk::DescriptorSetAllocateInfo dsAI;
   dsAI.setDescriptorPool(mDescriptorPool)
-      .setSetLayouts(mDescriptorLayout);
-  mDescriptorSet = mDevice.allocateDescriptorSets(dsAI)[0];
+      .setSetLayouts(mGlobalDescriptorLayout);
+  mGlobalDescriptorSet = mDevice.allocateDescriptorSets(dsAI)[0];
   vk::DescriptorBufferInfo bufferInfo;
   bufferInfo.setBuffer(mUniformBuffer.getBuffer())
       .setOffset(0)
       .setRange(sizeof(VulkanUniformBufferObject));
   vk::WriteDescriptorSet writeDescriptor;
-  writeDescriptor.setDstSet(mDescriptorSet)
+  writeDescriptor.setDstSet(mGlobalDescriptorSet)
       .setDstBinding(0)
       .setDstArrayElement(0)
       .setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -674,7 +681,8 @@ void VulkanEngine::cleanup() noexcept
   mUniformBuffer.cleanup();
 
   mDevice.destroyPipeline(mGraphicsPipeline);
-  mDevice.destroyDescriptorSetLayout(mDescriptorLayout);
+  mDevice.destroyDescriptorSetLayout(mGlobalDescriptorLayout);
+  mDevice.destroyDescriptorSetLayout(mImageDescriptorLayout);
   mDevice.destroyDescriptorPool(mDescriptorPool);
   mDevice.destroyPipelineLayout(mPipelineLayout);
   mDevice.destroyRenderPass(mRenderPass);
@@ -696,15 +704,24 @@ void VulkanEngine::initUniformBuffers()
 
 void VulkanEngine::initDescriptorLayout()
 {
-  vk::DescriptorSetLayoutBinding uboLayoutBinding;
-  uboLayoutBinding.setBinding(0)
+  vk::DescriptorSetLayoutBinding layoutBinding;
+  layoutBinding.setBinding(0)
       .setDescriptorType(vk::DescriptorType::eUniformBuffer)
       .setDescriptorCount(1)
       .setStageFlags(vk::ShaderStageFlagBits::eVertex);
 
   vk::DescriptorSetLayoutCreateInfo layoutCI;
-  layoutCI.setBindings(uboLayoutBinding);
-  mDescriptorLayout = mDevice.createDescriptorSetLayout(layoutCI);
+  layoutCI.setBindings(layoutBinding);
+  mGlobalDescriptorLayout = mDevice.createDescriptorSetLayout(layoutCI);
+
+
+  layoutBinding.setBinding(0)
+      .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+      .setDescriptorCount(1)
+      .setStageFlags(vk::ShaderStageFlagBits::eFragment);
+
+  layoutCI.setBindings(layoutBinding);
+  mImageDescriptorLayout = mDevice.createDescriptorSetLayout(layoutCI);
 }
 
 void VulkanEngine::onWindowResize(int width, int height) noexcept

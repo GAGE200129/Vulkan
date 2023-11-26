@@ -17,6 +17,7 @@ struct VulkanUniformBufferObject
 };
 
 struct GLFWwindow;
+class VulkanTexture;
 class VulkanEngine
 {
   friend class VulkanBuffer;
@@ -48,7 +49,7 @@ public:
   }
 
   void joint();
-  void render();
+  void render(VulkanTexture& texture);
   void cleanup() noexcept;
   void onWindowResize(int width, int height) noexcept;
 
@@ -98,9 +99,9 @@ private:
   vk::PresentModeKHR mPresentMode;
   vk::Extent2D mSwapExtent;
   vk::RenderPass mRenderPass;
-  vk::DescriptorSetLayout mDescriptorLayout;
+  vk::DescriptorSetLayout mGlobalDescriptorLayout, mImageDescriptorLayout;
   vk::DescriptorPool mDescriptorPool;
-  vk::DescriptorSet mDescriptorSet;
+  vk::DescriptorSet mGlobalDescriptorSet;
   
   vk::PipelineLayout mPipelineLayout;
   vk::Pipeline mGraphicsPipeline;

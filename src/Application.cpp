@@ -2,6 +2,7 @@
 
 #include "ECS/Components.hpp"
 
+#include "Vulkan/VulkanTexture.hpp"
 
 void Application::windowResizeFn(GLFWwindow *window, int width, int height) noexcept
 {
@@ -38,6 +39,8 @@ void Application::init()
   auto e1 = mEntt.create();
   mEntt.emplace<ModelComponent>(e1, &mModel);
   mEntt.emplace<TransformComponent>(e1, glm::vec3{3, 0, 0}, glm::vec3{10, 10, 10}, glm::vec3{0, 0, 0});
+  
+  mTexture.loadFromFile("res/models/adamHead/Assets/Models/PBR/Adam/Textures/Adam_Head_a.jpg");
 
 }
 void Application::mainLoop()
@@ -45,7 +48,7 @@ void Application::mainLoop()
 
   while (!glfwWindowShouldClose(mWindow))
   {
-    mVulkanEngine.render();
+    mVulkanEngine.render(mTexture);
     glfwPollEvents();
   }
   mVulkanEngine.joint();
@@ -53,6 +56,7 @@ void Application::mainLoop()
 
 void Application::cleanup() noexcept
 {
+  mTexture.cleanup();
   mModel.cleanup();
   mVulkanEngine.cleanup();
   glfwDestroyWindow(mWindow);

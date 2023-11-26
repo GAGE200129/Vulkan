@@ -7,12 +7,13 @@
 #include "Lua/LuaEngine.hpp"
 #include "entt/entt.hpp"
 #include "Model/Model.hpp"
+#include "Vulkan/VulkanTexture.hpp"
 
 
 class Application
 {
 public:
-  Application() : mVulkanEngine(mWindow, mEntt), mLuaEngine(mEntt), mModel(mVulkanEngine) {}
+  Application() : mVulkanEngine(mWindow, mEntt), mLuaEngine(mEntt), mModel(mVulkanEngine), mTexture(mVulkanEngine) {}
   void run()
   {
     init();
@@ -32,6 +33,6 @@ private:
   entt::registry mEntt;
   VulkanEngine mVulkanEngine;
   LuaEngine mLuaEngine;
-
   Model mModel;
+  VulkanTexture mTexture;
 };

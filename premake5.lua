@@ -2,7 +2,24 @@
 workspace "GAGE"
    configurations { "Debug", "Release" }
 
-project "LearningVulkan"
+
+project "EnGAGEditor"
+   kind "ConsoleApp"
+   language "C++"
+   cppdialect "c++17"
+   targetdir "bin/%{cfg.buildcfg}"
+
+   files { "editor/**.hpp", "editor/**.cpp", "res/**.vert", "res/**.frag" }
+   links { "glfw", "vulkan", "spdlog", "fmt", "lua", "assimp" }
+
+   includedirs { 
+      "src/editor",
+      "libs/EnTT/single_include"
+   }
+
+   
+
+project "EnGAGE"
    kind "ConsoleApp"
    language "C++"
    cppdialect "c++17"
