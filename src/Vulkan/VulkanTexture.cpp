@@ -14,7 +14,7 @@ void VulkanTexture::loadFromFile(const std::string &filePath)
     throw std::runtime_error("failed to load texture image!");
   }
   // Create a staging buffer and copy to it
-  VulkanBuffer staging(mEngine);
+  VulkanBuffer staging;
   staging.init(imageSize, vk::BufferUsageFlagBits::eTransferSrc,
                vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
   staging.copy(pixels, imageSize);
@@ -123,16 +123,16 @@ void VulkanTexture::init(uint32_t width, uint32_t height, vk::Format format, vk:
       .setSamples(vk::SampleCountFlagBits::e1)
       .setSharingMode(vk::SharingMode::eExclusive);
 
-  mHandle = mEngine.mDevice.createImage(imageCI);
+  mHandle = VulkanEngine::mDevice.createImage(imageCI);
 
-  vk::MemoryRequirements memRequirements = mEngine.mDevice.getImageMemoryRequirements(mHandle);
+  vk::MemoryRequirements memRequirements = VulkanEngine::mDevice.getImageMemoryRequirements(mHandle);
   vk::MemoryAllocateInfo memAI;
   memAI.setAllocationSize(memRequirements.size)
-      .setMemoryTypeIndex(mEngine.findMemoryType(memRequirements.memoryTypeBits, properties));
+      .setMemoryTypeIndex(VulkanEngine::findMemoryType(memRequirements.memoryTypeBits, properties));
 
-  mMemory = mEngine.mDevice.allocateMemory(memAI);
+  mMemory = VulkanEngine::mDevice.allocateMemory(memAI);
 
-  mEngine.mDevice.bindImageMemory(mHandle, mMemory, {0});
+  VulkanEngine::mDevice.bindImageMemory(mHandle, mMemory, {0});
 
   // Create Image view
   vk::ImageViewCreateInfo viewInfo;
@@ -147,7 +147,7 @@ void VulkanTexture::init(uint32_t width, uint32_t height, vk::Format format, vk:
       .setBaseArrayLayer(0)
       .setLayerCount(1);
 
-  mImageView = mEngine.mDevice.createImageView(viewInfo);
+  mImageView = VulkanEngine::mDevice.createImageView(viewInfo);
 
   // Create sampler
   vk::SamplerCreateInfo samplerCI;
@@ -158,19 +158,19 @@ void VulkanTexture::init(uint32_t width, uint32_t height, vk::Format format, vk:
       .setAddressModeV(vk::SamplerAddressMode::eRepeat)
       .setAddressModeW(vk::SamplerAddressMode::eRepeat)
       .setAnisotropyEnable(false)
-      .setMaxAnisotropy(mEngine.mPhysicalDevice->getProperties().limits.maxSamplerAnisotropy)
+      .setMaxAnisotropy(VulkanEngine::mPhysicalDevice->getProperties().limits.maxSamplerAnisotropy)
       .setBorderColor(vk::BorderColor::eIntOpaqueBlack)
       .setUnnormalizedCoordinates(false)
       .setCompareEnable(false)
       .setCompareOp(vk::CompareOp::eAlways)
       .setMipmapMode(vk::SamplerMipmapMode::eNearest);
 
-  mSampler = mEngine.mDevice.createSampler(samplerCI);
+  mSampler = VulkanEngine::mDevice.createSampler(samplerCI);
 
   vk::DescriptorSetAllocateInfo dsAI;
-  dsAI.setDescriptorPool(mEngine.mDescriptorPool)
-      .setSetLayouts(mEngine.mImageDescriptorLayout);
-  mDescriptorSet = mEngine.mDevice.allocateDescriptorSets(dsAI)[0];
+  dsAI.setDescriptorPool(VulkanEngine::mDescriptorPool)
+      .setSetLayouts(VulkanEngine::mImageDescriptorLayout);
+  mDescriptorSet = VulkanEngine::mDevice.allocateDescriptorSets(dsAI)[0];
   vk::DescriptorImageInfo imageInfo;
   imageInfo.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
     .setImageView(mImageView)
@@ -182,17 +182,17 @@ void VulkanTexture::init(uint32_t width, uint32_t height, vk::Format format, vk:
       .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
       .setDescriptorCount(1)
       .setImageInfo(imageInfo);
-  mEngine.mDevice.updateDescriptorSets(writeDescriptor, {});
+  VulkanEngine::mDevice.updateDescriptorSets(writeDescriptor, {});
 }
 
 vk::CommandBuffer VulkanTexture::beginSingleTimeCmd()
 {
   vk::CommandBufferAllocateInfo allocInfo;
   allocInfo.setLevel(vk::CommandBufferLevel::ePrimary)
-      .setCommandPool(mEngine.mCommandPool)
+      .setCommandPool(VulkanEngine::mCommandPool)
       .setCommandBufferCount(1);
 
-  vk::CommandBuffer commandBuffer = mEngine.mDevice.allocateCommandBuffers(allocInfo)[0];
+  vk::CommandBuffer commandBuffer = VulkanEngine::mDevice.allocateCommandBuffers(allocInfo)[0];
   vk::CommandBufferBeginInfo beginInfo;
   beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
@@ -206,7 +206,7 @@ void VulkanTexture::endSingleTimeCmd(vk::CommandBuffer cmd)
 
   vk::SubmitInfo submitInfo;
   submitInfo.setCommandBuffers(cmd);
-  mEngine.mGraphicQueue.submit(submitInfo);
-  mEngine.mGraphicQueue.waitIdle();
-  mEngine.mDevice.freeCommandBuffers(mEngine.mCommandPool, cmd);
+  VulkanEngine::mGraphicQueue.submit(submitInfo);
+  VulkanEngine::mGraphicQueue.waitIdle();
+  VulkanEngine::mDevice.freeCommandBuffers(VulkanEngine::mCommandPool, cmd);
 }

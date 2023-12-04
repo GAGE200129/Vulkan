@@ -7,7 +7,7 @@ class VulkanBuffer
 {
 
 public:
-  VulkanBuffer(VulkanEngine& engine) : mEngine(engine) {}
+  VulkanBuffer() {}
   void init(vk::DeviceSize size, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags props);
 
   void initAndTransferToLocalDevice(const void *data, vk::DeviceSize size, vk::BufferUsageFlagBits usage);
@@ -18,7 +18,6 @@ public:
   void* getMapped(vk::DeviceSize offset, vk::DeviceSize size);
   inline const vk::Buffer& getBuffer() const noexcept { return mBuffer; }
 private:
-  VulkanEngine& mEngine;
   vk::Buffer mBuffer;
   vk::DeviceMemory mBufferMemory;
 };

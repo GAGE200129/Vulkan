@@ -29,8 +29,49 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
   return VK_FALSE;
 }
 
+GLFWwindow *VulkanEngine::mWindow = nullptr;
+bool VulkanEngine::mWindowResized = false;
+vk::Instance VulkanEngine::mInstance;
+std::optional<vk::PhysicalDevice> VulkanEngine::mPhysicalDevice;
+vk::Device VulkanEngine::mDevice;
+std::optional<uint32_t> VulkanEngine::mGraphicsQueueFamily;
+std::optional<uint32_t> VulkanEngine::mPresentQueueFamily;
+std::optional<uint32_t> VulkanEngine::mTransferQueueFamily;
+vk::Queue VulkanEngine::mGraphicQueue, VulkanEngine::mPresentQueue, VulkanEngine::mTransferQueue;
+vk::SurfaceKHR VulkanEngine::mSurface;
+vk::SwapchainKHR VulkanEngine::mSwapchain;
+std::vector<vk::Image> VulkanEngine::mSwapchainImages;
+std::vector<vk::ImageView> VulkanEngine::mSwapchainImageViews;
+std::vector<vk::Framebuffer> VulkanEngine::mSwapchainFramebuffers;
+vk::DebugUtilsMessengerEXT VulkanEngine::mDebugMessenger;
+vk::DispatchLoaderDynamic VulkanEngine::mDynamicDispatcher = vk::DispatchLoaderDynamic(vkGetInstanceProcAddr);
+vk::SurfaceCapabilitiesKHR VulkanEngine::mSurfaceCapabilities;
+vk::SurfaceFormatKHR VulkanEngine::mSurfaceFormat;
+vk::PresentModeKHR VulkanEngine::mPresentMode;
+vk::Extent2D VulkanEngine::mSwapExtent;
+vk::RenderPass VulkanEngine::mRenderPass;
+vk::DescriptorSetLayout VulkanEngine::mGlobalDescriptorLayout, VulkanEngine::mImageDescriptorLayout;
+vk::DescriptorPool VulkanEngine::mDescriptorPool;
+vk::DescriptorSet VulkanEngine::mGlobalDescriptorSet;
+vk::PipelineLayout VulkanEngine::mPipelineLayout;
+vk::Pipeline VulkanEngine::mGraphicsPipeline;
+vk::CommandPool VulkanEngine::mCommandPool;
+vk::CommandBuffer VulkanEngine::mCommandBuffer;
+vk::Semaphore VulkanEngine::mImageAvalidableGSignal, VulkanEngine::mRenderFinishedGSignal;
+vk::Fence VulkanEngine::mInFlightLocker;
+VulkanBuffer VulkanEngine::mUniformBuffer;
+void *VulkanEngine::mUniformBufferMap;
+vk::Image VulkanEngine::mDepthImage;
+vk::DeviceMemory VulkanEngine::mDepthMemory;
+vk::ImageView VulkanEngine::mDepthView;
+ uint32_t VulkanEngine::mCurrentSwapChainImageIndex = 0;
+
 void VulkanEngine::cleanupSwapchain()
 {
+
+  mDevice.destroyImage(mDepthImage);
+  mDevice.destroyImageView(mDepthView);
+  mDevice.freeMemory(mDepthMemory);
   for (const vk::Framebuffer &framebuffer : mSwapchainFramebuffers)
   {
     mDevice.destroyFramebuffer(framebuffer);
@@ -175,6 +216,15 @@ void VulkanEngine::initGraphicsPipeline()
       .setAttachments(blendAttachmentState)
       .setBlendConstants({0.0f, 0.0f, 0.0f, 0.0f});
 
+  vk::PipelineDepthStencilStateCreateInfo depthStencil;
+  depthStencil
+      .setDepthTestEnable(true)
+      .setDepthWriteEnable(true)
+      .setDepthCompareOp(vk::CompareOp::eLess)
+      .setDepthBoundsTestEnable(false)
+      .setMinDepthBounds(0.0f)
+      .setMaxDepthBounds(1.0f);
+
   vk::PushConstantRange ps;
   ps.setOffset(0).setSize(sizeof(glm::mat4x4)).setStageFlags(vk::ShaderStageFlagBits::eVertex);
   vk::PipelineLayoutCreateInfo pipelineLayoutCI;
@@ -191,7 +241,7 @@ void VulkanEngine::initGraphicsPipeline()
       .setPViewportState(&viewportStateCI)
       .setPRasterizationState(&rasterizationStateCI)
       .setPMultisampleState(&multisampleStateCI)
-      .setPDepthStencilState(nullptr)
+      .setPDepthStencilState(&depthStencil)
       .setPColorBlendState(&colorBlendingCI)
       .setPDynamicState(&dynamicStateCI)
       .setLayout(mPipelineLayout)
@@ -235,6 +285,7 @@ void VulkanEngine::recreateSwapchain()
   initSwapExtent();
   initSwapchain();
   initSwapchainImageViews();
+  initDepthBuffer();
   initSwapchainFramebuffers();
 }
 
@@ -362,7 +413,7 @@ void VulkanEngine::initDevice()
   std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
   std::set<uint32_t> uniqueQueueFamilies = {mGraphicsQueueFamily.value(), mPresentQueueFamily.value(), mTransferQueueFamily.value()};
 
-  float queuePriorities[] = {1.0f};
+  std::vector<float> queuePriorities = {1.0f};
   for (uint32_t queueFamily : uniqueQueueFamilies)
   {
     vk::DeviceQueueCreateInfo queueCreateInfo;
@@ -407,9 +458,9 @@ void VulkanEngine::initSwapExtent()
 void VulkanEngine::initVulkan()
 {
   vk::ApplicationInfo info;
-  info.setApiVersion(vk::makeApiVersion(0, 1, 1, 0))
-      .setApplicationVersion(vk::makeApiVersion(0, 1, 0, 0))
-      .setEngineVersion(vk::makeApiVersion(0, 1, 0, 0))
+  info.setApiVersion(VK_MAKE_API_VERSION(0, 1, 0, 0))
+      .setApplicationVersion(VK_MAKE_API_VERSION(0, 1, 0, 0))
+      .setEngineVersion(VK_MAKE_API_VERSION(0, 1, 0, 0))
       .setPEngineName("EnGAGE");
   vk::InstanceCreateInfo createInfo;
   createInfo.setPApplicationInfo(&info);
@@ -472,19 +523,35 @@ void VulkanEngine::initRenderPass()
   colorAttachmentRef.setAttachment(0)
       .setLayout(vk::ImageLayout::eColorAttachmentOptimal);
 
+  vk::AttachmentDescription depthAttachment;
+  depthAttachment.setFormat(vk::Format::eD32Sfloat)
+      .setSamples(vk::SampleCountFlagBits::e1)
+      .setLoadOp(vk::AttachmentLoadOp::eClear)
+      .setStoreOp(vk::AttachmentStoreOp::eStore)
+      .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+      .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+      .setInitialLayout(vk::ImageLayout::eUndefined)
+      .setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+  vk::AttachmentReference depthAttachmentRef;
+  depthAttachmentRef.setAttachment(1)
+      .setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
   vk::SubpassDescription subpass;
   subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
-      .setColorAttachments(colorAttachmentRef);
+      .setColorAttachments(colorAttachmentRef)
+      .setPDepthStencilAttachment(&depthAttachmentRef);
 
   vk::SubpassDependency subpassDependency;
   subpassDependency.setSrcSubpass(VK_SUBPASS_EXTERNAL)
       .setDstSubpass(0)
-      .setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
-      .setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
-      .setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+      .setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests)
+      .setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests)
+      .setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite);
 
   vk::RenderPassCreateInfo renderPassCI;
-  renderPassCI.setAttachments(colorAttachment)
+  auto attachments = std::array{colorAttachment, depthAttachment};
+  renderPassCI.setAttachments(attachments)
       .setSubpasses(subpass)
       .setDependencies(subpassDependency);
 
@@ -515,7 +582,8 @@ void VulkanEngine::joint()
   mDevice.waitIdle();
 }
 
-void VulkanEngine::render(VulkanTexture &texture)
+
+bool VulkanEngine::prepare()
 {
   constexpr uint64_t UINT64_T_MAX = std::numeric_limits<uint64_t>::max();
   if (mDevice.waitForFences(mInFlightLocker, true, UINT64_MAX) != vk::Result::eSuccess)
@@ -524,7 +592,7 @@ void VulkanEngine::render(VulkanTexture &texture)
   if (imageResult.result == vk::Result::eErrorOutOfDateKHR)
   {
     recreateSwapchain();
-    return;
+    return false;
   }
   else if (imageResult.result != vk::Result::eSuccess && imageResult.result != vk::Result::eSuboptimalKHR)
   {
@@ -532,7 +600,7 @@ void VulkanEngine::render(VulkanTexture &texture)
   }
   mDevice.resetFences(mInFlightLocker);
 
-  uint32_t imageIndex = imageResult.value;
+  mCurrentSwapChainImageIndex = imageResult.value;
   vk::CommandBuffer &cmdBuffer = mCommandBuffer;
   cmdBuffer.reset();
 
@@ -540,13 +608,17 @@ void VulkanEngine::render(VulkanTexture &texture)
   if (cmdBuffer.begin(&cmdBufferBeginInfo) != vk::Result::eSuccess)
     throw std::runtime_error("Failed to record cmd buffer !");
 
-  vk::ClearValue clearValue;
-  clearValue.setColor({0.1f, 0.1f, 0.1f, 1.0f});
+  std::array<vk::ClearValue, 2> clearValues;
+
+  clearValues[0].setColor(std::array{0.1f, 0.1f, 0.1f, 1.0f});
+  clearValues[1].setDepthStencil({1.0f, 0});
   vk::RenderPassBeginInfo renderpassBeginInfo;
   renderpassBeginInfo.setRenderPass(mRenderPass)
-      .setFramebuffer(mSwapchainFramebuffers[imageIndex])
+      .setFramebuffer(mSwapchainFramebuffers[mCurrentSwapChainImageIndex])
       .setRenderArea({{0, 0}, mSwapExtent})
-      .setClearValues(clearValue);
+      .setClearValues(clearValues);
+
+  updateUniformBuffer();
 
   cmdBuffer.beginRenderPass(renderpassBeginInfo, vk::SubpassContents::eInline);
   cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, mGraphicsPipeline);
@@ -562,27 +634,11 @@ void VulkanEngine::render(VulkanTexture &texture)
   scissor.setOffset({0, 0})
       .setExtent(mSwapExtent);
   cmdBuffer.setScissor(0, scissor);
-
-  auto enttView = mEntt.view<TransformComponent, ModelComponent>();
-
-  for (auto e : enttView)
-  {
-    TransformComponent &transform = enttView.get<TransformComponent>(e);
-    Model *model = enttView.get<ModelComponent>(e).pModel;
-
-    cmdBuffer.bindVertexBuffers(0, model->mPositionBuffer.getBuffer(), {0});
-    cmdBuffer.bindVertexBuffers(1, model->mNormalBuffer.getBuffer(), {0});
-    cmdBuffer.bindVertexBuffers(2, model->mUvBuffer.getBuffer(), {0});
-    cmdBuffer.bindIndexBuffer(model->mIndexBuffer.getBuffer(), 0, vk::IndexType::eUint32);
-    glm::mat4x4 modelMat = glm::translate(glm::mat4(1.0f), transform.position);
-    cmdBuffer.pushConstants(mPipelineLayout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(modelMat), &modelMat);
-    for (const auto &mesh : model->mMeshes)
-    {
-      cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, mPipelineLayout, 0, {mGlobalDescriptorSet, texture.mDescriptorSet}, {});
-      cmdBuffer.drawIndexed(mesh.numIndices, 1, mesh.baseIndex, mesh.baseVertex, 0);
-    }
-  }
-
+  return true;
+}
+void VulkanEngine::submit()
+{
+  vk::CommandBuffer &cmdBuffer = mCommandBuffer;
   cmdBuffer.endRenderPass();
   cmdBuffer.end();
 
@@ -593,14 +649,12 @@ void VulkanEngine::render(VulkanTexture &texture)
       .setCommandBuffers(mCommandBuffer)
       .setSignalSemaphores(mRenderFinishedGSignal);
 
-  updateUniformBuffer();
-
   mGraphicQueue.submit(submitInfo, mInFlightLocker);
 
   vk::PresentInfoKHR presentInfo;
   presentInfo.setWaitSemaphores(mRenderFinishedGSignal)
       .setSwapchains(mSwapchain)
-      .setImageIndices(imageIndex);
+      .setImageIndices(mCurrentSwapChainImageIndex);
 
   vk::Result presentResult = mPresentQueue.presentKHR(presentInfo);
 
@@ -613,6 +667,47 @@ void VulkanEngine::render(VulkanTexture &texture)
   {
     throw std::runtime_error("Failed to present !");
   }
+}
+
+void VulkanEngine::initDepthBuffer()
+{
+  vk::ImageCreateInfo imageCI;
+  imageCI.setImageType(vk::ImageType::e2D)
+      .setExtent(vk::Extent3D(mSwapExtent.width, mSwapExtent.height, 1))
+      .setMipLevels(1)
+      .setArrayLayers(1)
+      .setFormat(vk::Format::eD32Sfloat)
+      .setTiling(vk::ImageTiling::eOptimal)
+      .setInitialLayout(vk::ImageLayout::eUndefined)
+      .setUsage(vk::ImageUsageFlagBits::eDepthStencilAttachment)
+      .setSamples(vk::SampleCountFlagBits::e1)
+      .setSharingMode(vk::SharingMode::eExclusive);
+
+  mDepthImage = mDevice.createImage(imageCI);
+
+  vk::MemoryRequirements memRequirements = mDevice.getImageMemoryRequirements(mDepthImage);
+  vk::MemoryAllocateInfo memAI;
+  memAI.setAllocationSize(memRequirements.size)
+      .setMemoryTypeIndex(findMemoryType(memRequirements.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal));
+
+  mDepthMemory = mDevice.allocateMemory(memAI);
+
+  mDevice.bindImageMemory(mDepthImage, mDepthMemory, {0});
+
+  // Create Image view
+  vk::ImageViewCreateInfo viewInfo;
+  viewInfo
+      .setImage(mDepthImage)
+      .setViewType(vk::ImageViewType::e2D)
+      .setFormat(vk::Format::eD32Sfloat)
+      .subresourceRange
+      .setAspectMask(vk::ImageAspectFlagBits::eDepth)
+      .setBaseMipLevel(0)
+      .setLevelCount(1)
+      .setBaseArrayLayer(0)
+      .setLayerCount(1);
+
+  mDepthView = mDevice.createImageView(viewInfo);
 }
 
 void VulkanEngine::initSyncObjects()
@@ -641,17 +736,14 @@ void VulkanEngine::updateUniformBuffer()
 void VulkanEngine::initDescriptor()
 {
   std::array<vk::DescriptorPoolSize, 2> dps;
-  dps[0].setDescriptorCount(1)
-      .setType(vk::DescriptorType::eUniformBuffer);
-  dps[1].setDescriptorCount(1)
-      .setType(vk::DescriptorType::eCombinedImageSampler);
+  dps[0].setDescriptorCount(1).setType(vk::DescriptorType::eUniformBuffer);
+  dps[1].setDescriptorCount(1).setType(vk::DescriptorType::eCombinedImageSampler);
 
   vk::DescriptorPoolCreateInfo descriptorPoolCI;
   descriptorPoolCI.setPoolSizes(dps)
       .setMaxSets(1024);
 
   mDescriptorPool = mDevice.createDescriptorPool(descriptorPoolCI);
-
 
   vk::DescriptorSetAllocateInfo dsAI;
   dsAI.setDescriptorPool(mDescriptorPool)
@@ -714,7 +806,6 @@ void VulkanEngine::initDescriptorLayout()
   layoutCI.setBindings(layoutBinding);
   mGlobalDescriptorLayout = mDevice.createDescriptorSetLayout(layoutCI);
 
-
   layoutBinding.setBinding(0)
       .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
       .setDescriptorCount(1)
@@ -734,9 +825,11 @@ void VulkanEngine::initSwapchainFramebuffers()
   mSwapchainFramebuffers.resize(mSwapchainImageViews.size());
   for (size_t i = 0; i < mSwapchainImageViews.size(); i++)
   {
+
+    auto attachments = std::array{mSwapchainImageViews[i], mDepthView};
     vk::FramebufferCreateInfo framebufferCI;
     framebufferCI.setRenderPass(mRenderPass)
-        .setAttachments(mSwapchainImageViews[i])
+        .setAttachments(attachments)
         .setWidth(mSwapExtent.width)
         .setHeight(mSwapExtent.height)
         .setLayers(1);

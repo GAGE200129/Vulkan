@@ -9,21 +9,21 @@ void VulkanBuffer::init(vk::DeviceSize size, vk::BufferUsageFlags usage, vk::Mem
       .setUsage(usage)
       .setSharingMode(vk::SharingMode::eExclusive);
 
-  mBuffer = mEngine.mDevice.createBuffer(bufferCI);
+  mBuffer = VulkanEngine::mDevice.createBuffer(bufferCI);
 
-  vk::MemoryRequirements memRequirements = mEngine.mDevice.getBufferMemoryRequirements(mBuffer);
+  vk::MemoryRequirements memRequirements = VulkanEngine::mDevice.getBufferMemoryRequirements(mBuffer);
   vk::MemoryAllocateInfo allocInfo;
   allocInfo.setAllocationSize(memRequirements.size)
-      .setMemoryTypeIndex(mEngine.findMemoryType(memRequirements.memoryTypeBits, props));
+      .setMemoryTypeIndex(VulkanEngine::findMemoryType(memRequirements.memoryTypeBits, props));
 
-  mBufferMemory = mEngine.mDevice.allocateMemory(allocInfo);
-  mEngine.mDevice.bindBufferMemory(mBuffer, mBufferMemory, 0);
+  mBufferMemory = VulkanEngine::mDevice.allocateMemory(allocInfo);
+  VulkanEngine::mDevice.bindBufferMemory(mBuffer, mBufferMemory, 0);
 }
 
 void VulkanBuffer::initAndTransferToLocalDevice(const void *data, vk::DeviceSize size, vk::BufferUsageFlagBits usage)
 {
 
-  VulkanBuffer stagingBuffer(mEngine);
+  VulkanBuffer stagingBuffer;
 
   stagingBuffer.init(size, vk::BufferUsageFlagBits::eTransferSrc,
                      vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
@@ -41,9 +41,9 @@ void VulkanBuffer::copy(const VulkanBuffer &other, vk::DeviceSize size)
   // Copy
   vk::CommandBufferAllocateInfo cmdAI;
   cmdAI.setLevel(vk::CommandBufferLevel::ePrimary)
-      .setCommandPool(mEngine.mCommandPool)
+      .setCommandPool(VulkanEngine::mCommandPool)
       .setCommandBufferCount(1);
-  vk::CommandBuffer cmdBuf = mEngine.mDevice.allocateCommandBuffers(cmdAI)[0];
+  vk::CommandBuffer cmdBuf = VulkanEngine::mDevice.allocateCommandBuffers(cmdAI)[0];
 
   vk::CommandBufferBeginInfo cmdBeginI;
   cmdBeginI.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
@@ -56,26 +56,26 @@ void VulkanBuffer::copy(const VulkanBuffer &other, vk::DeviceSize size)
 
   vk::SubmitInfo submitI;
   submitI.setCommandBuffers(cmdBuf);
-  mEngine.mTransferQueue.submit(submitI);
-  mEngine.mTransferQueue.waitIdle();
+  VulkanEngine::mTransferQueue.submit(submitI);
+  VulkanEngine::mTransferQueue.waitIdle();
 
-  mEngine.mDevice.freeCommandBuffers(mEngine.mCommandPool, cmdBuf);
+  VulkanEngine::mDevice.freeCommandBuffers(VulkanEngine::mCommandPool, cmdBuf);
 }
 
 void VulkanBuffer::copy(const void *data, vk::DeviceSize size)
 {
-  void *mappedData = mEngine.mDevice.mapMemory(mBufferMemory, 0, size);
+  void *mappedData = VulkanEngine::mDevice.mapMemory(mBufferMemory, 0, size);
   memcpy(mappedData, data, size);
-  mEngine.mDevice.unmapMemory(mBufferMemory);
+  VulkanEngine::mDevice.unmapMemory(mBufferMemory);
 }
 
 void VulkanBuffer::cleanup() noexcept
 {
-  mEngine.mDevice.destroyBuffer(mBuffer);
-  mEngine.mDevice.freeMemory(mBufferMemory);
+  VulkanEngine::mDevice.destroyBuffer(mBuffer);
+  VulkanEngine::mDevice.freeMemory(mBufferMemory);
 }
 
 void *VulkanBuffer::getMapped(vk::DeviceSize offset, vk::DeviceSize size)
 {
-  return mEngine.mDevice.mapMemory(mBufferMemory, offset, size);
+  return VulkanEngine::mDevice.mapMemory(mBufferMemory, offset, size);
 }

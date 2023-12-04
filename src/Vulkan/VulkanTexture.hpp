@@ -5,17 +5,18 @@
 class VulkanTexture
 {
   friend class VulkanEngine;
+  friend class ModelComponent;
 public:
-  VulkanTexture(VulkanEngine& engine) : mEngine(engine) {}
+  VulkanTexture() {}
 
   void loadFromFile(const std::string& filePath);
 
   void cleanup()
   {
-    mEngine.mDevice.destroySampler(mSampler);
-    mEngine.mDevice.destroyImageView(mImageView);
-    mEngine.mDevice.destroyImage(mHandle);
-    mEngine.mDevice.freeMemory(mMemory);
+    VulkanEngine::mDevice.destroySampler(mSampler);
+    VulkanEngine::mDevice.destroyImageView(mImageView);
+    VulkanEngine::mDevice.destroyImage(mHandle);
+    VulkanEngine::mDevice.freeMemory(mMemory);
   }
 private:
   void init(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tilting,
@@ -27,7 +28,6 @@ private:
   vk::CommandBuffer beginSingleTimeCmd();
   void endSingleTimeCmd(vk::CommandBuffer buffer);
 private:
-  VulkanEngine& mEngine;
   vk::Image mHandle;
   vk::DeviceMemory mMemory;
   vk::ImageView mImageView;

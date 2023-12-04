@@ -1,18 +1,22 @@
 #pragma once
 
-#include <glm/vec3.hpp>
-#include "Model/Model.hpp"
 
-struct TransformComponent
+class GameObject;
+class Component
 {
-  glm::vec3 position;
-  glm::vec3 scale;
-  glm::vec3 rotation_euler;
-};
+public:
+  Component() = default;
+  virtual ~Component() = default;
 
-struct ModelComponent
-{
-  Model* pModel;
-  
-};
 
+  virtual void init() {}
+  virtual void update(float delta) {} 
+  virtual void render() {}
+  virtual void shutdown() noexcept {} 
+
+  const GameObject& getGameObject() const noexcept { return *mGameObject; }
+  GameObject& getGameObject()  noexcept { return *mGameObject; }
+  void setGameObject(GameObject* go)  noexcept { mGameObject = go; }
+protected:
+  GameObject* mGameObject;
+};

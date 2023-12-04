@@ -10,7 +10,7 @@ project "EnGAGEditor"
    targetdir "bin/%{cfg.buildcfg}"
 
    files { "editor/**.hpp", "editor/**.cpp", "res/**.vert", "res/**.frag" }
-   links { "glfw", "vulkan", "spdlog", "fmt", "lua", "assimp" }
+   links { "glfw", "vulkan", "spdlog", "fmt", "lua5.4", "assimp" }
 
    includedirs { 
       "src/editor",
@@ -26,7 +26,7 @@ project "EnGAGE"
    targetdir "bin/%{cfg.buildcfg}"
 
    files { "src/**.hpp", "src/**.cpp", "res/**.vert", "res/**.frag" }
-   links { "glfw", "vulkan", "spdlog", "fmt", "lua", "assimp" }
+   links { "glfw", "vulkan", "spdlog", "fmt", "lua5.4", "assimp" }
    includedirs { 
       "src",
       "libs/EnTT/single_include"
