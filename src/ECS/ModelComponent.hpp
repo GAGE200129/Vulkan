@@ -4,14 +4,8 @@
 #include "GameObject.hpp"
 #include "TransformComponent.hpp"
 
-#include <vector>
-#include <map>
 #include <Vulkan/VulkanBuffer.hpp>
 #include <Vulkan/VulkanTexture.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-
-
 
 
 class ModelComponent : public Component
@@ -45,8 +39,13 @@ private:
       unsigned int baseIndex;
       unsigned int materialIndex;
     };
+
+    struct Material
+    {
+      VulkanTexture mDiffuse;
+    };
     std::vector<MeshEntry> mMeshes;
-    std::vector<VulkanTexture> mTextures;
+    std::vector<Material> mMaterials;
     VulkanBuffer mPositionBuffer, mNormalBuffer, mUvBuffer, mIndexBuffer;
     std::vector<glm::vec3> mPositions;
     std::vector<glm::vec3> mNormals;

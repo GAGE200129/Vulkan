@@ -1,16 +1,10 @@
+#include "pch.hpp"
 #include "ModelComponent.hpp"
 
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-
 #include <Vulkan/VulkanEngine.hpp>
-
-#include <iostream>
-
-#include <glm/gtc/matrix_transform.hpp>
-
 #include "Vulkan/VulkanTexture.hpp"
+
+#include <stb/stb_image.h>
 
 std::map<std::string, std::unique_ptr<ModelComponent::MeshData>> ModelComponent::sCache;
 
@@ -72,16 +66,61 @@ ModelComponent::MeshData *ModelComponent::initCache(const std::string &filePath)
     }
   }
 
-  //Init texture
+  // Init texture
 
-  for(int i = 0; i < pScene->mNumMaterials; i++)
+  for (int i = 0; i < pScene->mNumMaterials; i++)
   {
-    const auto* aiMaterial = pScene->mMaterials[i];
+    const auto *aiMaterial = pScene->mMaterials[i];
+    //Check for assimp's default material
+    if(aiMaterial->GetName().length == 0)
+      continue;
+    
     aiString textureFile;
-    //aiMaterial->Get(AI_MATKEY_TEXTURE
+    aiMaterial->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), textureFile);
+    const aiTexture *texture = pScene->GetEmbeddedTexture(textureFile.C_Str());
+    if (!texture)
+      throw std::runtime_error("Model component only accepts embedded textures !");
 
-  
+    int width = texture->mWidth, height = texture->mHeight;
+    stbi_uc *imageData = (stbi_uc *)texture->pcData;
+    bool needDecoder = false;
 
+    // Raw texture data, need a decoder
+    if (texture->mHeight == 0)
+    {
+      needDecoder = true;
+      int bpp;
+      imageData = stbi_load_from_memory((stbi_uc *)texture->pcData, texture->mWidth, &width, &height, &bpp, STBI_rgb_alpha);
+      if (!imageData)
+        throw std::runtime_error("Something wrong with encoded embedded texture !");
+    }
+    meshData->mMaterials.emplace_back();
+    auto &diffuseTexture = meshData->mMaterials.back().mDiffuse;
+    size_t imageSize = width * height * 4;
+    // Create a staging buffer and copy to it
+    VulkanBuffer staging;
+    staging.init(imageSize, vk::BufferUsageFlagBits::eTransferSrc,
+                 vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+    staging.copy(imageData, imageSize);
+
+    // Create image handle
+    diffuseTexture.init(width, height,
+         vk::Format::eR8G8B8A8Srgb,
+         vk::ImageTiling::eOptimal,
+         vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
+         vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+    // Upload image to GPU
+    diffuseTexture.transitionLayout(vk::Format::eR8G8B8Srgb,
+                     vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
+    diffuseTexture.copyBufferToImage(staging, width, height);
+    diffuseTexture.transitionLayout(vk::Format::eR8G8B8Srgb,
+                     vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
+
+    staging.cleanup();
+
+    if (needDecoder)
+      stbi_image_free(imageData);
   }
 
   // Push mesh data to vulkan buffer
@@ -105,13 +144,6 @@ ModelComponent::MeshData *ModelComponent::initCache(const std::string &filePath)
 
 void ModelComponent::render()
 {
-  static VulkanTexture texture;
-  static bool first = true;
-  if(first)
-  {
-    texture.loadFromFile("res/models/adamHead/Assets/Models/PBR/Adam/Textures/Adam_Head_a.jpg");
-    first = false;
-  }
   VulkanEngine::mCommandBuffer.bindVertexBuffers(0, mMeshData->mPositionBuffer.getBuffer(), {0});
   VulkanEngine::mCommandBuffer.bindVertexBuffers(1, mMeshData->mNormalBuffer.getBuffer(), {0});
   VulkanEngine::mCommandBuffer.bindVertexBuffers(2, mMeshData->mUvBuffer.getBuffer(), {0});
@@ -120,8 +152,10 @@ void ModelComponent::render()
   VulkanEngine::mCommandBuffer.pushConstants(VulkanEngine::mPipelineLayout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(modelMat), &modelMat);
   for (const auto &mesh : mMeshData->mMeshes)
   {
-    VulkanEngine::mCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, VulkanEngine::mPipelineLayout, 
-        0, {VulkanEngine::mGlobalDescriptorSet, texture.mDescriptorSet}, {});
+    auto& material = mMeshData->mMaterials[mesh.materialIndex];
+   
+    VulkanEngine::mCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, VulkanEngine::mPipelineLayout,
+                                                    0, {VulkanEngine::mGlobalDescriptorSet, material.mDiffuse.mDescriptorSet}, {});
     VulkanEngine::mCommandBuffer.drawIndexed(mesh.numIndices, 1, mesh.baseIndex, mesh.baseVertex, 0);
   }
 }
@@ -134,6 +168,8 @@ void ModelComponent::clearCache()
     mesh->mNormalBuffer.cleanup();
     mesh->mUvBuffer.cleanup();
     mesh->mIndexBuffer.cleanup();
+    for(auto& material : mesh->mMaterials)
+      material.mDiffuse.cleanup();
   }
   sCache.clear();
 }

@@ -2,10 +2,6 @@
 
 #include "Components.hpp"
 
-#include <string>
-#include <vector>
-#include <memory>
-#include <stdexcept>
 
 class GameObject
 {

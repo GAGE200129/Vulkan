@@ -24,6 +24,7 @@ project "EnGAGE"
    language "C++"
    cppdialect "c++17"
    targetdir "bin/%{cfg.buildcfg}"
+   pchheader "src/pch.hpp"
 
    files { "src/**.hpp", "src/**.cpp", "res/**.vert", "res/**.frag" }
    links { "glfw", "vulkan", "spdlog", "fmt", "lua5.4", "assimp" }

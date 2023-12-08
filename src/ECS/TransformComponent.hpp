@@ -1,9 +1,7 @@
 #pragma once
 
-#include "Components.hpp"
-
 #include <glm/vec3.hpp>
-
+#include "Components.hpp"
 #include "GameObject.hpp"
 
 class TransformComponent : public Component

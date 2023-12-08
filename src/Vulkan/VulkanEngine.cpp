@@ -1,13 +1,7 @@
+#include "pch.hpp"
 #include "VulkanEngine.hpp"
 
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
-#include <spdlog/spdlog.h>
 
-#include <set>
-#include <fstream>
-#include <iostream>
-#include <glm/gtc/matrix_transform.hpp>
 #include "ECS/Components.hpp"
 
 #include "VulkanTexture.hpp"
@@ -64,7 +58,8 @@ void *VulkanEngine::mUniformBufferMap;
 vk::Image VulkanEngine::mDepthImage;
 vk::DeviceMemory VulkanEngine::mDepthMemory;
 vk::ImageView VulkanEngine::mDepthView;
- uint32_t VulkanEngine::mCurrentSwapChainImageIndex = 0;
+uint32_t VulkanEngine::mCurrentSwapChainImageIndex = 0;
+VulkanCamera VulkanEngine::mCamera = {{0, 0, 0}, 0, 0, 0.1, 100.0f, 70.0f};
 
 void VulkanEngine::cleanupSwapchain()
 {
@@ -582,7 +577,6 @@ void VulkanEngine::joint()
   mDevice.waitIdle();
 }
 
-
 bool VulkanEngine::prepare()
 {
   constexpr uint64_t UINT64_T_MAX = std::numeric_limits<uint64_t>::max();
@@ -724,10 +718,8 @@ void VulkanEngine::initSyncObjects()
 void VulkanEngine::updateUniformBuffer()
 {
   VulkanUniformBufferObject ubo;
-  ubo.proj = glm::perspective(glm::radians(90.0f), (float)mSwapExtent.width / (float)mSwapExtent.height,
-                              0.1f, 100.0f);
-  ubo.view = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-
+  ubo.proj = mCamera.getProjection(mSwapExtent);
+  ubo.view = mCamera.getView();
   ubo.proj[1][1] *= -1;
 
   std::memcpy(mUniformBufferMap, &ubo, sizeof(ubo));
@@ -736,12 +728,12 @@ void VulkanEngine::updateUniformBuffer()
 void VulkanEngine::initDescriptor()
 {
   std::array<vk::DescriptorPoolSize, 2> dps;
-  dps[0].setDescriptorCount(1).setType(vk::DescriptorType::eUniformBuffer);
-  dps[1].setDescriptorCount(1).setType(vk::DescriptorType::eCombinedImageSampler);
+  dps[0].setDescriptorCount(128).setType(vk::DescriptorType::eUniformBuffer);
+  dps[1].setDescriptorCount(128).setType(vk::DescriptorType::eCombinedImageSampler);
 
   vk::DescriptorPoolCreateInfo descriptorPoolCI;
   descriptorPoolCI.setPoolSizes(dps)
-      .setMaxSets(1024);
+      .setMaxSets(128 * dps.size());
 
   mDescriptorPool = mDevice.createDescriptorPool(descriptorPoolCI);
 

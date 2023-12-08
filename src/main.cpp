@@ -1,18 +1,12 @@
+#include "pch.hpp"
 
-
-#include <iostream>
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
-
-#include "Lua/LuaEngine.hpp"
 #include "Vulkan/VulkanTexture.hpp"
 
 #include "ECS/Components.hpp"
 
-#include "Vulkan/VulkanTexture.hpp"
-
 #include "ECS/GameObject.hpp"
 #include "ECS/ModelComponent.hpp"
+#include "ECS/ScriptComponent.hpp"
 
 void windowResizeFn(GLFWwindow *window, int width, int height) noexcept
 {
@@ -32,12 +26,16 @@ void run()
 
   VulkanEngine::init(mWindow);
 
+  GameObject &camera = GameObject::addGameObject("Camera");
+  camera.addComponent<TransformComponent>();
+  camera.addComponent<ScriptComponent>("res/scripts/testing.lua");
+
   GameObject &go = GameObject::addGameObject("Testing");
-  go.addComponent<ModelComponent>("res/models/adamHead/adamHead.gltf");
+  go.addComponent<ModelComponent>("res/models/box_textured.glb");
   go.addComponent<TransformComponent>();
 
   GameObject &go1 = GameObject::addGameObject("Testing1");
-  go1.addComponent<ModelComponent>("res/models/box.glb");
+  go1.addComponent<ModelComponent>("res/models/box_textured.glb");
   TransformComponent *c = go1.addComponent<TransformComponent>();
   c->position.x += 3;
 

@@ -1,3 +1,4 @@
+#include "pch.hpp"
 #include "GameObject.hpp"
 
 std::vector<std::unique_ptr<GameObject>> GameObject::sGameObjects;

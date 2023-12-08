@@ -1,3 +1,4 @@
+#include "pch.hpp"
 #include "VulkanTexture.hpp"
 
 #include <stb/stb_image.h>

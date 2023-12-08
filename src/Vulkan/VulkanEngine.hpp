@@ -1,13 +1,4 @@
 #pragma once
-
-#include <vulkan/vulkan.hpp>
-
-#include <optional>
-#include <vector>
-#include <glm/glm.hpp>
-
-#include <entt/entt.hpp>
-
 #include "VulkanBuffer.hpp"
 
 
@@ -15,6 +6,34 @@ struct VulkanUniformBufferObject
 {
   glm::mat4 view;
   glm::mat4 proj;
+};
+
+class VulkanCamera
+{
+public:
+
+  glm::mat4 getProjection(const vk::Extent2D& extent)
+  {
+    return glm::perspective(glm::radians(fov), (float)extent.width / (float)extent.height,
+                              nearPlane, farPlane);
+  }
+
+  glm::mat4 getView()
+  {
+    glm::mat4 result;
+
+    result = glm::translate(glm::mat4(1.0f), -position);
+
+    result = glm::rotate(result, glm::radians(pitch), {1, 0, 0});
+    result = glm::rotate(result, glm::radians(yaw), {0, 1, 0});
+
+
+    return result;
+  }
+public:
+  glm::vec3 position;
+  float pitch, yaw;
+  float nearPlane, farPlane, fov;
 };
 
 struct GLFWwindow;
@@ -53,7 +72,6 @@ public:
   static void render();
   static void cleanup() noexcept;
   static void onWindowResize(int width, int height) noexcept;
-
   static std::vector<char> readfile(const std::string &file);
 
 private:
@@ -120,4 +138,5 @@ private:
   static vk::DeviceMemory mDepthMemory;
   static vk::ImageView mDepthView;
   static uint32_t mCurrentSwapChainImageIndex;
+  static VulkanCamera mCamera;
 }; 
