@@ -8,6 +8,8 @@
 #include "ECS/ModelComponent.hpp"
 #include "ECS/ScriptComponent.hpp"
 
+#include "Input.hpp"
+
 void windowResizeFn(GLFWwindow *window, int width, int height) noexcept
 {
   VulkanEngine::onWindowResize(width, height);
@@ -25,6 +27,7 @@ void run()
   glfwSetFramebufferSizeCallback(mWindow, windowResizeFn);
 
   VulkanEngine::init(mWindow);
+  Input::init(mWindow);
 
   GameObject &camera = GameObject::addGameObject("Camera");
   camera.addComponent<TransformComponent>();
@@ -40,16 +43,30 @@ void run()
   c->position.x += 3;
 
   GameObject::globalInit();
+
+
+  double lastTime = glfwGetTime();
   while (!glfwWindowShouldClose(mWindow))
   {
-    GameObject::globalUpdate(0.16f);
+    double current = glfwGetTime();
+    double elapsed = current - lastTime;
+    glfwPollEvents();
+    
+    GameObject::globalUpdate(elapsed);
+
+    if(Input::isKeyDownOnce(GLFW_KEY_C))
+    {
+      std::cout << "AKFJAKSF\n";
+    }
+
+    Input::update();
     if (VulkanEngine::prepare())
     {
       GameObject::globalRender();
       VulkanEngine::submit();
     }
 
-    glfwPollEvents();
+    lastTime = current;
   }
   VulkanEngine::joint();
 

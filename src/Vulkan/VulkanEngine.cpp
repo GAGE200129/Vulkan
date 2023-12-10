@@ -218,7 +218,8 @@ void VulkanEngine::initGraphicsPipeline()
       .setDepthCompareOp(vk::CompareOp::eLess)
       .setDepthBoundsTestEnable(false)
       .setMinDepthBounds(0.0f)
-      .setMaxDepthBounds(1.0f);
+      .setMaxDepthBounds(1.0f)
+      .setStencilTestEnable(false);
 
   vk::PushConstantRange ps;
   ps.setOffset(0).setSize(sizeof(glm::mat4x4)).setStageFlags(vk::ShaderStageFlagBits::eVertex);
@@ -522,7 +523,7 @@ void VulkanEngine::initRenderPass()
   depthAttachment.setFormat(vk::Format::eD32Sfloat)
       .setSamples(vk::SampleCountFlagBits::e1)
       .setLoadOp(vk::AttachmentLoadOp::eClear)
-      .setStoreOp(vk::AttachmentStoreOp::eStore)
+      .setStoreOp(vk::AttachmentStoreOp::eDontCare)
       .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
       .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
       .setInitialLayout(vk::ImageLayout::eUndefined)
@@ -622,7 +623,8 @@ bool VulkanEngine::prepare()
       .setY(0)
       .setWidth(mSwapExtent.width)
       .setHeight(mSwapExtent.height)
-      .setMinDepth(0.0f);
+      .setMinDepth(0.0f)
+      .setMaxDepth(1.0f);
   cmdBuffer.setViewport(0, viewport);
   vk::Rect2D scissor;
   scissor.setOffset({0, 0})

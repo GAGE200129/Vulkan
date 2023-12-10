@@ -1,7 +1,6 @@
 #pragma once
 #include "VulkanBuffer.hpp"
 
-
 struct VulkanUniformBufferObject
 {
   glm::mat4 view;
@@ -11,25 +10,24 @@ struct VulkanUniformBufferObject
 class VulkanCamera
 {
 public:
-
-  glm::mat4 getProjection(const vk::Extent2D& extent)
+  glm::mat4 getProjection(const vk::Extent2D &extent)
   {
-    return glm::perspective(glm::radians(fov), (float)extent.width / (float)extent.height,
-                              nearPlane, farPlane);
+    glm::mat4 proj = glm::perspectiveRH_ZO(glm::radians(fov), (float)extent.width / (float)extent.height,
+                            nearPlane, farPlane);
+    return proj;
   }
 
   glm::mat4 getView()
   {
     glm::mat4 result;
 
-    result = glm::translate(glm::mat4(1.0f), -position);
-
-    result = glm::rotate(result, glm::radians(pitch), {1, 0, 0});
-    result = glm::rotate(result, glm::radians(yaw), {0, 1, 0});
-
+    result = glm::rotate(glm::mat4(1.0f), glm::radians(-pitch), {1, 0, 0});
+    result = glm::rotate(result, glm::radians(-yaw), {0, 1, 0});
+    result = glm::translate(result, -position);
 
     return result;
   }
+
 public:
   glm::vec3 position;
   float pitch, yaw;
@@ -43,9 +41,9 @@ class VulkanEngine
   friend class VulkanBuffer;
   friend class VulkanTexture;
   friend class ModelComponent;
-public:
 
-  static void init(GLFWwindow* window)
+public:
+  static void init(GLFWwindow *window)
   {
     mWindow = window;
     initVulkan();
@@ -73,6 +71,7 @@ public:
   static void cleanup() noexcept;
   static void onWindowResize(int width, int height) noexcept;
   static std::vector<char> readfile(const std::string &file);
+  inline static VulkanCamera &getCamera() { return mCamera; }
 
 private:
   static void initUniformBuffers();
@@ -122,21 +121,21 @@ private:
   static vk::DescriptorSetLayout mGlobalDescriptorLayout, mImageDescriptorLayout;
   static vk::DescriptorPool mDescriptorPool;
   static vk::DescriptorSet mGlobalDescriptorSet;
-   
+
   static vk::PipelineLayout mPipelineLayout;
   static vk::Pipeline mGraphicsPipeline;
   static vk::CommandPool mCommandPool;
   static vk::CommandBuffer mCommandBuffer;
- 
+
   static vk::Semaphore mImageAvalidableGSignal, mRenderFinishedGSignal;
   static vk::Fence mInFlightLocker;
- 
+
   static VulkanBuffer mUniformBuffer;
-  static void* mUniformBufferMap;
- 
+  static void *mUniformBufferMap;
+
   static vk::Image mDepthImage;
   static vk::DeviceMemory mDepthMemory;
   static vk::ImageView mDepthView;
   static uint32_t mCurrentSwapChainImageIndex;
   static VulkanCamera mCamera;
-}; 
+};
