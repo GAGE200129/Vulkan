@@ -9,7 +9,7 @@ class VulkanTexture
 public:
   VulkanTexture() {}
 
-  void loadFromFile(const std::string& filePath);
+  void loadFromFile(const std::string& filePath, vk::DescriptorSetLayout outputLayout);
 
   void cleanup()
   {
@@ -20,7 +20,7 @@ public:
   }
 private:
   void init(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tilting,
-    vk::ImageUsageFlags usage, vk::MemoryPropertyFlags);
+    vk::ImageUsageFlags usage, vk::MemoryPropertyFlags, vk::DescriptorSetLayout outputLayout);
   void transitionLayout(vk::Format format, vk::ImageLayout oldLayout, vk::ImageLayout newLayout);
   void copyBufferToImage(const VulkanBuffer& buffer, uint32_t width, uint32_t height);
   

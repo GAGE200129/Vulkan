@@ -20,9 +20,10 @@ ModelComponent::MeshData *ModelComponent::initCache(const std::string &filePath)
     throw std::runtime_error(importer.GetErrorString());
   }
 
+  std::cout << "Caching model: " << filePath << "\n";
   auto meshData = std::make_unique<MeshData>();
   // Count and reserve vertex data for all meshes in scene
-  unsigned int numVertices = 0, numIndices = 0;
+  unsigned int numVertices = 0, numIndices = 0, numBones = 0;
   meshData->mMeshes.resize(pScene->mNumMeshes);
   for (unsigned int i = 0; i < pScene->mNumMeshes; i++)
   {
@@ -33,7 +34,14 @@ ModelComponent::MeshData *ModelComponent::initCache(const std::string &filePath)
 
     numVertices += pScene->mMeshes[i]->mNumVertices;
     numIndices += meshData->mMeshes[i].numIndices;
+    numBones += pScene->mMeshes[i]->mNumBones;
+
+    std::cout << "Mesh: " << pScene->mMeshes[i]->mName.C_Str()
+              << " vertices: " << numVertices
+              << " indices: " << numIndices
+              << " bones: " << numBones << "\n";
   }
+
   meshData->mPositions.reserve(numVertices);
   meshData->mNormals.reserve(numVertices);
   meshData->mUvs.reserve(numVertices);
@@ -71,10 +79,10 @@ ModelComponent::MeshData *ModelComponent::initCache(const std::string &filePath)
   for (int i = 0; i < pScene->mNumMaterials; i++)
   {
     const auto *aiMaterial = pScene->mMaterials[i];
-    //Check for assimp's default material
-    if(aiMaterial->GetName().length == 0)
+    // Check for assimp's default material
+    if (aiMaterial->GetName().length == 0)
       continue;
-    
+
     aiString textureFile;
     aiMaterial->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), textureFile);
     const aiTexture *texture = pScene->GetEmbeddedTexture(textureFile.C_Str());
@@ -105,17 +113,17 @@ ModelComponent::MeshData *ModelComponent::initCache(const std::string &filePath)
 
     // Create image handle
     diffuseTexture.init(width, height,
-         vk::Format::eR8G8B8A8Srgb,
-         vk::ImageTiling::eOptimal,
-         vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
-         vk::MemoryPropertyFlagBits::eDeviceLocal);
+                        vk::Format::eR8G8B8A8Srgb,
+                        vk::ImageTiling::eOptimal,
+                        vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
+                        vk::MemoryPropertyFlagBits::eDeviceLocal, VulkanEngine::mStaticModelPipeline.mImageDescriptorLayout);
 
     // Upload image to GPU
     diffuseTexture.transitionLayout(vk::Format::eR8G8B8Srgb,
-                     vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
+                                    vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
     diffuseTexture.copyBufferToImage(staging, width, height);
     diffuseTexture.transitionLayout(vk::Format::eR8G8B8Srgb,
-                     vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
+                                    vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
 
     staging.cleanup();
 
@@ -138,24 +146,28 @@ ModelComponent::MeshData *ModelComponent::initCache(const std::string &filePath)
   auto ptr = meshData.get();
   sCache[filePath] = std::move(meshData);
 
-  std::cout << "Caching model: " << filePath << "\n";
   return ptr;
 }
 
 void ModelComponent::render()
 {
+  VulkanEngine::mCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, VulkanEngine::mStaticModelPipeline.mPipeline);
   VulkanEngine::mCommandBuffer.bindVertexBuffers(0, mMeshData->mPositionBuffer.getBuffer(), {0});
   VulkanEngine::mCommandBuffer.bindVertexBuffers(1, mMeshData->mNormalBuffer.getBuffer(), {0});
   VulkanEngine::mCommandBuffer.bindVertexBuffers(2, mMeshData->mUvBuffer.getBuffer(), {0});
   VulkanEngine::mCommandBuffer.bindIndexBuffer(mMeshData->mIndexBuffer.getBuffer(), 0, vk::IndexType::eUint32);
   glm::mat4x4 modelMat = glm::translate(glm::mat4(1.0f), mTransformComponent->position);
-  VulkanEngine::mCommandBuffer.pushConstants(VulkanEngine::mPipelineLayout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(modelMat), &modelMat);
+  VulkanEngine::mCommandBuffer.pushConstants(VulkanEngine::mStaticModelPipeline.mLayout,
+                                             vk::ShaderStageFlagBits::eVertex, 0, sizeof(modelMat), &modelMat);
+
+  VulkanEngine::mCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, VulkanEngine::VulkanEngine::mStaticModelPipeline.mLayout,
+                                                  0, {VulkanEngine::mStaticModelPipeline.mGlobalDescriptorSet}, {});
   for (const auto &mesh : mMeshData->mMeshes)
   {
-    auto& material = mMeshData->mMaterials[mesh.materialIndex];
-   
-    VulkanEngine::mCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, VulkanEngine::mPipelineLayout,
-                                                    0, {VulkanEngine::mGlobalDescriptorSet, material.mDiffuse.mDescriptorSet}, {});
+    auto &material = mMeshData->mMaterials[mesh.materialIndex];
+
+    VulkanEngine::mCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, VulkanEngine::VulkanEngine::mStaticModelPipeline.mLayout,
+                                                    1, {material.mDiffuse.mDescriptorSet}, {});
     VulkanEngine::mCommandBuffer.drawIndexed(mesh.numIndices, 1, mesh.baseIndex, mesh.baseVertex, 0);
   }
 }
@@ -168,7 +180,7 @@ void ModelComponent::clearCache()
     mesh->mNormalBuffer.cleanup();
     mesh->mUvBuffer.cleanup();
     mesh->mIndexBuffer.cleanup();
-    for(auto& material : mesh->mMaterials)
+    for (auto &material : mesh->mMaterials)
       material.mDiffuse.cleanup();
   }
   sCache.clear();

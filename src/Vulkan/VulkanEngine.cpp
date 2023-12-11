@@ -1,10 +1,10 @@
 #include "pch.hpp"
 #include "VulkanEngine.hpp"
 
-
 #include "ECS/Components.hpp"
 
 #include "VulkanTexture.hpp"
+#include "ECS/GameObject.hpp"
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -44,17 +44,12 @@ vk::SurfaceFormatKHR VulkanEngine::mSurfaceFormat;
 vk::PresentModeKHR VulkanEngine::mPresentMode;
 vk::Extent2D VulkanEngine::mSwapExtent;
 vk::RenderPass VulkanEngine::mRenderPass;
-vk::DescriptorSetLayout VulkanEngine::mGlobalDescriptorLayout, VulkanEngine::mImageDescriptorLayout;
 vk::DescriptorPool VulkanEngine::mDescriptorPool;
-vk::DescriptorSet VulkanEngine::mGlobalDescriptorSet;
-vk::PipelineLayout VulkanEngine::mPipelineLayout;
-vk::Pipeline VulkanEngine::mGraphicsPipeline;
+StaticModelPipeline VulkanEngine::mStaticModelPipeline;
 vk::CommandPool VulkanEngine::mCommandPool;
 vk::CommandBuffer VulkanEngine::mCommandBuffer;
 vk::Semaphore VulkanEngine::mImageAvalidableGSignal, VulkanEngine::mRenderFinishedGSignal;
 vk::Fence VulkanEngine::mInFlightLocker;
-VulkanBuffer VulkanEngine::mUniformBuffer;
-void *VulkanEngine::mUniformBufferMap;
 vk::Image VulkanEngine::mDepthImage;
 vk::DeviceMemory VulkanEngine::mDepthMemory;
 vk::ImageView VulkanEngine::mDepthView;
@@ -120,141 +115,6 @@ vk::ShaderModule VulkanEngine::initShaderModule(const std::vector<char> &code)
   vk::ShaderModuleCreateInfo ci;
   ci.setPCode((const uint32_t *)code.data()).setCodeSize(code.size());
   return mDevice.createShaderModule(ci);
-}
-
-void VulkanEngine::initGraphicsPipeline()
-{
-  auto vertexCode = readfile("res/shaders/shader.vert.spv");
-  auto fragmentCode = readfile("res/shaders/shader.frag.spv");
-
-  vk::ShaderModule vertexModule = initShaderModule(vertexCode);
-  vk::ShaderModule fragmentModule = initShaderModule(fragmentCode);
-  vk::PipelineShaderStageCreateInfo vertStageCI, fragStageCI;
-  vertStageCI.setStage(vk::ShaderStageFlagBits::eVertex)
-      .setPName("main")
-      .setModule(vertexModule);
-  fragStageCI.setStage(vk::ShaderStageFlagBits::eFragment)
-      .setPName("main")
-      .setModule(fragmentModule);
-
-  std::vector<vk::PipelineShaderStageCreateInfo> shaderStages = {vertStageCI, fragStageCI};
-  std::vector<vk::DynamicState> dynamicStates = {vk::DynamicState::eViewport, vk::DynamicState::eScissor};
-  vk::PipelineDynamicStateCreateInfo dynamicStateCI;
-  dynamicStateCI.setDynamicStates(dynamicStates);
-  vk::PipelineVertexInputStateCreateInfo vertexInputCI;
-
-  // Position, normal, uv
-  std::array<vk::VertexInputBindingDescription, 3> vertexInputBindingDescriptions;
-  vertexInputBindingDescriptions[0].setBinding(0).setStride(sizeof(glm::vec3)).setInputRate(vk::VertexInputRate::eVertex);
-  vertexInputBindingDescriptions[1].setBinding(1).setStride(sizeof(glm::vec3)).setInputRate(vk::VertexInputRate::eVertex);
-  vertexInputBindingDescriptions[2].setBinding(2).setStride(sizeof(glm::vec2)).setInputRate(vk::VertexInputRate::eVertex);
-
-  std::array<vk::VertexInputAttributeDescription, 3> vertexInputAttributeDescription;
-  vertexInputAttributeDescription[0].setBinding(0).setLocation(0).setFormat(vk::Format::eR32G32B32Sfloat);
-  vertexInputAttributeDescription[1].setBinding(1).setLocation(1).setFormat(vk::Format::eR32G32B32Sfloat);
-  vertexInputAttributeDescription[2].setBinding(2).setLocation(2).setFormat(vk::Format::eR32G32Sfloat);
-
-  vertexInputCI.setVertexBindingDescriptions(vertexInputBindingDescriptions)
-      .setVertexAttributeDescriptions(vertexInputAttributeDescription);
-  vk::PipelineInputAssemblyStateCreateInfo inputAssemblyCI;
-  inputAssemblyCI.setTopology(vk::PrimitiveTopology::eTriangleList)
-      .setPrimitiveRestartEnable(false);
-  vk::Viewport viewport;
-  viewport.setX(0)
-      .setY(0)
-      .setWidth(mSwapExtent.width)
-      .setHeight(mSwapExtent.height)
-      .setMinDepth(0.0f)
-      .setMaxDepth(1.0f);
-  vk::Rect2D scissor;
-  scissor.setOffset({0, 0})
-      .setExtent(mSwapExtent);
-  vk::PipelineViewportStateCreateInfo viewportStateCI;
-  viewportStateCI.setViewports(viewport)
-      .setScissors(scissor);
-
-  vk::PipelineRasterizationStateCreateInfo rasterizationStateCI;
-  rasterizationStateCI.setDepthClampEnable(false)
-      .setRasterizerDiscardEnable(false)
-      .setPolygonMode(vk::PolygonMode::eFill)
-      .setLineWidth(1.0f)
-      .setCullMode(vk::CullModeFlagBits::eBack)
-      .setFrontFace(vk::FrontFace::eCounterClockwise)
-      .setDepthBiasEnable(false)
-      .setDepthBiasConstantFactor(0.0f)
-      .setDepthBiasSlopeFactor(0.0f)
-      .setDepthBiasClamp(0.0f);
-
-  vk::PipelineMultisampleStateCreateInfo multisampleStateCI;
-  multisampleStateCI.setSampleShadingEnable(false)
-      .setRasterizationSamples(vk::SampleCountFlagBits::e1)
-      .setMinSampleShading(1.0f)
-      .setPSampleMask(nullptr)
-      .setAlphaToCoverageEnable(false)
-      .setAlphaToOneEnable(false);
-
-  vk::PipelineColorBlendAttachmentState blendAttachmentState;
-  blendAttachmentState.setColorWriteMask(vk::ColorComponentFlagBits::eA |
-                                         vk::ColorComponentFlagBits::eR |
-                                         vk::ColorComponentFlagBits::eG |
-                                         vk::ColorComponentFlagBits::eB)
-      .setBlendEnable(false)
-      .setSrcColorBlendFactor(vk::BlendFactor::eOne)
-      .setDstColorBlendFactor(vk::BlendFactor::eZero)
-      .setColorBlendOp(vk::BlendOp::eAdd)
-      .setSrcAlphaBlendFactor(vk::BlendFactor::eOne)
-      .setDstAlphaBlendFactor(vk::BlendFactor::eZero)
-      .setAlphaBlendOp(vk::BlendOp::eAdd);
-  vk::PipelineColorBlendStateCreateInfo colorBlendingCI;
-  colorBlendingCI.setLogicOp(vk::LogicOp::eCopy)
-      .setLogicOpEnable(false)
-      .setAttachments(blendAttachmentState)
-      .setBlendConstants({0.0f, 0.0f, 0.0f, 0.0f});
-
-  vk::PipelineDepthStencilStateCreateInfo depthStencil;
-  depthStencil
-      .setDepthTestEnable(true)
-      .setDepthWriteEnable(true)
-      .setDepthCompareOp(vk::CompareOp::eLess)
-      .setDepthBoundsTestEnable(false)
-      .setMinDepthBounds(0.0f)
-      .setMaxDepthBounds(1.0f)
-      .setStencilTestEnable(false);
-
-  vk::PushConstantRange ps;
-  ps.setOffset(0).setSize(sizeof(glm::mat4x4)).setStageFlags(vk::ShaderStageFlagBits::eVertex);
-  vk::PipelineLayoutCreateInfo pipelineLayoutCI;
-
-  auto layouts = std::array{mGlobalDescriptorLayout, mImageDescriptorLayout};
-  pipelineLayoutCI.setSetLayouts(layouts)
-      .setPushConstantRanges(ps);
-
-  mPipelineLayout = mDevice.createPipelineLayout(pipelineLayoutCI);
-  vk::GraphicsPipelineCreateInfo graphicsPipelineCI;
-  graphicsPipelineCI.setStages(shaderStages)
-      .setPVertexInputState(&vertexInputCI)
-      .setPInputAssemblyState(&inputAssemblyCI)
-      .setPViewportState(&viewportStateCI)
-      .setPRasterizationState(&rasterizationStateCI)
-      .setPMultisampleState(&multisampleStateCI)
-      .setPDepthStencilState(&depthStencil)
-      .setPColorBlendState(&colorBlendingCI)
-      .setPDynamicState(&dynamicStateCI)
-      .setLayout(mPipelineLayout)
-      .setRenderPass(mRenderPass)
-      .setSubpass(0)
-      .setBasePipelineHandle(nullptr)
-      .setBasePipelineIndex(-1);
-
-  auto graphicsPipelineResult = mDevice.createGraphicsPipeline(nullptr, graphicsPipelineCI);
-  if (graphicsPipelineResult.result != vk::Result::eSuccess)
-  {
-    throw std::runtime_error("Failed to create graphics pipeline !");
-  }
-  mGraphicsPipeline = graphicsPipelineResult.value;
-
-  mDevice.destroyShaderModule(vertexModule);
-  mDevice.destroyShaderModule(fragmentModule);
 }
 
 uint32_t VulkanEngine::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags props)
@@ -349,7 +209,7 @@ void VulkanEngine::initDevice()
     bool valid_present_mode = false;
     for (const auto &mode : presentModes)
     {
-      if (mode == vk::PresentModeKHR::eFifo)
+      if (mode == vk::PresentModeKHR::eImmediate)
       {
         valid_present_mode = true;
         mPresentMode = mode;
@@ -578,7 +438,7 @@ void VulkanEngine::joint()
   mDevice.waitIdle();
 }
 
-bool VulkanEngine::prepare()
+void VulkanEngine::render()
 {
   constexpr uint64_t UINT64_T_MAX = std::numeric_limits<uint64_t>::max();
   if (mDevice.waitForFences(mInFlightLocker, true, UINT64_MAX) != vk::Result::eSuccess)
@@ -587,7 +447,7 @@ bool VulkanEngine::prepare()
   if (imageResult.result == vk::Result::eErrorOutOfDateKHR)
   {
     recreateSwapchain();
-    return false;
+    return;
   }
   else if (imageResult.result != vk::Result::eSuccess && imageResult.result != vk::Result::eSuboptimalKHR)
   {
@@ -613,10 +473,9 @@ bool VulkanEngine::prepare()
       .setRenderArea({{0, 0}, mSwapExtent})
       .setClearValues(clearValues);
 
-  updateUniformBuffer();
+  mStaticModelPipeline.setup();
 
   cmdBuffer.beginRenderPass(renderpassBeginInfo, vk::SubpassContents::eInline);
-  cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, mGraphicsPipeline);
 
   vk::Viewport viewport;
   viewport.setX(0)
@@ -630,11 +489,9 @@ bool VulkanEngine::prepare()
   scissor.setOffset({0, 0})
       .setExtent(mSwapExtent);
   cmdBuffer.setScissor(0, scissor);
-  return true;
-}
-void VulkanEngine::submit()
-{
-  vk::CommandBuffer &cmdBuffer = mCommandBuffer;
+
+  GameObject::globalRender();
+
   cmdBuffer.endRenderPass();
   cmdBuffer.end();
 
@@ -717,17 +574,7 @@ void VulkanEngine::initSyncObjects()
   mInFlightLocker = mDevice.createFence(fenceCI);
 }
 
-void VulkanEngine::updateUniformBuffer()
-{
-  VulkanUniformBufferObject ubo;
-  ubo.proj = mCamera.getProjection(mSwapExtent);
-  ubo.view = mCamera.getView();
-  ubo.proj[1][1] *= -1;
-
-  std::memcpy(mUniformBufferMap, &ubo, sizeof(ubo));
-}
-
-void VulkanEngine::initDescriptor()
+void VulkanEngine::initDescriptorPool()
 {
   std::array<vk::DescriptorPoolSize, 2> dps;
   dps[0].setDescriptorCount(128).setType(vk::DescriptorType::eUniformBuffer);
@@ -735,26 +582,9 @@ void VulkanEngine::initDescriptor()
 
   vk::DescriptorPoolCreateInfo descriptorPoolCI;
   descriptorPoolCI.setPoolSizes(dps)
-      .setMaxSets(128 * dps.size());
+      .setMaxSets(128);
 
   mDescriptorPool = mDevice.createDescriptorPool(descriptorPoolCI);
-
-  vk::DescriptorSetAllocateInfo dsAI;
-  dsAI.setDescriptorPool(mDescriptorPool)
-      .setSetLayouts(mGlobalDescriptorLayout);
-  mGlobalDescriptorSet = mDevice.allocateDescriptorSets(dsAI)[0];
-  vk::DescriptorBufferInfo bufferInfo;
-  bufferInfo.setBuffer(mUniformBuffer.getBuffer())
-      .setOffset(0)
-      .setRange(sizeof(VulkanUniformBufferObject));
-  vk::WriteDescriptorSet writeDescriptor;
-  writeDescriptor.setDstSet(mGlobalDescriptorSet)
-      .setDstBinding(0)
-      .setDstArrayElement(0)
-      .setDescriptorType(vk::DescriptorType::eUniformBuffer)
-      .setDescriptorCount(1)
-      .setBufferInfo(bufferInfo);
-  mDevice.updateDescriptorSets(writeDescriptor, {});
 }
 void VulkanEngine::cleanup() noexcept
 {
@@ -764,13 +594,10 @@ void VulkanEngine::cleanup() noexcept
 
   mDevice.destroyCommandPool(mCommandPool);
 
-  mUniformBuffer.cleanup();
 
-  mDevice.destroyPipeline(mGraphicsPipeline);
-  mDevice.destroyDescriptorSetLayout(mGlobalDescriptorLayout);
-  mDevice.destroyDescriptorSetLayout(mImageDescriptorLayout);
+
+  mStaticModelPipeline.cleanup();
   mDevice.destroyDescriptorPool(mDescriptorPool);
-  mDevice.destroyPipelineLayout(mPipelineLayout);
   mDevice.destroyRenderPass(mRenderPass);
 
   cleanupSwapchain();
@@ -778,35 +605,6 @@ void VulkanEngine::cleanup() noexcept
 
   mInstance.destroyDebugUtilsMessengerEXT(mDebugMessenger, nullptr, mDynamicDispatcher);
   mInstance.destroy();
-}
-
-void VulkanEngine::initUniformBuffers()
-{
-  vk::DeviceSize size = sizeof(VulkanUniformBufferObject);
-  mUniformBuffer.init(size, vk::BufferUsageFlagBits::eUniformBuffer,
-                      vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-  mUniformBufferMap = mUniformBuffer.getMapped(0, size);
-}
-
-void VulkanEngine::initDescriptorLayout()
-{
-  vk::DescriptorSetLayoutBinding layoutBinding;
-  layoutBinding.setBinding(0)
-      .setDescriptorType(vk::DescriptorType::eUniformBuffer)
-      .setDescriptorCount(1)
-      .setStageFlags(vk::ShaderStageFlagBits::eVertex);
-
-  vk::DescriptorSetLayoutCreateInfo layoutCI;
-  layoutCI.setBindings(layoutBinding);
-  mGlobalDescriptorLayout = mDevice.createDescriptorSetLayout(layoutCI);
-
-  layoutBinding.setBinding(0)
-      .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-      .setDescriptorCount(1)
-      .setStageFlags(vk::ShaderStageFlagBits::eFragment);
-
-  layoutCI.setBindings(layoutBinding);
-  mImageDescriptorLayout = mDevice.createDescriptorSetLayout(layoutCI);
 }
 
 void VulkanEngine::onWindowResize(int width, int height) noexcept

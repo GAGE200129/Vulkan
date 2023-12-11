@@ -3,7 +3,7 @@
 
 #include <stb/stb_image.h>
 
-void VulkanTexture::loadFromFile(const std::string &filePath)
+void VulkanTexture::loadFromFile(const std::string &filePath, vk::DescriptorSetLayout outputLayout)
 {
   // Load to memory using stbi
   int texWidth, texHeight, texChannels;
@@ -26,7 +26,7 @@ void VulkanTexture::loadFromFile(const std::string &filePath)
        vk::Format::eR8G8B8A8Srgb,
        vk::ImageTiling::eOptimal,
        vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
-       vk::MemoryPropertyFlagBits::eDeviceLocal);
+       vk::MemoryPropertyFlagBits::eDeviceLocal, outputLayout);
 
   // Upload image to GPU
   transitionLayout(vk::Format::eR8G8B8Srgb,
@@ -109,7 +109,7 @@ void VulkanTexture::transitionLayout(vk::Format format, vk::ImageLayout oldLayou
 }
 
 void VulkanTexture::init(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling,
-                         vk::ImageUsageFlags usage, vk::MemoryPropertyFlags properties)
+                         vk::ImageUsageFlags usage, vk::MemoryPropertyFlags properties, vk::DescriptorSetLayout outputLayout)
 {
   vk::ImageCreateInfo imageCI;
 
@@ -170,7 +170,7 @@ void VulkanTexture::init(uint32_t width, uint32_t height, vk::Format format, vk:
 
   vk::DescriptorSetAllocateInfo dsAI;
   dsAI.setDescriptorPool(VulkanEngine::mDescriptorPool)
-      .setSetLayouts(VulkanEngine::mImageDescriptorLayout);
+      .setSetLayouts(outputLayout);
   mDescriptorSet = VulkanEngine::mDevice.allocateDescriptorSets(dsAI)[0];
   vk::DescriptorImageInfo imageInfo;
   imageInfo.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)

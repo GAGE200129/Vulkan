@@ -8,7 +8,7 @@ local pitch = 0
 local yaw = 0
 
 local sensitivity = 0.33
-local camera_speed = 0.5
+local camera_speed = 4
 local capture_mouse = false
 
 function update(delta)
@@ -55,6 +55,14 @@ function update(delta)
     direction.x = direction.x - rightX
     direction.y = direction.y - rightY
     direction.z = direction.z - rightZ
+  end
+
+  if input_key_is_down(KEY_SPACE) then
+    direction.y = direction.y + 1
+  end
+
+  if input_key_is_down(KEY_LEFT_SHIFT) then
+    direction.y = direction.y - 1
   end
 
   direction.x, direction.y, direction.z = vec3_normalize(direction.x, direction.y, direction.z)

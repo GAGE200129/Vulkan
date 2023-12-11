@@ -34,7 +34,7 @@ void run()
   camera.addComponent<ScriptComponent>("res/scripts/testing.lua");
 
   GameObject &go = GameObject::addGameObject("Testing");
-  go.addComponent<ModelComponent>("res/models/box_textured.glb");
+  go.addComponent<ModelComponent>("res/models/box.glb");
   go.addComponent<TransformComponent>();
 
   GameObject &go1 = GameObject::addGameObject("Testing1");
@@ -60,11 +60,7 @@ void run()
     }
 
     Input::update();
-    if (VulkanEngine::prepare())
-    {
-      GameObject::globalRender();
-      VulkanEngine::submit();
-    }
+    VulkanEngine::render();
 
     lastTime = current;
   }

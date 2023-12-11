@@ -1,6 +1,8 @@
 #pragma once
 #include "VulkanBuffer.hpp"
 
+#include "StaticModelPipeline.hpp"
+
 struct VulkanUniformBufferObject
 {
   glm::mat4 view;
@@ -41,7 +43,7 @@ class VulkanEngine
   friend class VulkanBuffer;
   friend class VulkanTexture;
   friend class ModelComponent;
-
+  friend class StaticModelPipeline;
 public:
   static void init(GLFWwindow *window)
   {
@@ -53,20 +55,16 @@ public:
     initSwapchain();
     initSwapchainImageViews();
     initRenderPass();
-    initDescriptorLayout();
-    initGraphicsPipeline();
+    initDescriptorPool();
+    mStaticModelPipeline.init();
     initDepthBuffer();
     initSwapchainFramebuffers();
     initCommandPool();
     initCommandBuffer();
-    initUniformBuffers();
-    initDescriptor();
     initSyncObjects();
   }
 
   static void joint();
-  static bool prepare();
-  static void submit();
   static void render();
   static void cleanup() noexcept;
   static void onWindowResize(int width, int height) noexcept;
@@ -74,25 +72,21 @@ public:
   inline static VulkanCamera &getCamera() { return mCamera; }
 
 private:
-  static void initUniformBuffers();
-  static void updateUniformBuffer();
-  static void initDescriptorLayout();
   static void initSwapExtent();
   static void initSwapchain();
   static void initSwapchainImageViews();
   static void initSurface();
   static void initDevice();
   static void initVulkan();
-  static void initGraphicsPipeline();
   static vk::ShaderModule initShaderModule(const std::vector<char> &code);
   static void initRenderPass();
   static void initSwapchainFramebuffers();
   static void initCommandPool();
   static void initCommandBuffer();
   static void initSyncObjects();
+  static void initDescriptorPool();
   static void recreateSwapchain();
   static void cleanupSwapchain();
-  static void initDescriptor();
   static void initDepthBuffer();
   static uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags props);
 
@@ -118,20 +112,14 @@ private:
   static vk::PresentModeKHR mPresentMode;
   static vk::Extent2D mSwapExtent;
   static vk::RenderPass mRenderPass;
-  static vk::DescriptorSetLayout mGlobalDescriptorLayout, mImageDescriptorLayout;
   static vk::DescriptorPool mDescriptorPool;
-  static vk::DescriptorSet mGlobalDescriptorSet;
 
-  static vk::PipelineLayout mPipelineLayout;
-  static vk::Pipeline mGraphicsPipeline;
+  static StaticModelPipeline mStaticModelPipeline;
   static vk::CommandPool mCommandPool;
   static vk::CommandBuffer mCommandBuffer;
 
   static vk::Semaphore mImageAvalidableGSignal, mRenderFinishedGSignal;
   static vk::Fence mInFlightLocker;
-
-  static VulkanBuffer mUniformBuffer;
-  static void *mUniformBufferMap;
 
   static vk::Image mDepthImage;
   static vk::DeviceMemory mDepthMemory;
