@@ -2,6 +2,7 @@
 #include "VulkanBuffer.hpp"
 
 #include "StaticModelPipeline.hpp"
+#include "AnimatedModelPipeline.hpp"
 
 struct VulkanUniformBufferObject
 {
@@ -43,7 +44,9 @@ class VulkanEngine
   friend class VulkanBuffer;
   friend class VulkanTexture;
   friend class ModelComponent;
+  friend class AnimatedModelComponent;
   friend class StaticModelPipeline;
+  friend class AnimatedModelPipeline;
 public:
   static void init(GLFWwindow *window)
   {
@@ -57,6 +60,7 @@ public:
     initRenderPass();
     initDescriptorPool();
     mStaticModelPipeline.init();
+    mAnimatedModelPipeline.init();
     initDepthBuffer();
     initSwapchainFramebuffers();
     initCommandPool();
@@ -115,6 +119,7 @@ private:
   static vk::DescriptorPool mDescriptorPool;
 
   static StaticModelPipeline mStaticModelPipeline;
+  static AnimatedModelPipeline mAnimatedModelPipeline;
   static vk::CommandPool mCommandPool;
   static vk::CommandBuffer mCommandBuffer;
 

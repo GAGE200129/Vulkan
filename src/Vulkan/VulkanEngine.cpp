@@ -46,6 +46,7 @@ vk::Extent2D VulkanEngine::mSwapExtent;
 vk::RenderPass VulkanEngine::mRenderPass;
 vk::DescriptorPool VulkanEngine::mDescriptorPool;
 StaticModelPipeline VulkanEngine::mStaticModelPipeline;
+AnimatedModelPipeline VulkanEngine::mAnimatedModelPipeline;
 vk::CommandPool VulkanEngine::mCommandPool;
 vk::CommandBuffer VulkanEngine::mCommandBuffer;
 vk::Semaphore VulkanEngine::mImageAvalidableGSignal, VulkanEngine::mRenderFinishedGSignal;
@@ -474,6 +475,7 @@ void VulkanEngine::render()
       .setClearValues(clearValues);
 
   mStaticModelPipeline.setup();
+  mAnimatedModelPipeline.setup();
 
   cmdBuffer.beginRenderPass(renderpassBeginInfo, vk::SubpassContents::eInline);
 
@@ -597,6 +599,7 @@ void VulkanEngine::cleanup() noexcept
 
 
   mStaticModelPipeline.cleanup();
+  mAnimatedModelPipeline.cleanup();
   mDevice.destroyDescriptorPool(mDescriptorPool);
   mDevice.destroyRenderPass(mRenderPass);
 

@@ -151,6 +151,8 @@ ModelComponent::MeshData *ModelComponent::initCache(const std::string &filePath)
 
 void ModelComponent::render()
 {
+
+  
   VulkanEngine::mCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, VulkanEngine::mStaticModelPipeline.mPipeline);
   VulkanEngine::mCommandBuffer.bindVertexBuffers(0, mMeshData->mPositionBuffer.getBuffer(), {0});
   VulkanEngine::mCommandBuffer.bindVertexBuffers(1, mMeshData->mNormalBuffer.getBuffer(), {0});

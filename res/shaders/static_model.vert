@@ -7,19 +7,19 @@ layout(location = 2) in vec2 inUv;
 
 layout(location = 0) out vec2 FSUv;
 
-layout(set = 0, binding = 0) uniform UniformBufferObject
+layout(set = 0, binding = 0) uniform GlobalUBO
 {
   mat4 view;
   mat4 proj;
-} ubo;
+} globalUBO;
 
-layout( push_constant ) uniform Constants
+layout(push_constant) uniform Constants
 {
   mat4 model;
 } constants;
 
 
 void main() {
-  gl_Position = ubo.proj * ubo.view * constants.model * vec4(inPos, 1.0);
+  gl_Position = globalUBO.proj * globalUBO.view * constants.model * vec4(inPos, 1.0);
   FSUv = inUv;
 }

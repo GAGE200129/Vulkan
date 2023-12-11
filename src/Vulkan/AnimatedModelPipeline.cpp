@@ -1,39 +1,33 @@
 #include "pch.hpp"
-#include "StaticModelPipeline.hpp"
+#include "AnimatedModelPipeline.hpp"
 
 #include "VulkanEngine.hpp"
 
-void StaticModelPipeline::init()
+void AnimatedModelPipeline::init()
 {
   // Descriptor layout
+  vk::DescriptorSetLayoutBinding layoutBinding;
+  vk::DescriptorSetLayoutCreateInfo layoutCI;
 
-  {
-    vk::DescriptorSetLayoutBinding layoutBinding;
-    layoutBinding.setBinding(0)
-        .setDescriptorType(vk::DescriptorType::eUniformBuffer)
-        .setDescriptorCount(1)
-        .setStageFlags(vk::ShaderStageFlagBits::eVertex);
+  layoutBinding.setBinding(0)
+      .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+      .setDescriptorCount(1)
+      .setStageFlags(vk::ShaderStageFlagBits::eVertex);
 
-    vk::DescriptorSetLayoutCreateInfo layoutCI;
-    layoutCI.setBindings(layoutBinding);
-    mGlobalDescriptorLayout = VulkanEngine::mDevice.createDescriptorSetLayout(layoutCI);
-  }
+  layoutCI.setBindings(layoutBinding);
+  mGlobalDescriptorLayout = VulkanEngine::mDevice.createDescriptorSetLayout(layoutCI);
 
-  {
-    vk::DescriptorSetLayoutBinding layoutBinding;
-    layoutBinding.setBinding(0)
-        .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-        .setDescriptorCount(1)
-        .setStageFlags(vk::ShaderStageFlagBits::eFragment);
+  layoutBinding.setBinding(0)
+      .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+      .setDescriptorCount(1)
+      .setStageFlags(vk::ShaderStageFlagBits::eFragment);
 
-    vk::DescriptorSetLayoutCreateInfo layoutCI;
-    layoutCI.setBindings(layoutBinding);
-    mImageDescriptorLayout = VulkanEngine::mDevice.createDescriptorSetLayout(layoutCI);
-  }
+  layoutCI.setBindings(layoutBinding);
+  mImageDescriptorLayout = VulkanEngine::mDevice.createDescriptorSetLayout(layoutCI);
 
   // Pipeline
-  auto vertexCode = VulkanEngine::readfile("res/shaders/static_model.vert.spv");
-  auto fragmentCode = VulkanEngine::readfile("res/shaders/static_model.frag.spv");
+  auto vertexCode = VulkanEngine::readfile("res/shaders/animated_model.vert.spv");
+  auto fragmentCode = VulkanEngine::readfile("res/shaders/animated_model.frag.spv");
 
   vk::ShaderModule vertexModule = VulkanEngine::initShaderModule(vertexCode);
   vk::ShaderModule fragmentModule = VulkanEngine::initShaderModule(fragmentCode);
@@ -52,15 +46,19 @@ void StaticModelPipeline::init()
   vk::PipelineVertexInputStateCreateInfo vertexInputCI;
 
   // Position, normal, uv
-  std::array<vk::VertexInputBindingDescription, 3> vertexInputBindingDescriptions;
+  std::array<vk::VertexInputBindingDescription, 5> vertexInputBindingDescriptions;
   vertexInputBindingDescriptions[0].setBinding(0).setStride(sizeof(glm::vec3)).setInputRate(vk::VertexInputRate::eVertex);
   vertexInputBindingDescriptions[1].setBinding(1).setStride(sizeof(glm::vec3)).setInputRate(vk::VertexInputRate::eVertex);
   vertexInputBindingDescriptions[2].setBinding(2).setStride(sizeof(glm::vec2)).setInputRate(vk::VertexInputRate::eVertex);
+  vertexInputBindingDescriptions[3].setBinding(3).setStride(sizeof(glm::ivec4)).setInputRate(vk::VertexInputRate::eVertex);
+  vertexInputBindingDescriptions[4].setBinding(4).setStride(sizeof(glm::vec4)).setInputRate(vk::VertexInputRate::eVertex);
 
-  std::array<vk::VertexInputAttributeDescription, 3> vertexInputAttributeDescription;
+  std::array<vk::VertexInputAttributeDescription, 5> vertexInputAttributeDescription;
   vertexInputAttributeDescription[0].setBinding(0).setLocation(0).setFormat(vk::Format::eR32G32B32Sfloat);
   vertexInputAttributeDescription[1].setBinding(1).setLocation(1).setFormat(vk::Format::eR32G32B32Sfloat);
   vertexInputAttributeDescription[2].setBinding(2).setLocation(2).setFormat(vk::Format::eR32G32Sfloat);
+  vertexInputAttributeDescription[3].setBinding(3).setLocation(3).setFormat(vk::Format::eR32G32B32A32Uint);
+  vertexInputAttributeDescription[4].setBinding(4).setLocation(4).setFormat(vk::Format::eR32G32B32A32Sfloat);
 
   vertexInputCI.setVertexBindingDescriptions(vertexInputBindingDescriptions)
       .setVertexAttributeDescriptions(vertexInputAttributeDescription);
@@ -129,14 +127,13 @@ void StaticModelPipeline::init()
       .setMaxDepthBounds(1.0f)
       .setStencilTestEnable(false);
 
+  vk::PushConstantRange ps;
+  ps.setOffset(0).setSize(sizeof(glm::mat4x4)).setStageFlags(vk::ShaderStageFlagBits::eVertex);
   vk::PipelineLayoutCreateInfo pipelineLayoutCI;
-  vk::PushConstantRange pushConstantCI;
-  pushConstantCI.setStageFlags(vk::ShaderStageFlagBits::eVertex)
-    .setSize(sizeof(glm::mat4x4));
 
   auto layouts = std::array{mGlobalDescriptorLayout, mImageDescriptorLayout};
   pipelineLayoutCI.setSetLayouts(layouts)
-    .setPushConstantRanges(pushConstantCI);
+      .setPushConstantRanges(ps);
 
   mLayout = VulkanEngine::mDevice.createPipelineLayout(pipelineLayoutCI);
   vk::GraphicsPipelineCreateInfo graphicsPipelineCI;
@@ -190,7 +187,7 @@ void StaticModelPipeline::init()
   VulkanEngine::mDevice.updateDescriptorSets(writeDescriptor, {});
 }
 
-void StaticModelPipeline::setup()
+void AnimatedModelPipeline::setup()
 {
   VulkanUniformBufferObject ubo;
   ubo.proj = VulkanEngine::mCamera.getProjection(VulkanEngine::mSwapExtent);
@@ -199,7 +196,7 @@ void StaticModelPipeline::setup()
 
   std::memcpy(mUniformBufferMap, &ubo, sizeof(ubo));
 }
-void StaticModelPipeline::cleanup()
+void AnimatedModelPipeline::cleanup()
 {
   mUniformBuffer.cleanup();
   VulkanEngine::mDevice.destroyDescriptorSetLayout(mGlobalDescriptorLayout);

@@ -6,6 +6,7 @@ class VulkanTexture
 {
   friend class VulkanEngine;
   friend class ModelComponent;
+  friend class AnimatedModelComponent;
 public:
   VulkanTexture() {}
 

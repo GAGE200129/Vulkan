@@ -7,6 +7,7 @@
 #include "ECS/GameObject.hpp"
 #include "ECS/ModelComponent.hpp"
 #include "ECS/ScriptComponent.hpp"
+#include "ECS/AnimatedModelComponent.hpp"
 
 #include "Input.hpp"
 
@@ -34,7 +35,7 @@ void run()
   camera.addComponent<ScriptComponent>("res/scripts/testing.lua");
 
   GameObject &go = GameObject::addGameObject("Testing");
-  go.addComponent<ModelComponent>("res/models/box.glb");
+  go.addComponent<AnimatedModelComponent>("res/models/box.glb");
   go.addComponent<TransformComponent>();
 
   GameObject &go1 = GameObject::addGameObject("Testing1");
@@ -68,6 +69,7 @@ void run()
 
   GameObject::globalShutdown();
   ModelComponent::clearCache();
+  AnimatedModelComponent::clearCache();
   VulkanEngine::cleanup();
   glfwDestroyWindow(mWindow);
   glfwTerminate();
