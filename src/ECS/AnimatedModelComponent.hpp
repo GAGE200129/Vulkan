@@ -5,25 +5,16 @@
 
 #include "Vulkan/VulkanTexture.hpp"
 
+#include <btBulletDynamicsCommon.h>
+
 class AnimatedModelComponent : public Component
 {
 public:
   AnimatedModelComponent(const std::string &filePath) : mFilePath(filePath) {}
-  void init() override
-  {
-    if (sCache.find(mFilePath) != sCache.end())
-    {
-      mMeshData = sCache.at(mFilePath).get();
-    }
-    else
-    {
-      mMeshData = initCache(mFilePath);
-    }
-
-    mTransformComponent = mGameObject->getRequiredComponent<TransformComponent>();
-  }
-
+  void init() override;
+  void update(float delta) override;
   void render() override;
+  void shutdown() noexcept override;
 
 private:
   struct MeshData
@@ -41,11 +32,8 @@ private:
       VulkanTexture mDiffuse;
     };
 
-    struct BoneData
-    {
-      glm::uvec4 ids;
-      glm::vec4 weights;
-    };
+    Assimp::Importer mImporter;
+    const aiScene* mPScene;
     std::vector<MeshEntry> mMeshes;
     std::vector<Material> mMaterials;
     VulkanBuffer mPositionBuffer, mNormalBuffer, mUvBuffer, mBoneIDBuffer, mBoneWeightBuffer, mIndexBuffer;
@@ -58,10 +46,16 @@ private:
 
     std::vector<unsigned int> mMeshBaseVertex;
     std::map<std::string, unsigned int> mBoneNameToIndex;
+    std::vector<glm::mat4> mBoneIndexToOffset;
   };
+
   MeshData *mMeshData;
   TransformComponent *mTransformComponent;
   std::string mFilePath;
+  std::array<glm::mat4, 100> mBoneTransforms;
+  VulkanBuffer mBoneTransformBuffer;
+  void* mBoneTransformBufferMapped;
+  vk::DescriptorSet mBoneTransformDescriptorSet;
 
   // static field
 public:

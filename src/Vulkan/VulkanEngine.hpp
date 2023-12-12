@@ -117,6 +117,10 @@ private:
   static vk::Extent2D mSwapExtent;
   static vk::RenderPass mRenderPass;
   static vk::DescriptorPool mDescriptorPool;
+  static vk::DescriptorSetLayout mGlobalDescriptorLayout;
+  static vk::DescriptorSet mGlobalDescriptorSet;
+  static VulkanBuffer mGlobalUniformBuffer;
+  static void *mGlobalUniformBufferMap;
 
   static StaticModelPipeline mStaticModelPipeline;
   static AnimatedModelPipeline mAnimatedModelPipeline;

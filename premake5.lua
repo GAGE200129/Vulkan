@@ -27,7 +27,7 @@ project "EnGAGE"
    pchheader "src/pch.hpp"
 
    files { "src/**.hpp", "src/**.cpp", "res/**.vert", "res/**.frag" }
-   links { "glfw", "vulkan", "spdlog", "fmt", "lua5.4", "assimp" }
+   links { "glfw", "vulkan", "spdlog", "fmt", "lua5.4", "assimp", "LinearMath", "BulletCollision", "BulletDynamics" }
    includedirs { 
       "src",
       "libs/EnTT/single_include"

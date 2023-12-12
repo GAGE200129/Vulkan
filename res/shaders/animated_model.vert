@@ -17,6 +17,12 @@ layout(set = 0, binding = 0) uniform UniformBufferObject
   mat4 proj;
 } ubo;
 
+layout(set = 2, binding = 0) uniform BoneTransforms
+{
+  mat4 mat[100];
+} boneTransforms;
+
+
 layout( push_constant ) uniform Constants
 {
   mat4 model;
@@ -24,7 +30,13 @@ layout( push_constant ) uniform Constants
 
 
 void main() {
-  gl_Position = ubo.proj * ubo.view * constants.model * vec4(inPos, 1.0);
+
+  mat4 boneTransform = boneTransforms.mat[inBoneIDs[0]] * inBoneWeights[0];
+  boneTransform += boneTransforms.mat[inBoneIDs[1]] * inBoneWeights[1];
+  boneTransform += boneTransforms.mat[inBoneIDs[2]] * inBoneWeights[2];
+  boneTransform += boneTransforms.mat[inBoneIDs[3]] * inBoneWeights[3];
+
+  gl_Position = ubo.proj * ubo.view * boneTransform * constants.model * vec4(inPos, 1.0);
   FSUv = inUv;
   FSBoneIDs = inBoneIDs;
   FSBoneWeights = inBoneWeights;

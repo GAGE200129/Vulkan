@@ -10,18 +10,6 @@ void StaticModelPipeline::init()
   {
     vk::DescriptorSetLayoutBinding layoutBinding;
     layoutBinding.setBinding(0)
-        .setDescriptorType(vk::DescriptorType::eUniformBuffer)
-        .setDescriptorCount(1)
-        .setStageFlags(vk::ShaderStageFlagBits::eVertex);
-
-    vk::DescriptorSetLayoutCreateInfo layoutCI;
-    layoutCI.setBindings(layoutBinding);
-    mGlobalDescriptorLayout = VulkanEngine::mDevice.createDescriptorSetLayout(layoutCI);
-  }
-
-  {
-    vk::DescriptorSetLayoutBinding layoutBinding;
-    layoutBinding.setBinding(0)
         .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
         .setDescriptorCount(1)
         .setStageFlags(vk::ShaderStageFlagBits::eFragment);
@@ -134,7 +122,7 @@ void StaticModelPipeline::init()
   pushConstantCI.setStageFlags(vk::ShaderStageFlagBits::eVertex)
     .setSize(sizeof(glm::mat4x4));
 
-  auto layouts = std::array{mGlobalDescriptorLayout, mImageDescriptorLayout};
+  auto layouts = std::array{VulkanEngine::mGlobalDescriptorLayout, mImageDescriptorLayout};
   pipelineLayoutCI.setSetLayouts(layouts)
     .setPushConstantRanges(pushConstantCI);
 
@@ -165,44 +153,12 @@ void StaticModelPipeline::init()
   VulkanEngine::mDevice.destroyShaderModule(vertexModule);
   VulkanEngine::mDevice.destroyShaderModule(fragmentModule);
 
-  // Uniform buffer
-  vk::DeviceSize size = sizeof(VulkanUniformBufferObject);
-  mUniformBuffer.init(size, vk::BufferUsageFlagBits::eUniformBuffer,
-                      vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-  mUniformBufferMap = mUniformBuffer.getMapped(0, size);
-
-  // Descriptor
-  vk::DescriptorSetAllocateInfo dsAI;
-  dsAI.setDescriptorPool(VulkanEngine::mDescriptorPool)
-      .setSetLayouts(mGlobalDescriptorLayout);
-  mGlobalDescriptorSet = VulkanEngine::mDevice.allocateDescriptorSets(dsAI)[0];
-  vk::DescriptorBufferInfo bufferInfo;
-  bufferInfo.setBuffer(mUniformBuffer.getBuffer())
-      .setOffset(0)
-      .setRange(sizeof(VulkanUniformBufferObject));
-  vk::WriteDescriptorSet writeDescriptor;
-  writeDescriptor.setDstSet(mGlobalDescriptorSet)
-      .setDstBinding(0)
-      .setDstArrayElement(0)
-      .setDescriptorType(vk::DescriptorType::eUniformBuffer)
-      .setDescriptorCount(1)
-      .setBufferInfo(bufferInfo);
-  VulkanEngine::mDevice.updateDescriptorSets(writeDescriptor, {});
+  
 }
 
-void StaticModelPipeline::setup()
-{
-  VulkanUniformBufferObject ubo;
-  ubo.proj = VulkanEngine::mCamera.getProjection(VulkanEngine::mSwapExtent);
-  ubo.view = VulkanEngine::mCamera.getView();
-  ubo.proj[1][1] *= -1;
-
-  std::memcpy(mUniformBufferMap, &ubo, sizeof(ubo));
-}
 void StaticModelPipeline::cleanup()
 {
-  mUniformBuffer.cleanup();
-  VulkanEngine::mDevice.destroyDescriptorSetLayout(mGlobalDescriptorLayout);
+  
   VulkanEngine::mDevice.destroyDescriptorSetLayout(mImageDescriptorLayout);
   VulkanEngine::mDevice.destroyPipeline(mPipeline);
   VulkanEngine::mDevice.destroyPipelineLayout(mLayout);

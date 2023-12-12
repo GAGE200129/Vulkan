@@ -161,9 +161,6 @@ void ModelComponent::render()
   glm::mat4x4 modelMat = glm::translate(glm::mat4(1.0f), mTransformComponent->position);
   VulkanEngine::mCommandBuffer.pushConstants(VulkanEngine::mStaticModelPipeline.mLayout,
                                              vk::ShaderStageFlagBits::eVertex, 0, sizeof(modelMat), &modelMat);
-
-  VulkanEngine::mCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, VulkanEngine::VulkanEngine::mStaticModelPipeline.mLayout,
-                                                  0, {VulkanEngine::mStaticModelPipeline.mGlobalDescriptorSet}, {});
   for (const auto &mesh : mMeshData->mMeshes)
   {
     auto &material = mMeshData->mMaterials[mesh.materialIndex];

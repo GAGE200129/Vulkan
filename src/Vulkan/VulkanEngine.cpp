@@ -55,6 +55,11 @@ vk::Image VulkanEngine::mDepthImage;
 vk::DeviceMemory VulkanEngine::mDepthMemory;
 vk::ImageView VulkanEngine::mDepthView;
 uint32_t VulkanEngine::mCurrentSwapChainImageIndex = 0;
+vk::DescriptorSetLayout VulkanEngine::mGlobalDescriptorLayout;
+vk::DescriptorSet VulkanEngine::mGlobalDescriptorSet;
+VulkanBuffer VulkanEngine::mGlobalUniformBuffer;
+void *VulkanEngine::mGlobalUniformBufferMap;
+
 VulkanCamera VulkanEngine::mCamera = {{0, 0, 0}, 0, 0, 0.1, 100.0f, 70.0f};
 
 void VulkanEngine::cleanupSwapchain()
@@ -474,8 +479,13 @@ void VulkanEngine::render()
       .setRenderArea({{0, 0}, mSwapExtent})
       .setClearValues(clearValues);
 
-  mStaticModelPipeline.setup();
-  mAnimatedModelPipeline.setup();
+
+  //Update ubo
+  VulkanUniformBufferObject ubo;
+  ubo.proj = VulkanEngine::mCamera.getProjection(VulkanEngine::mSwapExtent);
+  ubo.view = VulkanEngine::mCamera.getView();
+  ubo.proj[1][1] *= -1;
+  std::memcpy(mGlobalUniformBufferMap, &ubo, sizeof(ubo));
 
   cmdBuffer.beginRenderPass(renderpassBeginInfo, vk::SubpassContents::eInline);
 
@@ -491,6 +501,9 @@ void VulkanEngine::render()
   scissor.setOffset({0, 0})
       .setExtent(mSwapExtent);
   cmdBuffer.setScissor(0, scissor);
+
+  cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, mStaticModelPipeline.mLayout, 0, {mGlobalDescriptorSet}, {});
+  cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, mAnimatedModelPipeline.mLayout, 0, {mGlobalDescriptorSet}, {});
 
   GameObject::globalRender();
 
@@ -587,6 +600,40 @@ void VulkanEngine::initDescriptorPool()
       .setMaxSets(128);
 
   mDescriptorPool = mDevice.createDescriptorPool(descriptorPoolCI);
+
+  vk::DescriptorSetLayoutBinding layoutBinding;
+  layoutBinding.setBinding(0)
+      .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+      .setDescriptorCount(1)
+      .setStageFlags(vk::ShaderStageFlagBits::eVertex);
+
+  vk::DescriptorSetLayoutCreateInfo layoutCI;
+  layoutCI.setBindings(layoutBinding);
+  mGlobalDescriptorLayout = VulkanEngine::mDevice.createDescriptorSetLayout(layoutCI);
+
+  // Uniform buffer
+  vk::DeviceSize size = sizeof(VulkanUniformBufferObject);
+  mGlobalUniformBuffer.init(size, vk::BufferUsageFlagBits::eUniformBuffer,
+                            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+  mGlobalUniformBufferMap = mGlobalUniformBuffer.getMapped(0, size);
+
+  // Descriptor
+  vk::DescriptorSetAllocateInfo dsAI;
+  dsAI.setDescriptorPool(VulkanEngine::mDescriptorPool)
+      .setSetLayouts(mGlobalDescriptorLayout);
+  mGlobalDescriptorSet = VulkanEngine::mDevice.allocateDescriptorSets(dsAI)[0];
+  vk::DescriptorBufferInfo bufferInfo;
+  bufferInfo.setBuffer(mGlobalUniformBuffer.getBuffer())
+      .setOffset(0)
+      .setRange(sizeof(VulkanUniformBufferObject));
+  vk::WriteDescriptorSet writeDescriptor;
+  writeDescriptor.setDstSet(mGlobalDescriptorSet)
+      .setDstBinding(0)
+      .setDstArrayElement(0)
+      .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+      .setDescriptorCount(1)
+      .setBufferInfo(bufferInfo);
+  VulkanEngine::mDevice.updateDescriptorSets(writeDescriptor, {});
 }
 void VulkanEngine::cleanup() noexcept
 {
@@ -596,10 +643,10 @@ void VulkanEngine::cleanup() noexcept
 
   mDevice.destroyCommandPool(mCommandPool);
 
-
-
   mStaticModelPipeline.cleanup();
   mAnimatedModelPipeline.cleanup();
+  mGlobalUniformBuffer.cleanup();
+  mDevice.destroyDescriptorSetLayout(mGlobalDescriptorLayout);
   mDevice.destroyDescriptorPool(mDescriptorPool);
   mDevice.destroyRenderPass(mRenderPass);
 

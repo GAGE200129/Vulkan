@@ -36,11 +36,11 @@ void run()
 
   GameObject &go = GameObject::addGameObject("Testing");
   go.addComponent<AnimatedModelComponent>("res/models/box.glb");
-  go.addComponent<TransformComponent>();
+  TransformComponent *c = go.addComponent<TransformComponent>();
 
   GameObject &go1 = GameObject::addGameObject("Testing1");
   go1.addComponent<ModelComponent>("res/models/box_textured.glb");
-  TransformComponent *c = go1.addComponent<TransformComponent>();
+  go1.addComponent<TransformComponent>();
   c->position.x += 3;
 
   GameObject::globalInit();
