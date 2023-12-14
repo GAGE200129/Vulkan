@@ -36,7 +36,7 @@ void main() {
   boneTransform += boneTransforms.mat[inBoneIDs[2]] * inBoneWeights[2];
   boneTransform += boneTransforms.mat[inBoneIDs[3]] * inBoneWeights[3];
 
-  gl_Position = ubo.proj * ubo.view * boneTransform * constants.model * vec4(inPos, 1.0);
+  gl_Position = ubo.proj * ubo.view * constants.model * boneTransform * vec4(inPos, 1.0);
   FSUv = inUv;
   FSBoneIDs = inBoneIDs;
   FSBoneWeights = inBoneWeights;

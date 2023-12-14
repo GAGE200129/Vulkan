@@ -7,6 +7,9 @@
 
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtx/norm.hpp>
+#include <typeindex>
+
+#include "TransformComponent.hpp"
 
 int luaUpdateCameraParams(lua_State *L)
 {
@@ -63,7 +66,6 @@ int luaVec3Rotate(lua_State *L)
   dir.y = lua_tonumber(L, idx++);
   dir.z = lua_tonumber(L, idx++);
 
-
   v = glm::rotate(v, glm::radians(angle), dir);
 
   lua_pushnumber(L, v.x);
@@ -73,15 +75,14 @@ int luaVec3Rotate(lua_State *L)
   return 3;
 }
 
-static int luaVec3Normalize(lua_State* L)
+static int luaVec3Normalize(lua_State *L)
 {
   glm::vec3 v;
   v.x = lua_tonumber(L, 1);
   v.y = lua_tonumber(L, 2);
   v.z = lua_tonumber(L, 3);
 
-
-  if(glm::length2(v) != 0.0f)
+  if (glm::length2(v) != 0.0f)
   {
     v = glm::normalize(v);
   }
@@ -93,11 +94,11 @@ static int luaVec3Normalize(lua_State* L)
   return 3;
 }
 
-static int luaMouseSetLock(lua_State* L)
+static int luaMouseSetLock(lua_State *L)
 {
   bool v = lua_toboolean(L, 1);
 
-  if(v)
+  if (v)
     Input::lockCursor();
   else
     Input::unlockCursor();
@@ -105,23 +106,75 @@ static int luaMouseSetLock(lua_State* L)
 }
 
 
+
+static int luaGameObjectGetComponent(lua_State* L)
+{
+  static std::map<std::string, std::function<Component*(GameObject* go)>> sComponentMap = 
+  {
+    {"transform", [](GameObject* go){ return go->getRequiredComponent<TransformComponent>(); }}
+  };
+
+  GameObject* go = (GameObject*)lua_touserdata(L, 1);
+  std::string name = lua_tostring(L, 2);
+  std::transform(name.begin(), name.end(), name.begin(),
+    [](unsigned char c){ return std::tolower(c); });
+
+  lua_pushlightuserdata(L, sComponentMap.at(name)(go));
+  return 1;
+}
+
+static int luaTransformSetPosition(lua_State* L)
+{
+  TransformComponent* transform = (TransformComponent*)lua_touserdata(L, 1);
+  transform->position = {lua_tonumber(L, 2), lua_tonumber(L, 3), lua_tonumber(L, 4)};
+  return 0;
+}
+
+std::map<std::string, lua_CFunction> ScriptComponent::sFunctionMaps;
+
+void ScriptComponent::registerLuaScript(const std::string &name, lua_CFunction function)
+{
+  sFunctionMaps[name] = function;
+}
+
 void ScriptComponent::init()
 {
   L = luaL_newstate();
-  lua_register(L, "vk_camera_update_params", luaUpdateCameraParams);
-  lua_register(L, "input_key_is_down", luaIsKeyDown);
-  lua_register(L, "input_key_is_down_once", luaIsKeyDownOnce);
-  lua_register(L, "input_mouse_get_delta", luaGetMouseDelta);
-  lua_register(L, "input_mouse_set_lock", luaMouseSetLock);
-  lua_register(L, "vec3_rotate", luaVec3Rotate);
-  lua_register(L, "vec3_normalize", luaVec3Normalize);
+  luaL_openlibs(L);
+  registerLuaScript("vk_camera_update_params", luaUpdateCameraParams);
+  registerLuaScript("input_key_is_down", luaIsKeyDown);
+  registerLuaScript("input_key_is_down_once", luaIsKeyDownOnce);
+  registerLuaScript("input_mouse_get_delta", luaGetMouseDelta);
+  registerLuaScript("input_mouse_set_lock", luaMouseSetLock);
+  registerLuaScript("vec3_rotate", luaVec3Rotate);
+  registerLuaScript("vec3_normalize", luaVec3Normalize);
+  registerLuaScript("gameobject_get_component", luaGameObjectGetComponent);
+  registerLuaScript("transform_set_position", luaTransformSetPosition);
+
+  for (const auto &[name, function] : sFunctionMaps)
+  {
+    lua_register(L, name.c_str(), function);
+  }
 
   Input::registerScriptKeys(L);
 
   int ret = luaL_dofile(L, mFilePath.c_str());
   if (ret != 0)
   {
-    throw std::runtime_error("Can't load script file: " + mFilePath);
+    std::string error = "no error";
+    if (lua_isstring(L, lua_gettop(L)))
+      error = lua_tostring(L, -1);
+    throw std::runtime_error("Can't load script file: " + mFilePath + " | error: " + error);
+  }
+}
+
+void ScriptComponent::lateInit()
+{
+  lua_getglobal(L, "init");
+  if (lua_isfunction(L, -1))
+  {
+    lua_pushlightuserdata(L, mGameObject);
+    lua_call(L, 1, 0);
   }
 }
 

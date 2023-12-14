@@ -15,6 +15,12 @@ public:
       c->init();
   }
 
+  void lateInit()
+  {
+    for (auto &c : mComponents)
+      c->lateInit();
+  }
+
   void update(float delta)
   {
     for (auto &c : mComponents)
@@ -82,6 +88,11 @@ public:
     for (const auto &go : sGameObjects)
     {
       go->init();
+    }
+
+    for (const auto &go : sGameObjects)
+    {
+      go->lateInit();
     }
   }
 

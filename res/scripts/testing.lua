@@ -11,6 +11,8 @@ local sensitivity = 0.33
 local camera_speed = 4
 local capture_mouse = false
 
+
+
 function update(delta)
 
   local rightX, rightY, rightZ = vec3_rotate(global_right.x, global_right.y, global_right.z, yaw, 0, 1, 0)

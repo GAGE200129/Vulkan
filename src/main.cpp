@@ -8,6 +8,7 @@
 #include "ECS/ModelComponent.hpp"
 #include "ECS/ScriptComponent.hpp"
 #include "ECS/AnimatedModelComponent.hpp"
+#include "ECS/AnimatorComponent.hpp"
 
 #include "Input.hpp"
 
@@ -35,16 +36,19 @@ void run()
   camera.addComponent<ScriptComponent>("res/scripts/testing.lua");
 
   GameObject &go = GameObject::addGameObject("Testing");
+  AnimatorComponent* animator = go.addComponent<AnimatorComponent>();
   go.addComponent<AnimatedModelComponent>("res/models/box.glb");
   TransformComponent *c = go.addComponent<TransformComponent>();
+  
 
   GameObject &go1 = GameObject::addGameObject("Testing1");
   go1.addComponent<ModelComponent>("res/models/box_textured.glb");
   go1.addComponent<TransformComponent>();
-  c->position.x += 3;
+  go1.addComponent<ScriptComponent>("res/scripts/moveTest.lua");
 
   GameObject::globalInit();
 
+  animator->setCurrentAnimation("Crazy1");
 
   double lastTime = glfwGetTime();
   while (!glfwWindowShouldClose(mWindow))

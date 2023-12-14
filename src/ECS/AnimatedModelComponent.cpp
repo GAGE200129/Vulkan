@@ -6,28 +6,6 @@
 
 #include <stb/stb_image.h>
 
-static glm::mat4x4 aiToGlmMatrix4x4(const aiMatrix4x4 &a)
-{
-  glm::mat4x4 b;
-  b[0][0] = a.a1;
-  b[1][0] = a.a2;
-  b[2][0] = a.a3;
-  b[3][0] = a.a4;
-  b[0][1] = a.b1;
-  b[1][1] = a.b2;
-  b[2][1] = a.b3;
-  b[3][1] = a.b4;
-  b[0][2] = a.c1;
-  b[1][2] = a.c2;
-  b[2][2] = a.c3;
-  b[3][2] = a.c4;
-  b[0][3] = a.d1;
-  b[1][3] = a.d2;
-  b[2][3] = a.d3;
-  b[3][3] = a.d4;
-  return b;
-}
-
 std::map<std::string, std::unique_ptr<AnimatedModelComponent::MeshData>> AnimatedModelComponent::sCache;
 
 AnimatedModelComponent::MeshData *AnimatedModelComponent::initCache(const std::string &filePath)
@@ -42,6 +20,7 @@ AnimatedModelComponent::MeshData *AnimatedModelComponent::initCache(const std::s
     throw std::runtime_error(meshData->mImporter.GetErrorString());
   }
   meshData->mPScene = pScene;
+  //meshData->mGlobalInverse = glm::inverse(Utils::aiToGlmMatrix4x4(pScene->mRootNode->mTransformation));
 
   // Count and reserve vertex data for all meshes in scene
   unsigned int numVertices = 0, numIndices = 0, numBones = 0;
@@ -206,7 +185,7 @@ void AnimatedModelComponent::parseBone(const std::unique_ptr<MeshData> &meshData
 
   if (boneID == meshData->mBoneIndexToOffset.size())
   {
-    meshData->mBoneIndexToOffset.push_back(aiToGlmMatrix4x4(pBone->mOffsetMatrix));
+    meshData->mBoneIndexToOffset.push_back(Utils::aiToGlmMatrix4x4(pBone->mOffsetMatrix));
   }
 
   for (unsigned int i = 0; i < pBone->mNumWeights; i++)
@@ -230,30 +209,7 @@ void AnimatedModelComponent::parseBone(const std::unique_ptr<MeshData> &meshData
 
 void AnimatedModelComponent::update(float delta)
 {
-  std::function<void(const aiNode *node, glm::mat4x4 &accumulatedTransform)> parse_node;
-  parse_node = [&](const aiNode *node, glm::mat4x4 &accumulatedTransform)
-  {
-    // std::cout << "Node: " << node->mName.C_Str()
-    //           << " num childrens: " << node->mNumChildren
-    //           << " num meshes: " << node->mNumMeshes << "\n";
-    std::string nodeName = node->mName.C_Str();
-    glm::mat4x4 globalTransform = accumulatedTransform * aiToGlmMatrix4x4(node->mTransformation);
-
-    if (mMeshData->mBoneNameToIndex.find(nodeName) != mMeshData->mBoneNameToIndex.end())
-    {
-      unsigned int boneIndex = mMeshData->mBoneNameToIndex.at(nodeName);
-      mBoneTransforms[boneIndex] = globalTransform * mMeshData->mBoneIndexToOffset.at(boneIndex);
-    }
-
-    for (int i = 0; i < node->mNumChildren; i++)
-    {
-      parse_node(node->mChildren[i], globalTransform);
-    }
-  };
-  glm::mat4x4 mat = glm::mat4(1.0f);
-  parse_node(mMeshData->mPScene->mRootNode, mat);
-
-  //Update UBO
+  // Update UBO
   std::memcpy(mBoneTransformBufferMapped, mBoneTransforms.data(), sizeof(glm::mat4x4) * mMeshData->mBoneIndexToOffset.size());
 }
 
@@ -314,7 +270,7 @@ void AnimatedModelComponent::init()
   // Uniform buffer
   vk::DeviceSize size = sizeof(mBoneTransforms);
   mBoneTransformBuffer.init(size, vk::BufferUsageFlagBits::eUniformBuffer,
-                      vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+                            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
   mBoneTransformBufferMapped = mBoneTransformBuffer.getMapped(0, size);
 
   // Descriptor

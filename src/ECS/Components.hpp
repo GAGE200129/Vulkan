@@ -10,6 +10,7 @@ public:
 
 
   virtual void init() {}
+  virtual void lateInit() {}
   virtual void update(float delta) {} 
   virtual void render() {}
   virtual void shutdown() noexcept {} 

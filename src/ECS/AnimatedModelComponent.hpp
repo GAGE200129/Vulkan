@@ -9,6 +9,7 @@
 
 class AnimatedModelComponent : public Component
 {
+  friend class AnimatorComponent;
 public:
   AnimatedModelComponent(const std::string &filePath) : mFilePath(filePath) {}
   void init() override;

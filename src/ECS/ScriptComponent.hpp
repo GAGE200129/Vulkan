@@ -7,10 +7,16 @@ class ScriptComponent : public Component
 public:
   ScriptComponent(const std::string& filePath) : mFilePath(filePath) {}
   void init() override;
-
+  void lateInit() override;
   void update(float delta) override;
   void shutdown() noexcept override;
 private:
   std::string mFilePath;
   lua_State* L;
+
+//Static field
+public:
+  static void registerLuaScript(const std::string& name, lua_CFunction function);
+private:
+  static std::map<std::string, lua_CFunction> sFunctionMaps;
 };
