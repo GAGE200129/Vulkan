@@ -1,0 +1,21 @@
+#pragma once
+
+#include "btBulletDynamicsCommon.h"
+
+class BulletEngine
+{
+  friend class RigidBodyComponent;
+  friend class CharacterControllerComponent;
+public:
+  static void init();
+  static void update(float delta);
+  static void cleanup();
+private:
+  static btCollisionConfiguration* sCollisionConfiguration;
+  static btCollisionDispatcher* sDispatcher;
+  static btBroadphaseInterface* sBroadphaseInterface;
+  static btConstraintSolver* sSolver;
+  static btDynamicsWorld* sDynamicWorld;
+  static btCollisionShape* sGlobalPlaneCollision;
+  static btCollisionObject* sGlobalPlane;
+};

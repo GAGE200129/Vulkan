@@ -9,6 +9,8 @@
 #include "ECS/ScriptComponent.hpp"
 #include "ECS/AnimatedModelComponent.hpp"
 #include "ECS/AnimatorComponent.hpp"
+#include "ECS/RigidBodyComponent.hpp"
+#include "Bullet/BulletEngine.hpp"
 
 #include "Input.hpp"
 
@@ -25,9 +27,9 @@ void run()
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-  mWindow = glfwCreateWindow(800, 600, "Vulkan", nullptr, nullptr);
+  mWindow = glfwCreateWindow(1280, 720, "Vulkan", nullptr, nullptr);
   glfwSetFramebufferSizeCallback(mWindow, windowResizeFn);
-
+  BulletEngine::init();
   VulkanEngine::init(mWindow);
   Input::init(mWindow);
 
@@ -39,6 +41,7 @@ void run()
   AnimatorComponent* animator = go.addComponent<AnimatorComponent>();
   go.addComponent<AnimatedModelComponent>("res/models/box.glb");
   TransformComponent *c = go.addComponent<TransformComponent>();
+  go.addComponent<RigidBodyComponent>();
   
 
   GameObject &go1 = GameObject::addGameObject("Testing1");
@@ -48,7 +51,7 @@ void run()
 
   GameObject::globalInit();
 
-  animator->setCurrentAnimation("Crazy1");
+  animator->setCurrentAnimation("Crazy");
 
   double lastTime = glfwGetTime();
   while (!glfwWindowShouldClose(mWindow))
@@ -57,12 +60,8 @@ void run()
     double elapsed = current - lastTime;
     glfwPollEvents();
     
+    BulletEngine::update(elapsed);
     GameObject::globalUpdate(elapsed);
-
-    if(Input::isKeyDownOnce(GLFW_KEY_C))
-    {
-      std::cout << "AKFJAKSF\n";
-    }
 
     Input::update();
     VulkanEngine::render();
@@ -75,6 +74,7 @@ void run()
   ModelComponent::clearCache();
   AnimatedModelComponent::clearCache();
   VulkanEngine::cleanup();
+  BulletEngine::cleanup();
   glfwDestroyWindow(mWindow);
   glfwTerminate();
 }
