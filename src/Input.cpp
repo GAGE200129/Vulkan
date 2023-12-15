@@ -8,19 +8,17 @@ double Input::mDx = 0;
 double Input::mDy = 0;
 std::bitset<500> Input::mKeysPressed, Input::mPrevKeyPressed;
 
-
-void Input::keyPressedFn(GLFWwindow* window, int key, int scancode, int action, int mods)
+void Input::keyPressedFn(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
-  if(action == GLFW_PRESS)
+  if (action == GLFW_PRESS)
   {
     mKeysPressed[key] = true;
   }
-  else if(action == GLFW_RELEASE)
+  else if (action == GLFW_RELEASE)
   {
     mKeysPressed[key] = false;
   }
 }
-
 
 void Input::init(GLFWwindow *window) noexcept
 {
@@ -60,7 +58,7 @@ bool Input::isKeyDownOnce(int key) noexcept
   return !mPrevKeyPressed[key] && mKeysPressed[key];
 }
 
-void Input::registerScriptKeys(lua_State *L)
+void Input::registerLuaScript(lua_State *L)
 {
   std::map<std::string, int> keyMaps = {
       {"KEY_UNKNOWN", -1},
@@ -190,4 +188,44 @@ void Input::registerScriptKeys(lua_State *L)
     lua_pushinteger(L, value);
     lua_setglobal(L, name.c_str());
   }
+
+  auto luaIsKeyDown = [](lua_State *L) -> int
+  {
+    int key = lua_tointeger(L, 1);
+
+    lua_pushboolean(L, Input::isKeyDown(key));
+    return 1;
+  };
+
+  auto luaIsKeyDownOnce = [](lua_State *L) -> int
+  {
+    int key = lua_tointeger(L, 1);
+
+    lua_pushboolean(L, Input::isKeyDownOnce(key));
+    return 1;
+  };
+
+  auto luaGetMouseDelta = [](lua_State *L) -> int
+  {
+    lua_pushnumber(L, Input::getDx());
+    lua_pushnumber(L, Input::getDy());
+    return 2;
+  };
+
+  auto luaMouseSetLock = [](lua_State *L) -> int
+  {
+    bool v = lua_toboolean(L, 1);
+
+    if (v)
+      lockCursor();
+    else
+      unlockCursor();
+    return 0;
+  };
+  
+
+  lua_register(L, "input_key_is_down", luaIsKeyDown);
+  lua_register(L, "input_key_is_down_once", luaIsKeyDownOnce);
+  lua_register(L, "input_mouse_get_delta", luaGetMouseDelta);
+  lua_register(L, "input_mouse_set_lock", luaMouseSetLock);
 }

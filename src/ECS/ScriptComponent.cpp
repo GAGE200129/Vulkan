@@ -7,49 +7,10 @@
 
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtx/norm.hpp>
-#include <typeindex>
 
 #include "TransformComponent.hpp"
-
-int luaUpdateCameraParams(lua_State *L)
-{
-  auto &camera = VulkanEngine::getCamera();
-  camera.position.x = lua_tonumber(L, 1);
-  camera.position.y = lua_tonumber(L, 2);
-  camera.position.z = lua_tonumber(L, 3);
-
-  camera.pitch = lua_tonumber(L, 4);
-  camera.yaw = lua_tonumber(L, 5);
-
-  camera.fov = lua_tonumber(L, 6);
-  camera.nearPlane = lua_tonumber(L, 7);
-  camera.farPlane = lua_tonumber(L, 8);
-
-  return 0;
-}
-
-int luaIsKeyDown(lua_State *L)
-{
-  int key = lua_tointeger(L, 1);
-
-  lua_pushboolean(L, Input::isKeyDown(key));
-  return 1;
-}
-
-int luaIsKeyDownOnce(lua_State *L)
-{
-  int key = lua_tointeger(L, 1);
-
-  lua_pushboolean(L, Input::isKeyDownOnce(key));
-  return 1;
-}
-
-int luaGetMouseDelta(lua_State *L)
-{
-  lua_pushnumber(L, Input::getDx());
-  lua_pushnumber(L, Input::getDy());
-  return 2;
-}
+#include "Vulkan/VulkanEngine.hpp"
+#include "GameObject.hpp"
 
 int luaVec3Rotate(lua_State *L)
 {
@@ -94,69 +55,18 @@ static int luaVec3Normalize(lua_State *L)
   return 3;
 }
 
-static int luaMouseSetLock(lua_State *L)
-{
-  bool v = lua_toboolean(L, 1);
-
-  if (v)
-    Input::lockCursor();
-  else
-    Input::unlockCursor();
-  return 0;
-}
-
-
-
-static int luaGameObjectGetComponent(lua_State* L)
-{
-  static std::map<std::string, std::function<Component*(GameObject* go)>> sComponentMap = 
-  {
-    {"transform", [](GameObject* go){ return go->getRequiredComponent<TransformComponent>(); }}
-  };
-
-  GameObject* go = (GameObject*)lua_touserdata(L, 1);
-  std::string name = lua_tostring(L, 2);
-  std::transform(name.begin(), name.end(), name.begin(),
-    [](unsigned char c){ return std::tolower(c); });
-
-  lua_pushlightuserdata(L, sComponentMap.at(name)(go));
-  return 1;
-}
-
-static int luaTransformSetPosition(lua_State* L)
-{
-  TransformComponent* transform = (TransformComponent*)lua_touserdata(L, 1);
-  transform->position = {lua_tonumber(L, 2), lua_tonumber(L, 3), lua_tonumber(L, 4)};
-  return 0;
-}
-
-std::map<std::string, lua_CFunction> ScriptComponent::sFunctionMaps;
-
-void ScriptComponent::registerLuaScript(const std::string &name, lua_CFunction function)
-{
-  sFunctionMaps[name] = function;
-}
-
 void ScriptComponent::init()
 {
   L = luaL_newstate();
   luaL_openlibs(L);
-  registerLuaScript("vk_camera_update_params", luaUpdateCameraParams);
-  registerLuaScript("input_key_is_down", luaIsKeyDown);
-  registerLuaScript("input_key_is_down_once", luaIsKeyDownOnce);
-  registerLuaScript("input_mouse_get_delta", luaGetMouseDelta);
-  registerLuaScript("input_mouse_set_lock", luaMouseSetLock);
-  registerLuaScript("vec3_rotate", luaVec3Rotate);
-  registerLuaScript("vec3_normalize", luaVec3Normalize);
-  registerLuaScript("gameobject_get_component", luaGameObjectGetComponent);
-  registerLuaScript("transform_set_position", luaTransformSetPosition);
 
-  for (const auto &[name, function] : sFunctionMaps)
-  {
-    lua_register(L, name.c_str(), function);
-  }
+  VulkanEngine::registerLuaScript(L);
+  Input::registerLuaScript(L);
+  GameObject::registerLuaScript(L);
+  TransformComponent::registerLuaScript(L);
 
-  Input::registerScriptKeys(L);
+  lua_register(L, "vec3_rotate", luaVec3Rotate);
+  lua_register(L, "vec3_normalize", luaVec3Normalize);
 
   int ret = luaL_dofile(L, mFilePath.c_str());
   if (ret != 0)

@@ -13,10 +13,4 @@ public:
 private:
   std::string mFilePath;
   lua_State* L;
-
-//Static field
-public:
-  static void registerLuaScript(const std::string& name, lua_CFunction function);
-private:
-  static std::map<std::string, lua_CFunction> sFunctionMaps;
 };

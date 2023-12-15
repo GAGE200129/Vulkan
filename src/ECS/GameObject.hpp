@@ -82,6 +82,7 @@ private:
   // Static fields
 public:
   static GameObject &addGameObject(const std::string &name);
+  static void registerLuaScript(lua_State* L);
 
   static void globalInit()
   {

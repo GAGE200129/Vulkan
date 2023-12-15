@@ -48,6 +48,7 @@ class VulkanEngine
   friend class StaticModelPipeline;
   friend class AnimatedModelPipeline;
 public:
+  
   static void init(GLFWwindow *window)
   {
     mWindow = window;
@@ -67,7 +68,7 @@ public:
     initCommandBuffer();
     initSyncObjects();
   }
-
+  static void registerLuaScript(lua_State* L);
   static void joint();
   static void render();
   static void cleanup() noexcept;

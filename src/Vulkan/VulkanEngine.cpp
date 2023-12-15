@@ -369,6 +369,28 @@ void VulkanEngine::initVulkan()
   mDebugMessenger = mInstance.createDebugUtilsMessengerEXT(debugCreateInfo, nullptr, mDynamicDispatcher);
 }
 
+void VulkanEngine::registerLuaScript(lua_State* L)
+{
+  auto luaUpdateCameraParams = [](lua_State *L) -> int
+  {
+    auto &camera = VulkanEngine::getCamera();
+    camera.position.x = lua_tonumber(L, 1);
+    camera.position.y = lua_tonumber(L, 2);
+    camera.position.z = lua_tonumber(L, 3);
+
+    camera.pitch = lua_tonumber(L, 4);
+    camera.yaw = lua_tonumber(L, 5);
+
+    camera.fov = lua_tonumber(L, 6);
+    camera.nearPlane = lua_tonumber(L, 7);
+    camera.farPlane = lua_tonumber(L, 8);
+
+    return 0;
+  };
+  
+  lua_register(L, "vk_camera_update_params", luaUpdateCameraParams);
+}
+
 void VulkanEngine::initRenderPass()
 {
   vk::AttachmentDescription colorAttachment;

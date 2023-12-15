@@ -17,6 +17,8 @@ public:
 
     return result;
   }
+
+  static void registerLuaScript(lua_State* L);
 public:
   glm::vec3 position = {0, 0, 0},  rotation = {0, 0, 0}, scale = {1, 1, 1};
 };

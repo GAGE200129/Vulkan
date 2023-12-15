@@ -8,6 +8,7 @@ public:
   static void init(GLFWwindow* window) noexcept;
   static void update();
 
+  static void registerLuaScript(lua_State* L);
   static bool isKeyDown(int key) noexcept;
   static bool isKeyDownOnce(int key) noexcept;
   static void lockCursor() noexcept;
