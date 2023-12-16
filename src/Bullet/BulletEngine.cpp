@@ -1,12 +1,12 @@
 #include "pch.hpp"
 #include "BulletEngine.hpp"
 
-#include <BulletCollision/CollisionDispatch/btGhostObject.h>
 
 btCollisionConfiguration* BulletEngine::sCollisionConfiguration;
 btCollisionDispatcher*    BulletEngine::sDispatcher;
 btBroadphaseInterface*    BulletEngine::sBroadphaseInterface;
 btConstraintSolver*       BulletEngine::sSolver;
+btConstraintSolverPoolMt* BulletEngine::sSolverPool;
 btDynamicsWorld*          BulletEngine::sDynamicWorld;
 btCollisionShape*         BulletEngine::sGlobalPlaneCollision;
 btCollisionObject*        BulletEngine::sGlobalPlane;
@@ -16,7 +16,8 @@ void BulletEngine::init()
   sDispatcher = new btCollisionDispatcher(sCollisionConfiguration);
   sBroadphaseInterface = new btDbvtBroadphase();
   sSolver = new btSequentialImpulseConstraintSolver();
-  sDynamicWorld = new btDiscreteDynamicsWorld(sDispatcher, sBroadphaseInterface, sSolver, sCollisionConfiguration);
+  sSolverPool = new btConstraintSolverPoolMt(4);
+  sDynamicWorld = new btDiscreteDynamicsWorldMt(sDispatcher, sBroadphaseInterface, sSolverPool, sSolver, sCollisionConfiguration);
   sDynamicWorld->setGravity(btVector3(0, -9.8, 0));
 
   sGlobalPlaneCollision = new btStaticPlaneShape(btVector3(0, 1, 0), 0);

@@ -9,6 +9,7 @@
 #include <glm/gtx/norm.hpp>
 
 #include "TransformComponent.hpp"
+#include "CharacterControllerComponent.hpp"
 #include "Vulkan/VulkanEngine.hpp"
 #include "GameObject.hpp"
 
@@ -64,6 +65,7 @@ void ScriptComponent::init()
   Input::registerLuaScript(L);
   GameObject::registerLuaScript(L);
   TransformComponent::registerLuaScript(L);
+  CharacterControllerComponent::registerLuaScript(L);
 
   lua_register(L, "vec3_rotate", luaVec3Rotate);
   lua_register(L, "vec3_normalize", luaVec3Normalize);

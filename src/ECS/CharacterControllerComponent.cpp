@@ -12,8 +12,8 @@ class FindGround : public btCollisionWorld::ContactResultCallback
 {
 public:
   btScalar addSingleResult(btManifoldPoint &cp,
-                                       const btCollisionObjectWrapper *colObj0, int partId0, int index0,
-                                       const btCollisionObjectWrapper *colObj1, int partId1, int index1)
+                           const btCollisionObjectWrapper *colObj0, int partId0, int index0,
+                           const btCollisionObjectWrapper *colObj1, int partId1, int index1)
   {
     if (colObj0->m_collisionObject == mMe && !mHaveGround)
     {
@@ -25,8 +25,7 @@ public:
       float r = localPoint.length();
       float cosTheta = localPoint[2] / r;
 
-      if (fabs(r - CharacterControllerComponent::RADIUS) <= CharacterControllerComponent::RADIUS_THRESHOLD 
-          && cosTheta < CharacterControllerComponent::MAX_COS_GROUND)
+      if (fabs(r - CharacterControllerComponent::RADIUS) <= CharacterControllerComponent::RADIUS_THRESHOLD && cosTheta < CharacterControllerComponent::MAX_COS_GROUND)
       {
         mHaveGround = true;
         mGroundPoint = cp.m_positionWorldOnB;
@@ -51,10 +50,11 @@ void CharacterControllerComponent::init()
   t.setOrigin(btVector3(mTransform->position.x, mTransform->position.y, mTransform->position.z));
   mMotionState = new btDefaultMotionState(t);
 
-  btRigidBody::btRigidBodyConstructionInfo info(1.0f, mMotionState, mShape);
+  btRigidBody::btRigidBodyConstructionInfo info(4000.0f, mMotionState, mShape);
   mBody = new btRigidBody(info);
   mBody->setSleepingThresholds(0.0, 0.0);
   mBody->setAngularFactor(0.0);
+  mBody->setFriction(0);
   BulletEngine::sDynamicWorld->addRigidBody(mBody);
 }
 void CharacterControllerComponent::update(float delta)
@@ -64,7 +64,6 @@ void CharacterControllerComponent::update(float delta)
   BulletEngine::sDynamicWorld->contactTest(mBody, callback);
   mOnGround = callback.mHaveGround;
   mGroundPoint = glm::vec3{callback.mGroundPoint.x(), callback.mGroundPoint.y(), callback.mGroundPoint.z()};
-
 
   const btTransform &transform = mBody->getWorldTransform();
   btMatrix3x3 basis = transform.getBasis();
@@ -77,16 +76,14 @@ void CharacterControllerComponent::update(float delta)
   }
   else if (mOnGround || linearVelocity[2] > 0)
   {
-    btVector3 dv = moveDirection * (WALK_ACCEL * delta);
-    linearVelocity += dv;
-    // We do not really need to be that picky, but we can do that. The important is to ignore the up direction
-    btScalar speed2 = pow(linearVelocity.x(), 2) + pow(linearVelocity.y(), 2);
+    linearVelocity += moveDirection * (WALK_ACCEL * delta);
+    btScalar speed2 = pow(linearVelocity.x(), 2) + pow(linearVelocity.z(), 2);
     constexpr float MAX_VELOCITY_SQUARED = MAX_VELOCITY * MAX_VELOCITY;
     if (speed2 > MAX_VELOCITY_SQUARED)
     {
       btScalar correction = sqrt(MAX_VELOCITY_SQUARED / speed2);
       linearVelocity[0] *= correction;
-      linearVelocity[1] *= correction;
+      linearVelocity[2] *= correction;
     }
   }
 
@@ -100,10 +97,22 @@ void CharacterControllerComponent::update(float delta)
   mTransform->rotation.y = rot.y();
   mTransform->rotation.z = rot.z();
   mTransform->rotation.w = rot.w();
-  mMoveDirection.x = 0;
-  mMoveDirection.y = 0;
-  mMoveDirection.z = 0;
-  
+}
+
+void CharacterControllerComponent::registerLuaScript(lua_State *L)
+{
+  auto setMoveDirection = [](lua_State *L) -> int
+  {
+    CharacterControllerComponent *c = (CharacterControllerComponent *)lua_touserdata(L, 1);
+    glm::vec3 v;
+    v.x = lua_tonumber(L, 2);
+    v.y = lua_tonumber(L, 3);
+    v.z = lua_tonumber(L, 4);
+    c->mMoveDirection = v;
+    return 0;
+  };
+
+  lua_register(L, "character_controller_set_move_dir", setMoveDirection);
 }
 void CharacterControllerComponent::shutdown() noexcept
 {

@@ -614,12 +614,12 @@ void VulkanEngine::initSyncObjects()
 void VulkanEngine::initDescriptorPool()
 {
   std::array<vk::DescriptorPoolSize, 2> dps;
-  dps[0].setDescriptorCount(128).setType(vk::DescriptorType::eUniformBuffer);
-  dps[1].setDescriptorCount(128).setType(vk::DescriptorType::eCombinedImageSampler);
+  dps[0].setDescriptorCount(512).setType(vk::DescriptorType::eUniformBuffer);
+  dps[1].setDescriptorCount(512).setType(vk::DescriptorType::eCombinedImageSampler);
 
   vk::DescriptorPoolCreateInfo descriptorPoolCI;
   descriptorPoolCI.setPoolSizes(dps)
-      .setMaxSets(128);
+      .setMaxSets(512);
 
   mDescriptorPool = mDevice.createDescriptorPool(descriptorPoolCI);
 

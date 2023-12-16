@@ -8,7 +8,7 @@
 class BoxColliderComponent : public CollisionShapeBase
 {
 public:
-  BoxColliderComponent(const glm::vec3& halfWidth) : mHalfWidth(halfWidth) {}
+  BoxColliderComponent(const glm::vec3& offset, const glm::vec3& halfWidth) : CollisionShapeBase(offset), mHalfWidth(halfWidth) {}
   virtual ~BoxColliderComponent() = default;
   
   void init() override

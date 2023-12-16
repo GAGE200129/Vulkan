@@ -1,6 +1,7 @@
 #pragma once
 
 #include "btBulletDynamicsCommon.h"
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorldMt.h>
 
 class BulletEngine
 {
@@ -15,6 +16,7 @@ private:
   static btCollisionDispatcher* sDispatcher;
   static btBroadphaseInterface* sBroadphaseInterface;
   static btConstraintSolver* sSolver;
+  static btConstraintSolverPoolMt* sSolverPool;
   static btDynamicsWorld* sDynamicWorld;
   static btCollisionShape* sGlobalPlaneCollision;
   static btCollisionObject* sGlobalPlane;

@@ -4,6 +4,7 @@
 #include "Bullet/BulletEngine.hpp"
 
 #include <glm/gtx/string_cast.hpp>
+#include <glm/gtx/rotate_vector.hpp>
 
 void RigidBodyComponent::init()
 {
@@ -28,11 +29,20 @@ void RigidBodyComponent::update(float delta)
   btVector3& pos = t.getOrigin();
   btQuaternion rot = t.getRotation().normalized();
   
-  mTransform->position = {pos.x(), pos.y(), pos.z()};
+
+
+  
   mTransform->rotation.x = rot.x();
   mTransform->rotation.y = rot.y();
   mTransform->rotation.z = rot.z();
   mTransform->rotation.w = rot.w();
+
+  glm::vec3 offsetRotation = glm::mat3(mTransform->rotation) * mShape->mColliderOffset; 
+  mTransform->position = {
+    pos.x() - offsetRotation.x,
+    pos.y() - offsetRotation.y,
+    pos.z() - offsetRotation.z
+  };
 }
 
 void RigidBodyComponent::shutdown() noexcept

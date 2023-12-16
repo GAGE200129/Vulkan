@@ -2,6 +2,7 @@
 #include "GameObject.hpp"
 
 #include "TransformComponent.hpp"
+#include "CharacterControllerComponent.hpp"
 
 std::vector<std::unique_ptr<GameObject>> GameObject::sGameObjects;
 
@@ -20,7 +21,10 @@ void GameObject::registerLuaScript(lua_State *L)
     static std::map<std::string, std::function<Component *(GameObject * go)>> sComponentMap =
     {
       {"transform", [](GameObject *go)
-        { return go->getRequiredComponent<TransformComponent>(); }}
+        { return go->getRequiredComponent<TransformComponent>(); }},
+      
+      {"character_controller", [](GameObject *go)
+        { return go->getRequiredComponent<CharacterControllerComponent>(); }}
     };
 
     GameObject *go = (GameObject *)lua_touserdata(L, 1);

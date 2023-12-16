@@ -8,6 +8,7 @@
 #include <fstream>
 #include <optional>
 #include <iostream>
+#include <thread>
 #include <bitset>
 
 #include <glm/glm.hpp>
