@@ -19,7 +19,6 @@ void BulletEngine::init()
   sDynamicWorld = new btDiscreteDynamicsWorld(sDispatcher, sBroadphaseInterface, sSolver, sCollisionConfiguration);
   sDynamicWorld->setGravity(btVector3(0, -9.8, 0));
 
-
   sGlobalPlaneCollision = new btStaticPlaneShape(btVector3(0, 1, 0), 0);
   sGlobalPlane = new btCollisionObject();
   sGlobalPlane->setCollisionShape(sGlobalPlaneCollision); 
