@@ -1,6 +1,7 @@
 #include "pch.hpp"
 #include "BulletEngine.hpp"
 
+#include <BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolverMt.h>
 
 btCollisionConfiguration* BulletEngine::sCollisionConfiguration;
 btCollisionDispatcher*    BulletEngine::sDispatcher;
@@ -16,13 +17,14 @@ void BulletEngine::init()
   sDispatcher = new btCollisionDispatcher(sCollisionConfiguration);
   sBroadphaseInterface = new btDbvtBroadphase();
   sSolver = new btSequentialImpulseConstraintSolver();
-  sSolverPool = new btConstraintSolverPoolMt(4);
+  sSolverPool = new btConstraintSolverPoolMt(2);
   sDynamicWorld = new btDiscreteDynamicsWorldMt(sDispatcher, sBroadphaseInterface, sSolverPool, sSolver, sCollisionConfiguration);
   sDynamicWorld->setGravity(btVector3(0, -9.8, 0));
 
   sGlobalPlaneCollision = new btStaticPlaneShape(btVector3(0, 1, 0), 0);
   sGlobalPlane = new btCollisionObject();
   sGlobalPlane->setCollisionShape(sGlobalPlaneCollision); 
+  sGlobalPlane->setFriction(1.0);
 
   sDynamicWorld->addCollisionObject(sGlobalPlane);
 
@@ -38,6 +40,7 @@ void BulletEngine::cleanup()
   delete sGlobalPlane;
   delete sGlobalPlaneCollision;
   delete sDynamicWorld;
+  delete sSolverPool;
   delete sSolver;
   delete sBroadphaseInterface;
   delete sDispatcher;

@@ -215,7 +215,7 @@ void VulkanEngine::initDevice()
     bool valid_present_mode = false;
     for (const auto &mode : presentModes)
     {
-      if (mode == vk::PresentModeKHR::eImmediate)
+      if (mode == vk::PresentModeKHR::eFifo)
       {
         valid_present_mode = true;
         mPresentMode = mode;

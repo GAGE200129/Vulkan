@@ -10,11 +10,10 @@ project "EnGAGEditor"
    targetdir "bin/%{cfg.buildcfg}"
 
    files { "editor/**.hpp", "editor/**.cpp", "res/**.vert", "res/**.frag" }
-   links { "glfw", "vulkan", "spdlog", "fmt", "lua5.4", "assimp" }
+   links { "glfw", "spdlog", "fmt", "lua5.4", "assimp" }
 
    includedirs { 
-      "src/editor",
-      "libs/EnTT/single_include"
+      "src/editor"
    }
 
    

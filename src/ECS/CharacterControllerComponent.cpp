@@ -18,14 +18,14 @@ public:
     if (colObj0->m_collisionObject == mMe && !mHaveGround)
     {
       const btTransform &transform = mMe->getWorldTransform();
-      // Orthonormal basis (just rotations) => can just transpose to invert
       btMatrix3x3 invBasis = transform.getBasis().transpose();
       btVector3 localPoint = invBasis * (cp.m_positionWorldOnB - transform.getOrigin());
       localPoint[2] += CharacterControllerComponent::HEIGHT;
       float r = localPoint.length();
       float cosTheta = localPoint[2] / r;
 
-      if (fabs(r - CharacterControllerComponent::RADIUS) <= CharacterControllerComponent::RADIUS_THRESHOLD && cosTheta < CharacterControllerComponent::MAX_COS_GROUND)
+      if (std::fabs(r - CharacterControllerComponent::RADIUS) <= CharacterControllerComponent::RADIUS_THRESHOLD 
+        && cosTheta < CharacterControllerComponent::MAX_COS_GROUND)
       {
         mHaveGround = true;
         mGroundPoint = cp.m_positionWorldOnB;
@@ -44,7 +44,7 @@ void CharacterControllerComponent::init()
 {
   mTransform = mGameObject->getRequiredComponent<TransformComponent>();
 
-  mShape = new btBoxShape(btVector3(0.5f, 0.1f, 0.5f));
+  mShape = new btCapsuleShape(RADIUS, HEIGHT);
   btTransform t;
   t.setIdentity();
   t.setOrigin(btVector3(mTransform->position.x, mTransform->position.y, mTransform->position.z));
@@ -116,6 +116,7 @@ void CharacterControllerComponent::registerLuaScript(lua_State *L)
 }
 void CharacterControllerComponent::shutdown() noexcept
 {
+  BulletEngine::sDynamicWorld->removeRigidBody(mBody);
   delete mMotionState;
   delete mShape;
   delete mBody;
