@@ -13,27 +13,39 @@
 #include "ECS/BoxColliderComponent.hpp"
 #include "ECS/CharacterControllerComponent.hpp"
 #include "Bullet/BulletEngine.hpp"
+#include "Map/Map.hpp"
 
 #include "Input.hpp"
 
-void windowResizeFn(GLFWwindow *window, int width, int height) noexcept
+extern void debugMain();
+extern bool gDebugPaused;
+
+static void windowResizeFn(GLFWwindow *window, int width, int height) noexcept
 {
   VulkanEngine::onWindowResize(width, height);
 }
 
+
+GLFWwindow *gMainWindow;
+
+
 void run()
 {
-  GLFWwindow *mWindow;
   glfwInit();
+  
+  std::thread debugThread(debugMain);
 
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-  mWindow = glfwCreateWindow(800, 600, "Vulkan", nullptr, nullptr);
-  glfwSetFramebufferSizeCallback(mWindow, windowResizeFn);
+  gMainWindow = glfwCreateWindow(1600, 900, "Vulkan", nullptr, nullptr);
+  glfwSetFramebufferSizeCallback(gMainWindow, windowResizeFn);
   BulletEngine::init();
-  VulkanEngine::init(mWindow);
-  Input::init(mWindow);
+  VulkanEngine::init(gMainWindow);
+  Input::init(gMainWindow);
+
+  Map map;
+  map.load("AF:ASFKLA");
 
   std::vector<AnimatorComponent*> animators;
 
@@ -60,21 +72,18 @@ void run()
 
   GameObject::globalInit();
 
-  for(const auto& animator : animators)
-  {
-    animator->setCurrentAnimation("Crazy");
-  }
-
   double lastTime = glfwGetTime();
   double lag = 0;
   constexpr double MS_PER_TICK = 1.0 / 60.0;
-  while (!glfwWindowShouldClose(mWindow))
+  while (!glfwWindowShouldClose(gMainWindow))
   {
     double current = glfwGetTime();
     double elapsed = current - lastTime;
     lastTime = current;
-    lag += elapsed;
 
+    if(gDebugPaused)
+      continue;
+    lag += elapsed;
     while (lag >= MS_PER_TICK)
     {
       glfwPollEvents();
@@ -86,6 +95,7 @@ void run()
 
     VulkanEngine::render();
   }
+  
   VulkanEngine::joint();
 
   GameObject::globalShutdown();
@@ -93,7 +103,8 @@ void run()
   AnimatedModelComponent::clearCache();
   VulkanEngine::cleanup();
   BulletEngine::cleanup();
-  glfwDestroyWindow(mWindow);
+  glfwDestroyWindow(gMainWindow);
+  debugThread.join();
   glfwTerminate();
 }
 

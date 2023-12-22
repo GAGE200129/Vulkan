@@ -1,21 +1,6 @@
 -- premake5.lua
 workspace "GAGE"
    configurations { "Debug", "Release" }
-
-
-project "EnGAGEditor"
-   kind "ConsoleApp"
-   language "C++"
-   cppdialect "c++17"
-   targetdir "bin/%{cfg.buildcfg}"
-
-   files { "editor/**.hpp", "editor/**.cpp", "res/**.vert", "res/**.frag" }
-   links { "glfw", "spdlog", "fmt", "lua5.4", "assimp" }
-
-   includedirs { 
-      "src/editor"
-   }
-
    
 
 project "EnGAGE"
@@ -25,11 +10,18 @@ project "EnGAGE"
    targetdir "bin/%{cfg.buildcfg}"
    pchheader "src/pch.hpp"
 
-   files { "src/**.hpp", "src/**.cpp", "res/**.vert", "res/**.frag" }
-   links { "glfw", "vulkan", "spdlog", "fmt", "lua5.4", "assimp", "LinearMath", "BulletCollision", "BulletDynamics" }
+   files {
+      "src/**.hpp", "src/**.cpp", "res/**.vert", "res/**.frag",
+      "libs/imgui-docking/*.cpp",
+      "libs/imgui-docking/backends/imgui_impl_opengl2.cpp",
+      "libs/imgui-docking/backends/imgui_impl_glfw.cpp"
+
+   }
+   links { "glfw", "vulkan", "spdlog", "fmt", "lua5.4", "assimp", "LinearMath", "BulletCollision", "BulletDynamics", "GL" }
    includedirs { 
       "src",
-      "libs/EnTT/single_include"
+      "libs/EnTT/single_include",
+      "libs/imgui-docking"
    }
    
    defines 
