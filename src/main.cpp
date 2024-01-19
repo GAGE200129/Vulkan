@@ -13,7 +13,6 @@
 #include "ECS/BoxColliderComponent.hpp"
 #include "ECS/CharacterControllerComponent.hpp"
 #include "Bullet/BulletEngine.hpp"
-#include "Map/Map.hpp"
 
 #include "Input.hpp"
 
@@ -43,9 +42,6 @@ void run()
   BulletEngine::init();
   VulkanEngine::init(gMainWindow);
   Input::init(gMainWindow);
-
-  Map map;
-  map.load("AF:ASFKLA");
 
   std::vector<AnimatorComponent*> animators;
 

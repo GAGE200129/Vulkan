@@ -10,6 +10,7 @@
 #include <iostream>
 #include <thread>
 #include <bitset>
+#include <condition_variable>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>

@@ -13,7 +13,7 @@ public:
   void init() override;
   void update(float delta) override;
   void shutdown() noexcept override;
-private:
+public:
   float mMass;
   btRigidBody* mBody;
   btMotionState* mMotionState;

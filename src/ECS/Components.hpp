@@ -8,7 +8,7 @@ public:
   Component() = default;
   virtual ~Component() = default;
 
-
+  virtual void renderImGui() noexcept {}
   virtual void init() {}
   virtual void lateInit() {}
   virtual void update(float delta) {} 

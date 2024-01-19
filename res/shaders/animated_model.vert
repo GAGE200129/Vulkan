@@ -1,7 +1,7 @@
 #version 450
 
 layout(location = 0) in vec3 inPos;
-layout(location = 1) in vec3 inColor;
+layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec2 inUv;
 layout(location = 3) in uvec4 inBoneIDs;
 layout(location = 4) in vec4 inBoneWeights;
@@ -10,6 +10,7 @@ layout(location = 4) in vec4 inBoneWeights;
 layout(location = 0) out vec2 FSUv;
 layout(location = 1) flat out uvec4 FSBoneIDs;
 layout(location = 2) out vec4 FSBoneWeights;
+layout(location = 3) out vec3 FSNormal;
 
 layout(set = 0, binding = 0) uniform UniformBufferObject
 {
@@ -36,8 +37,11 @@ void main() {
   boneTransform += boneTransforms.mat[inBoneIDs[2]] * inBoneWeights[2];
   boneTransform += boneTransforms.mat[inBoneIDs[3]] * inBoneWeights[3];
 
-  gl_Position = ubo.proj * ubo.view * constants.model * boneTransform * vec4(inPos, 1.0);
+  mat4 modelTransform = constants.model * boneTransform;
+
+  gl_Position = ubo.proj * ubo.view *  modelTransform * vec4(inPos, 1.0);
   FSUv = inUv;
+  FSNormal = (modelTransform * vec4(inNormal, 0.0)).xyz;
   FSBoneIDs = inBoneIDs;
   FSBoneWeights = inBoneWeights;
 }

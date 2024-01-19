@@ -8,6 +8,7 @@ class GameObject
 public:
   GameObject(const std::string &name) : mName(name) {}
   ~GameObject() = default;
+  
 
   void init()
   {
@@ -75,7 +76,7 @@ public:
     return t;
   }
 
-private:
+public:
   std::string mName;
   std::vector<std::unique_ptr<Component>> mComponents;
 
