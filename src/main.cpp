@@ -13,8 +13,15 @@
 #include "ECS/BoxColliderComponent.hpp"
 #include "ECS/CharacterControllerComponent.hpp"
 #include "Bullet/BulletEngine.hpp"
+#include "Map/Map.hpp"
 
 #include "Input.hpp"
+
+#ifdef DEBUG
+static constexpr bool gDebugEnabled = true;
+#else
+static constexpr bool gDebugEnabled = false;
+#endif
 
 extern void debugMain();
 extern bool gDebugPaused;
@@ -24,15 +31,11 @@ static void windowResizeFn(GLFWwindow *window, int width, int height) noexcept
   VulkanEngine::onWindowResize(width, height);
 }
 
-
 GLFWwindow *gMainWindow;
-
 
 void run()
 {
   glfwInit();
-  
-  std::thread debugThread(debugMain);
 
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
@@ -43,7 +46,9 @@ void run()
   VulkanEngine::init(gMainWindow);
   Input::init(gMainWindow);
 
-  std::vector<AnimatorComponent*> animators;
+  Map::load("res/maps/test1.map");
+
+  std::vector<AnimatorComponent *> animators;
 
   for (int i = 5; i < 15; i += 2)
   {
@@ -68,6 +73,11 @@ void run()
 
   GameObject::globalInit();
 
+  // Launch debugger
+  std::unique_ptr<std::thread> debugThread;
+  if (gDebugEnabled)
+    debugThread = std::make_unique<std::thread>(debugMain);
+
   double lastTime = glfwGetTime();
   double lag = 0;
   constexpr double MS_PER_TICK = 1.0 / 60.0;
@@ -77,7 +87,7 @@ void run()
     double elapsed = current - lastTime;
     lastTime = current;
 
-    if(gDebugPaused)
+    if (gDebugPaused)
       continue;
     lag += elapsed;
     while (lag >= MS_PER_TICK)
@@ -91,7 +101,9 @@ void run()
 
     VulkanEngine::render();
   }
-  
+  if(gDebugEnabled)
+    debugThread->join();
+
   VulkanEngine::joint();
 
   GameObject::globalShutdown();
@@ -100,7 +112,6 @@ void run()
   VulkanEngine::cleanup();
   BulletEngine::cleanup();
   glfwDestroyWindow(gMainWindow);
-  debugThread.join();
   glfwTerminate();
 }
 

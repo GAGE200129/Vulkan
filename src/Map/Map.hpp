@@ -1,16 +1,21 @@
 #pragma once
-
-#include "Brush.hpp"
-#include "MapMesh.hpp"
-
 #include <vector>
 
+#include "Vulkan/VulkanEngine.hpp"
+#include "BulletCollision/CollisionDispatch/btCollisionObject.h"
+#include "BulletCollision/CollisionShapes/btBvhTriangleMeshShape.h"
+
+// Static class that handles currently loaded map
 class Map
 {
 public:
-  MapMesh getMapMesh();
-
-  void addBrush(const glm::vec3& position);
-public:
-  std::vector<Brush> mBrushes;
+  static void load(const std::string &filePath);
+  static void save(const std::string &fileName);
+private:
+  static void processMapPiece(const std::string& line);
+private:
+  //static map mesh
+  static VulkanBuffer mPositionBuffer, mNormalBuffer, mUvBuffer, mIndexBuffer;
+  static btCollisionObject* mMapCollisionObject;
+  static btBvhTriangleMeshShape* mMapCollisionShape;
 };

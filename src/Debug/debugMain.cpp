@@ -10,6 +10,7 @@
 #include "EntityInspector.hpp"
 #include "MapEditor.hpp"
 #include "Map/Map.hpp"
+#include "ECS/GameObject.hpp"
 
 extern GLFWwindow *gMainWindow;
 bool gDebugPaused = false;
@@ -53,7 +54,6 @@ void debugMain()
   glfwSetWindowFocusCallback(pWindow, focusFn);
   while (!glfwWindowShouldClose(gMainWindow))
   {
-
     double current = glfwGetTime();
     double elapsed = current - lastTime;
     lastTime = current;
@@ -66,23 +66,21 @@ void debugMain()
       lag -= MS_PER_TICK;
     }
 
-    if(!gDebugPaused)
-      continue;
-
     ImGui_ImplOpenGL2_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
     ImGui::DockSpaceOverViewport(nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
     EntityInspector::renderImGui();
-    MapEditor::renderImGui(map);
+    MapEditor::renderImGui();
 
     ImGui::ShowDemoWindow();
 
     ImGui::Render();
-    int width, height;
+      int width, height;
     glfwGetFramebufferSize(pWindow, &width, &height);
     glClear(GL_COLOR_BUFFER_BIT);
     glViewport(0, 0, width, height);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     glm::mat4 proj = camera.getPerspective();
     glm::mat4 view = camera.getView();
@@ -93,12 +91,8 @@ void debugMain()
     glLoadIdentity();
     glLoadMatrixf(glm::value_ptr(view));
 
-    glBegin(GL_TRIANGLES);
-    glVertex3f(-1, 0, -3);
-    glVertex3f(0, 1, -3);
-    glVertex3f(1, 0, -3);
-
-    glEnd();
+    //Render all gameobjects, wireframe mode
+    GameObject::globalDebugRender();
 
     glBegin(GL_LINES);
     glColor3f(1, 0, 0);

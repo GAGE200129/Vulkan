@@ -27,6 +27,7 @@ public:
   }
 
   void render() override;
+  void debugRender() override;
 
 private:
 

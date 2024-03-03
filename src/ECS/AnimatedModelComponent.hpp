@@ -15,6 +15,7 @@ public:
   void init() override;
   void update(float delta) override;
   void render() override;
+  void debugRender() override;
   void shutdown() noexcept override;
 
 private:

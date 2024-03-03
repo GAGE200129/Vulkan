@@ -5,6 +5,7 @@
 #include "Vulkan/VulkanTexture.hpp"
 
 #include <stb/stb_image.h>
+#include <GL/gl.h>
 
 std::map<std::string, std::unique_ptr<AnimatedModelComponent::MeshData>> AnimatedModelComponent::sCache;
 
@@ -20,7 +21,7 @@ AnimatedModelComponent::MeshData *AnimatedModelComponent::initCache(const std::s
     throw std::runtime_error(meshData->mImporter.GetErrorString());
   }
   meshData->mPScene = pScene;
-  //meshData->mGlobalInverse = glm::inverse(Utils::aiToGlmMatrix4x4(pScene->mRootNode->mTransformation));
+  // meshData->mGlobalInverse = glm::inverse(Utils::aiToGlmMatrix4x4(pScene->mRootNode->mTransformation));
 
   // Count and reserve vertex data for all meshes in scene
   unsigned int numVertices = 0, numIndices = 0, numBones = 0;
@@ -213,27 +214,51 @@ void AnimatedModelComponent::update(float delta)
   std::memcpy(mBoneTransformBufferMapped, mBoneTransforms.data(), sizeof(glm::mat4x4) * mMeshData->mBoneIndexToOffset.size());
 }
 
+void AnimatedModelComponent::debugRender()
+{
+  glm::mat4 modelMatrix = mTransformComponent->build();
+  const std::vector<glm::vec3> &positions = mMeshData->mPositions;
+  const std::vector<unsigned int> &indices = mMeshData->mIndices;
+
+  glColor3f(1, 1, 1);
+  glBegin(GL_TRIANGLES);
+  for (const auto &mesh : mMeshData->mMeshes)
+  {
+    for (size_t i = 0; i < mesh.numIndices; i++)
+    {
+      unsigned int index = indices.at(mesh.baseIndex + i);
+      const glm::vec3 &position = positions.at(mesh.baseVertex + index);
+      glm::vec4 positionTranslated = modelMatrix * glm::vec4(position, 1);
+
+      glVertex3f(positionTranslated.x, positionTranslated.y, positionTranslated.z);
+    }
+  }
+  glEnd();
+}
 void AnimatedModelComponent::render()
 {
-  VulkanEngine::mCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, VulkanEngine::mAnimatedModelPipeline.mPipeline);
-  VulkanEngine::mCommandBuffer.bindVertexBuffers(0, mMeshData->mPositionBuffer.getBuffer(), {0});
-  VulkanEngine::mCommandBuffer.bindVertexBuffers(1, mMeshData->mNormalBuffer.getBuffer(), {0});
-  VulkanEngine::mCommandBuffer.bindVertexBuffers(2, mMeshData->mUvBuffer.getBuffer(), {0});
-  VulkanEngine::mCommandBuffer.bindVertexBuffers(3, mMeshData->mBoneIDBuffer.getBuffer(), {0});
-  VulkanEngine::mCommandBuffer.bindVertexBuffers(4, mMeshData->mBoneWeightBuffer.getBuffer(), {0});
-  VulkanEngine::mCommandBuffer.bindIndexBuffer(mMeshData->mIndexBuffer.getBuffer(), 0, vk::IndexType::eUint32);
+  vk::CommandBuffer &cmdBuffer = VulkanEngine::mCommandBuffer;
+  vk::Pipeline &pipeline = VulkanEngine::mAnimatedModelPipeline.mPipeline;
+  vk::PipelineLayout &pipelineLayout = VulkanEngine::mAnimatedModelPipeline.mLayout;
+  cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
+  cmdBuffer.bindVertexBuffers(0, mMeshData->mPositionBuffer.getBuffer(), {0});
+  cmdBuffer.bindVertexBuffers(1, mMeshData->mNormalBuffer.getBuffer(), {0});
+  cmdBuffer.bindVertexBuffers(2, mMeshData->mUvBuffer.getBuffer(), {0});
+  cmdBuffer.bindVertexBuffers(3, mMeshData->mBoneIDBuffer.getBuffer(), {0});
+  cmdBuffer.bindVertexBuffers(4, mMeshData->mBoneWeightBuffer.getBuffer(), {0});
+  cmdBuffer.bindIndexBuffer(mMeshData->mIndexBuffer.getBuffer(), 0, vk::IndexType::eUint32);
   glm::mat4x4 modelMat = mTransformComponent->build();
-  VulkanEngine::mCommandBuffer.pushConstants(VulkanEngine::mAnimatedModelPipeline.mLayout,
-                                             vk::ShaderStageFlagBits::eVertex, 0, sizeof(modelMat), &modelMat);
-  VulkanEngine::mCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, VulkanEngine::VulkanEngine::mAnimatedModelPipeline.mLayout,
-                                                  2, {mBoneTransformDescriptorSet}, {});
+  cmdBuffer.pushConstants(pipelineLayout,
+                          vk::ShaderStageFlagBits::eVertex, 0, sizeof(modelMat), &modelMat);
+  cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout,
+                               2, {mBoneTransformDescriptorSet}, {});
   for (const auto &mesh : mMeshData->mMeshes)
   {
     auto &material = mMeshData->mMaterials[mesh.materialIndex];
 
-    VulkanEngine::mCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, VulkanEngine::VulkanEngine::mAnimatedModelPipeline.mLayout,
-                                                    1, {material.mDiffuse.mDescriptorSet}, {});
-    VulkanEngine::mCommandBuffer.drawIndexed(mesh.numIndices, 1, mesh.baseIndex, mesh.baseVertex, 0);
+    cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, VulkanEngine::VulkanEngine::mAnimatedModelPipeline.mLayout,
+                                 1, {material.mDiffuse.mDescriptorSet}, {});
+    cmdBuffer.drawIndexed(mesh.numIndices, 1, mesh.baseIndex, mesh.baseVertex, 0);
   }
 }
 

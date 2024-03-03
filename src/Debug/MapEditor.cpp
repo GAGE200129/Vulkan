@@ -3,12 +3,12 @@
 
 #include <imgui.h>
 
-void MapEditor::renderImGui(Map& map)
+void MapEditor::renderImGui()
 {
   ImGui::Begin("MapEditor");
   if(ImGui::Button("New brush"))
   {
-    map.addBrush({0, 0, 0});
+    
   }
   ImGui::End();
 }

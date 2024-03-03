@@ -1,10 +1,12 @@
 #include "pch.hpp"
 #include "ModelComponent.hpp"
 
-#include <Vulkan/VulkanEngine.hpp>
 #include "Vulkan/VulkanTexture.hpp"
+#include "Vulkan/VulkanEngine.hpp"
 
 #include <stb/stb_image.h>
+#include <GL/gl.h>
+
 
 std::map<std::string, std::unique_ptr<ModelComponent::MeshData>> ModelComponent::sCache;
 
@@ -151,24 +153,49 @@ ModelComponent::MeshData *ModelComponent::initCache(const std::string &filePath)
 
 void ModelComponent::render()
 {
+  vk::CommandBuffer &cmdBuffer = VulkanEngine::mCommandBuffer;
+  vk::Pipeline &pipeline = VulkanEngine::mStaticModelPipeline.mPipeline;
+  vk::PipelineLayout &pipelineLayout = VulkanEngine::mStaticModelPipeline.mLayout;
 
-  
-  VulkanEngine::mCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, VulkanEngine::mStaticModelPipeline.mPipeline);
-  VulkanEngine::mCommandBuffer.bindVertexBuffers(0, mMeshData->mPositionBuffer.getBuffer(), {0});
-  VulkanEngine::mCommandBuffer.bindVertexBuffers(1, mMeshData->mNormalBuffer.getBuffer(), {0});
-  VulkanEngine::mCommandBuffer.bindVertexBuffers(2, mMeshData->mUvBuffer.getBuffer(), {0});
-  VulkanEngine::mCommandBuffer.bindIndexBuffer(mMeshData->mIndexBuffer.getBuffer(), 0, vk::IndexType::eUint32);
-  glm::mat4x4 modelMat = glm::translate(glm::mat4(1.0f), mTransformComponent->position);
-  VulkanEngine::mCommandBuffer.pushConstants(VulkanEngine::mStaticModelPipeline.mLayout,
-                                             vk::ShaderStageFlagBits::eVertex, 0, sizeof(modelMat), &modelMat);
+  cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
+  cmdBuffer.bindVertexBuffers(0, mMeshData->mPositionBuffer.getBuffer(), {0});
+  cmdBuffer.bindVertexBuffers(1, mMeshData->mNormalBuffer.getBuffer(), {0});
+  cmdBuffer.bindVertexBuffers(2, mMeshData->mUvBuffer.getBuffer(), {0});
+  cmdBuffer.bindIndexBuffer(mMeshData->mIndexBuffer.getBuffer(), 0, vk::IndexType::eUint32);
+  glm::mat4x4 modelMat = mTransformComponent->build();
+  cmdBuffer.pushConstants(pipelineLayout,
+                          vk::ShaderStageFlagBits::eVertex, 0, sizeof(modelMat), &modelMat);
   for (const auto &mesh : mMeshData->mMeshes)
   {
     auto &material = mMeshData->mMaterials[mesh.materialIndex];
 
-    VulkanEngine::mCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, VulkanEngine::VulkanEngine::mStaticModelPipeline.mLayout,
-                                                    1, {material.mDiffuse.mDescriptorSet}, {});
-    VulkanEngine::mCommandBuffer.drawIndexed(mesh.numIndices, 1, mesh.baseIndex, mesh.baseVertex, 0);
+    cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout,
+                                 1, {material.mDiffuse.mDescriptorSet}, {});
+    cmdBuffer.drawIndexed(mesh.numIndices, 1, mesh.baseIndex, mesh.baseVertex, 0);
   }
+}
+
+void ModelComponent::debugRender()
+{
+  glm::mat4 modelMatrix = mTransformComponent->build();
+  const std::vector<glm::vec3> &positions = mMeshData->mPositions;
+  const std::vector<unsigned int> &indices = mMeshData->mIndices;
+
+  glColor3f(1, 1, 1);
+  glBegin(GL_TRIANGLES);
+  for (const auto &mesh : mMeshData->mMeshes)
+  {
+    for (size_t i = 0; i < mesh.numIndices; i++)
+    {
+      unsigned int index = indices.at(mesh.baseIndex + i);
+      const glm::vec3 &position = positions.at(mesh.baseVertex + index);
+      glm::vec4 positionTranslated = modelMatrix * glm::vec4(position, 1);
+
+
+      glVertex3f(positionTranslated.x, positionTranslated.y, positionTranslated.z);
+    }
+  }
+  glEnd();
 }
 
 void ModelComponent::clearCache()

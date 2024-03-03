@@ -5,5 +5,5 @@
 class MapEditor
 {
 public:
-  static void renderImGui(Map& map);
+  static void renderImGui();
 };

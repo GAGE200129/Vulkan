@@ -13,6 +13,7 @@ public:
   virtual void lateInit() {}
   virtual void update(float delta) {} 
   virtual void render() {}
+  virtual void debugRender() {}
   virtual void shutdown() noexcept {} 
 
   const GameObject& getGameObject() const noexcept { return *mGameObject; }

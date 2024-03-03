@@ -34,6 +34,12 @@ public:
       c->render();
   }
 
+  void debugRender()
+  {
+    for(auto& c : mComponents)
+      c->debugRender();
+  }
+
   void shutdown() noexcept
   {
     for (auto &c : mComponents)
@@ -111,6 +117,15 @@ public:
     for (const auto &go : sGameObjects)
     {
       go->render();
+    }
+  }
+
+  //Only call this for the debugger please do not call it in the main game
+  static void globalDebugRender()
+  {
+    for(const auto& go: sGameObjects)
+    {
+      go->debugRender();
     }
   }
 
