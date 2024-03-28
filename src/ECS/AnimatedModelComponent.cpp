@@ -21,7 +21,6 @@ AnimatedModelComponent::MeshData *AnimatedModelComponent::initCache(const std::s
     throw std::runtime_error(meshData->mImporter.GetErrorString());
   }
   meshData->mPScene = pScene;
-  // meshData->mGlobalInverse = glm::inverse(Utils::aiToGlmMatrix4x4(pScene->mRootNode->mTransformation));
 
   // Count and reserve vertex data for all meshes in scene
   unsigned int numVertices = 0, numIndices = 0, numBones = 0;
@@ -40,10 +39,10 @@ AnimatedModelComponent::MeshData *AnimatedModelComponent::initCache(const std::s
     numIndices += meshData->mMeshes[i].numIndices;
     numBones += pScene->mMeshes[i]->mNumBones;
 
-    std::cout << "Mesh: " << pScene->mMeshes[i]->mName.C_Str()
+    /*std::cout << "Mesh: " << pScene->mMeshes[i]->mName.C_Str()
               << " vertices: " << numVertices
               << " indices: " << numIndices
-              << " bones: " << numBones << "\n";
+              << " bones: " << numBones << "\n";*/
   }
 
   meshData->mBoneIDs.resize(numVertices);
@@ -167,8 +166,8 @@ AnimatedModelComponent::MeshData *AnimatedModelComponent::initCache(const std::s
 
 void AnimatedModelComponent::parseBone(const std::unique_ptr<MeshData> &meshData, unsigned int meshID, aiBone *pBone)
 {
-  std::cout << "Bone :" << pBone->mName.C_Str()
-            << " | num vertices affected by this bone: " << pBone->mNumWeights << "\n";
+  // std::cout << "Bone :" << pBone->mName.C_Str()
+  //           << " | num vertices affected by this bone: " << pBone->mNumWeights << "\n";
 
   unsigned int boneID = 0;
 

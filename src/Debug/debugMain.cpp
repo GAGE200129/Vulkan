@@ -8,8 +8,6 @@
 
 #include "DebugCamera.hpp"
 #include "EntityInspector.hpp"
-#include "MapEditor.hpp"
-#include "Map/Map.hpp"
 #include "ECS/GameObject.hpp"
 
 extern GLFWwindow *gMainWindow;
@@ -23,7 +21,6 @@ static void focusFn(GLFWwindow *window, int focused)
 void debugMain()
 {
   GLFWwindow *pWindow;
-  Map map;
 
   glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
@@ -71,7 +68,6 @@ void debugMain()
     ImGui::NewFrame();
     ImGui::DockSpaceOverViewport(nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
     EntityInspector::renderImGui();
-    MapEditor::renderImGui();
 
     ImGui::ShowDemoWindow();
 

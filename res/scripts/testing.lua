@@ -32,9 +32,6 @@ function update(delta)
 
   right_dir.x, right_dir.y, right_dir.z = vec3_rotate(global_right.x, global_right.y, global_right.z, yaw, 0, 1, 0)
   forward_dir.x, forward_dir.y, forward_dir.z = vec3_rotate(global_forward.x, global_forward.y, global_forward.z, yaw, 0, 1, 0)
-
-
-  
  
   if input_key_is_down_once(KEY_ESCAPE) then
     capture_mouse = not capture_mouse
