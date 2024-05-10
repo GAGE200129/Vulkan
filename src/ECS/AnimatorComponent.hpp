@@ -9,17 +9,18 @@ public:
   void init() override;
   void update(float delta) override;
 
-  void setCurrentAnimation(const std::string& name);
+  void setCurrentAnimation(const std::string &name);
+
 private:
-  const aiNodeAnim* findNodeAnim(const std::string& nodeName);
-  glm::quat calculateInterpolatedRotation(const aiNodeAnim* pNodeAnim);
-  glm::vec3 calculateInterpolatedPosition(const aiNodeAnim* pNodeAnim);
-  glm::vec3 calculateInterpolatedScale(const aiNodeAnim* pNodeAnim);
+  const aiNodeAnim *findNodeAnim(const std::string &nodeName);
+  glm::quat calculateInterpolatedRotation(const aiNodeAnim *pNodeAnim);
+  glm::vec3 calculateInterpolatedPosition(const aiNodeAnim *pNodeAnim);
+  glm::vec3 calculateInterpolatedScale(const aiNodeAnim *pNodeAnim);
 
 private:
   double mAnimationTimeSec;
   double mAnimationTimeTick;
-  const aiAnimation* mCurrentAnimation;
-  AnimatedModelComponent* mAnimatedModel;
-  TransformComponent* mTransformComponent;
+  const aiAnimation *mCurrentAnimation;
+  AnimatedModelComponent *mAnimatedModel;
+  TransformComponent *mTransformComponent;
 };

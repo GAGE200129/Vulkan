@@ -7,39 +7,39 @@
 
 void EntityInspector::renderImGui()
 {
-  static GameObject *sSelectedGO = nullptr;
-  
-  auto &gameObjects = GameObject::getGameObjects();
-  ImGui::Begin("EntityList");
+    static GameObject *sSelectedGO = nullptr;
 
-  if (ImGui::TreeNode("Entities"))
-  {
-    size_t id = 0;
-    for (const auto &go : gameObjects)
+    auto &gameObjects = GameObject::getGameObjects();
+    ImGui::Begin("EntityList");
+
+    if (ImGui::TreeNode("Entities"))
     {
-      ImGui::PushID(id);
-      if (ImGui::Selectable(go->mName.c_str(), go.get() == sSelectedGO))
-      {
-        sSelectedGO = go.get();
-      }
-      ImGui::PopID();
+        size_t id = 0;
+        for (const auto &go : gameObjects)
+        {
+            ImGui::PushID(id);
+            if (ImGui::Selectable(go->mName.c_str(), go.get() == sSelectedGO))
+            {
+                sSelectedGO = go.get();
+            }
+            ImGui::PopID();
 
-      id++;
+            id++;
+        }
+
+        ImGui::TreePop();
     }
 
-    ImGui::TreePop();
-  }
+    ImGui::End();
 
-  ImGui::End();
-
-  ImGui::Begin("Inspector");
-  if (sSelectedGO)
-  {
-    for(const auto& c : sSelectedGO->mComponents)
+    ImGui::Begin("Inspector");
+    if (sSelectedGO)
     {
-      c->renderImGui();
-      ImGui::Separator();
-    } 
-  }
-  ImGui::End();
+        for (const auto &c : sSelectedGO->mComponents)
+        {
+            c->renderImGui();
+            ImGui::Separator();
+        }
+    }
+    ImGui::End();
 }

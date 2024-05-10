@@ -8,17 +8,18 @@
 class BoxColliderComponent : public CollisionShapeBase
 {
 public:
-  BoxColliderComponent(const glm::vec3& offset, const glm::vec3& halfWidth) : CollisionShapeBase(offset), mHalfWidth(halfWidth) {}
-  virtual ~BoxColliderComponent() = default;
-  
-  void init() override
-  {
-    mShape = new btBoxShape(btVector3(mHalfWidth.x, mHalfWidth.y, mHalfWidth.z));
-  }
-  void shutdown() noexcept override
-  {
-    delete mShape;
-  }
+    BoxColliderComponent(const glm::vec3 &offset, const glm::vec3 &halfWidth) : CollisionShapeBase(offset), mHalfWidth(halfWidth) {}
+    virtual ~BoxColliderComponent() = default;
+
+    void init() override
+    {
+        mShape = new btBoxShape(btVector3(mHalfWidth.x, mHalfWidth.y, mHalfWidth.z));
+    }
+    void shutdown() noexcept override
+    {
+        delete mShape;
+    }
+
 private:
-  glm::vec3 mHalfWidth;
+    glm::vec3 mHalfWidth;
 };

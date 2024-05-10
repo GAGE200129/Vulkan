@@ -3,5 +3,5 @@
 class EntityInspector
 {
 public:
-  static void renderImGui();
+    static void renderImGui();
 };

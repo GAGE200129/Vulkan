@@ -5,10 +5,11 @@
 class AnimatedModelPipeline
 {
 public:
-  void init();
-  void cleanup();
+    void init();
+    void cleanup();
+
 public:
-  vk::PipelineLayout mLayout;
-  vk::Pipeline mPipeline;
-  vk::DescriptorSetLayout mImageDescriptorLayout, mBoneTransformDescriptorLayout;
+    vk::PipelineLayout mLayout;
+    vk::Pipeline mPipeline;
+    vk::DescriptorSetLayout mImageDescriptorLayout, mBoneTransformDescriptorLayout;
 };

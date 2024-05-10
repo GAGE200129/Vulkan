@@ -7,12 +7,13 @@
 class CollisionShapeBase : public Component
 {
 public:
-  CollisionShapeBase(const glm::vec3& offset) : mColliderOffset(offset) {}
-  virtual ~CollisionShapeBase() = default;
+    CollisionShapeBase(const glm::vec3 &offset) : mColliderOffset(offset) {}
+    virtual ~CollisionShapeBase() = default;
 
-  void init() override {};
-  void shutdown() noexcept override {};
+    void init() override {};
+    void shutdown() noexcept override {};
+
 public:
-  btCollisionShape* mShape;
-  glm::vec3 mColliderOffset;
+    btCollisionShape *mShape;
+    glm::vec3 mColliderOffset;
 };

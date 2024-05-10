@@ -9,14 +9,15 @@
 class RigidBodyComponent : public Component
 {
 public:
-  RigidBodyComponent(float mass) : mMass(mass) {}
-  void init() override;
-  void update(float delta) override;
-  void shutdown() noexcept override;
+    RigidBodyComponent(float mass) : mMass(mass) {}
+    void init() override;
+    void update(float delta) override;
+    void shutdown() noexcept override;
+
 public:
-  float mMass;
-  btRigidBody* mBody;
-  btMotionState* mMotionState;
-  TransformComponent* mTransform;
-  CollisionShapeBase* mShape;
+    float mMass;
+    btRigidBody *mBody;
+    btMotionState *mMotionState;
+    TransformComponent *mTransform;
+    CollisionShapeBase *mShape;
 };
