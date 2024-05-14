@@ -10,14 +10,14 @@ void VulkanBuffer::init(vk::DeviceSize size, vk::BufferUsageFlags usage, vk::Mem
         .setUsage(usage)
         .setSharingMode(vk::SharingMode::eExclusive);
 
-    mBuffer = VulkanEngine::mDevice.createBuffer(bufferCI);
+    mBuffer = VulkanEngine::mDevice.createBuffer(bufferCI).value;
 
     vk::MemoryRequirements memRequirements = VulkanEngine::mDevice.getBufferMemoryRequirements(mBuffer);
     vk::MemoryAllocateInfo allocInfo;
     allocInfo.setAllocationSize(memRequirements.size)
         .setMemoryTypeIndex(VulkanEngine::findMemoryType(memRequirements.memoryTypeBits, props));
 
-    mBufferMemory = VulkanEngine::mDevice.allocateMemory(allocInfo);
+    mBufferMemory = VulkanEngine::mDevice.allocateMemory(allocInfo).value;
     VulkanEngine::mDevice.bindBufferMemory(mBuffer, mBufferMemory, 0);
 }
 
@@ -44,7 +44,7 @@ void VulkanBuffer::copy(const VulkanBuffer &other, vk::DeviceSize size)
     cmdAI.setLevel(vk::CommandBufferLevel::ePrimary)
         .setCommandPool(VulkanEngine::mCommandPool)
         .setCommandBufferCount(1);
-    vk::CommandBuffer cmdBuf = VulkanEngine::mDevice.allocateCommandBuffers(cmdAI)[0];
+    vk::CommandBuffer cmdBuf = VulkanEngine::mDevice.allocateCommandBuffers(cmdAI).value[0];
 
     vk::CommandBufferBeginInfo cmdBeginI;
     cmdBeginI.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
@@ -65,7 +65,7 @@ void VulkanBuffer::copy(const VulkanBuffer &other, vk::DeviceSize size)
 
 void VulkanBuffer::copy(const void *data, vk::DeviceSize size)
 {
-    void *mappedData = VulkanEngine::mDevice.mapMemory(mBufferMemory, 0, size);
+    void *mappedData = VulkanEngine::mDevice.mapMemory(mBufferMemory, 0, size).value;
     memcpy(mappedData, data, size);
     VulkanEngine::mDevice.unmapMemory(mBufferMemory);
 }
@@ -78,5 +78,5 @@ void VulkanBuffer::cleanup() noexcept
 
 void *VulkanBuffer::getMapped(vk::DeviceSize offset, vk::DeviceSize size)
 {
-    return VulkanEngine::mDevice.mapMemory(mBufferMemory, offset, size);
+    return VulkanEngine::mDevice.mapMemory(mBufferMemory, offset, size).value;
 }

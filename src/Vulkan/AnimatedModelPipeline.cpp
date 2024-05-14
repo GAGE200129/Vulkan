@@ -3,7 +3,7 @@
 
 #include "VulkanEngine.hpp"
 
-void AnimatedModelPipeline::init()
+bool AnimatedModelPipeline::init()
 {
     // Descriptor layout
     vk::DescriptorSetLayoutBinding layoutBinding;
@@ -16,7 +16,14 @@ void AnimatedModelPipeline::init()
         .setStageFlags(vk::ShaderStageFlagBits::eFragment);
 
     layoutCI.setBindings(layoutBinding);
-    mImageDescriptorLayout = VulkanEngine::mDevice.createDescriptorSetLayout(layoutCI);
+
+    auto[imageDescriptorLayoutResult, imageDescriptorLayout] = VulkanEngine::mDevice.createDescriptorSetLayout(layoutCI);
+    if(imageDescriptorLayoutResult != vk::Result::eSuccess)
+    {
+        spdlog::critical("Failed to create animated model image descriptor layout: {}", vk::to_string(imageDescriptorLayoutResult));
+        return false;
+    }
+    mImageDescriptorLayout = imageDescriptorLayout;
 
     // Create bone transforms
     layoutBinding.setBinding(0)
@@ -25,14 +32,25 @@ void AnimatedModelPipeline::init()
         .setStageFlags(vk::ShaderStageFlagBits::eVertex);
 
     layoutCI.setBindings(layoutBinding);
-    mBoneTransformDescriptorLayout = VulkanEngine::mDevice.createDescriptorSetLayout(layoutCI);
+
+
+    auto[boneTransformDescriptorLayoutResult, boneTransformDescriptorLayout] = VulkanEngine::mDevice.createDescriptorSetLayout(layoutCI);
+    if(boneTransformDescriptorLayoutResult != vk::Result::eSuccess)
+    {
+        spdlog::critical("Failed to create animated model bone transform descriptor layout: {}", vk::to_string(boneTransformDescriptorLayoutResult));
+        return false;
+    }
+    mBoneTransformDescriptorLayout = boneTransformDescriptorLayout;
 
     // Pipeline
     auto vertexCode = VulkanEngine::readfile("res/shaders/animated_model.vert.spv");
     auto fragmentCode = VulkanEngine::readfile("res/shaders/animated_model.frag.spv");
 
-    vk::ShaderModule vertexModule = VulkanEngine::initShaderModule(vertexCode);
-    vk::ShaderModule fragmentModule = VulkanEngine::initShaderModule(fragmentCode);
+    vk::ShaderModule vertexModule, fragmentModule;
+    if(!VulkanEngine::initShaderModule(vertexCode, vertexModule))
+        return false;
+    if(!VulkanEngine::initShaderModule(fragmentCode, fragmentModule))
+        return false;
     vk::PipelineShaderStageCreateInfo vertStageCI, fragStageCI;
     vertStageCI.setStage(vk::ShaderStageFlagBits::eVertex)
         .setPName("main")
@@ -137,7 +155,13 @@ void AnimatedModelPipeline::init()
     pipelineLayoutCI.setSetLayouts(layouts)
         .setPushConstantRanges(ps);
 
-    mLayout = VulkanEngine::mDevice.createPipelineLayout(pipelineLayoutCI);
+    auto[layoutResult, layout] = VulkanEngine::mDevice.createPipelineLayout(pipelineLayoutCI);
+    if(layoutResult != vk::Result::eSuccess)
+    {
+        spdlog::critical("Failed to create animated model pipeline: {}", vk::to_string(layoutResult));
+        return false;
+    }
+    mLayout = layout;
     vk::GraphicsPipelineCreateInfo graphicsPipelineCI;
     graphicsPipelineCI.setStages(shaderStages)
         .setPVertexInputState(&vertexInputCI)
@@ -163,6 +187,8 @@ void AnimatedModelPipeline::init()
 
     VulkanEngine::mDevice.destroyShaderModule(vertexModule);
     VulkanEngine::mDevice.destroyShaderModule(fragmentModule);
+
+    return true;
 }
 
 void AnimatedModelPipeline::cleanup()

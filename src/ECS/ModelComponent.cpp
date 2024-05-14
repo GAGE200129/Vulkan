@@ -162,7 +162,7 @@ void ModelComponent::render()
     cmdBuffer.bindVertexBuffers(1, mMeshData->mNormalBuffer.getBuffer(), {0});
     cmdBuffer.bindVertexBuffers(2, mMeshData->mUvBuffer.getBuffer(), {0});
     cmdBuffer.bindIndexBuffer(mMeshData->mIndexBuffer.getBuffer(), 0, vk::IndexType::eUint32);
-    glm::mat4x4 modelMat = mTransformComponent->build();
+    const glm::mat4x4 modelMat = mGameObject->buildTransform();
     cmdBuffer.pushConstants(pipelineLayout,
                             vk::ShaderStageFlagBits::eVertex, 0, sizeof(modelMat), &modelMat);
     for (const auto &mesh : mMeshData->mMeshes)
@@ -177,7 +177,7 @@ void ModelComponent::render()
 
 void ModelComponent::debugRender()
 {
-    glm::mat4 modelMatrix = mTransformComponent->build();
+    const glm::mat4x4 modelMat = mGameObject->buildTransform();
     const std::vector<glm::vec3> &positions = mMeshData->mPositions;
     const std::vector<unsigned int> &indices = mMeshData->mIndices;
 
@@ -189,7 +189,7 @@ void ModelComponent::debugRender()
         {
             unsigned int index = indices.at(mesh.baseIndex + i);
             const glm::vec3 &position = positions.at(mesh.baseVertex + index);
-            glm::vec4 positionTranslated = modelMatrix * glm::vec4(position, 1);
+            glm::vec4 positionTranslated = modelMat * glm::vec4(position, 1);
 
             glVertex3f(positionTranslated.x, positionTranslated.y, positionTranslated.z);
         }

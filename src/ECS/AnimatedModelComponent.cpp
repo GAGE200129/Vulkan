@@ -3,6 +3,7 @@
 
 #include "Vulkan/VulkanEngine.hpp"
 #include "Vulkan/VulkanTexture.hpp"
+#include "GameObject.hpp"
 
 #include <stb/stb_image.h>
 #include <GL/gl.h>
@@ -207,7 +208,7 @@ void AnimatedModelComponent::parseBone(const std::unique_ptr<MeshData> &meshData
     }
 }
 
-void AnimatedModelComponent::update(float delta)
+void AnimatedModelComponent::update()
 {
     // Update UBO
     std::memcpy(mBoneTransformBufferMapped, mBoneTransforms.data(), sizeof(glm::mat4x4) * mMeshData->mBoneIndexToOffset.size());
@@ -215,7 +216,7 @@ void AnimatedModelComponent::update(float delta)
 
 void AnimatedModelComponent::debugRender()
 {
-    glm::mat4 modelMatrix = mTransformComponent->build();
+    const glm::mat4 modelMatrix = mGameObject->buildTransform();
     const std::vector<glm::vec3> &positions = mMeshData->mPositions;
     const std::vector<unsigned int> &indices = mMeshData->mIndices;
 
@@ -236,9 +237,9 @@ void AnimatedModelComponent::debugRender()
 }
 void AnimatedModelComponent::render()
 {
-    vk::CommandBuffer &cmdBuffer = VulkanEngine::mCommandBuffer;
-    vk::Pipeline &pipeline = VulkanEngine::mAnimatedModelPipeline.mPipeline;
-    vk::PipelineLayout &pipelineLayout = VulkanEngine::mAnimatedModelPipeline.mLayout;
+    const vk::CommandBuffer &cmdBuffer = VulkanEngine::mCommandBuffer;
+    const vk::Pipeline &pipeline = VulkanEngine::mAnimatedModelPipeline.mPipeline;
+    const vk::PipelineLayout &pipelineLayout = VulkanEngine::mAnimatedModelPipeline.mLayout;
     cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
     cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, {VulkanEngine::mGlobalDescriptorSet}, {});
     cmdBuffer.bindVertexBuffers(0, mMeshData->mPositionBuffer.getBuffer(), {0});
@@ -247,9 +248,9 @@ void AnimatedModelComponent::render()
     cmdBuffer.bindVertexBuffers(3, mMeshData->mBoneIDBuffer.getBuffer(), {0});
     cmdBuffer.bindVertexBuffers(4, mMeshData->mBoneWeightBuffer.getBuffer(), {0});
     cmdBuffer.bindIndexBuffer(mMeshData->mIndexBuffer.getBuffer(), 0, vk::IndexType::eUint32);
-    glm::mat4x4 modelMat = mTransformComponent->build();
+    const glm::mat4 modelMatrix = mGameObject->buildTransform();
     cmdBuffer.pushConstants(pipelineLayout,
-                            vk::ShaderStageFlagBits::eVertex, 0, sizeof(modelMat), &modelMat);
+                            vk::ShaderStageFlagBits::eVertex, 0, sizeof(modelMatrix), &modelMatrix);
     cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout,
                                  2, {mBoneTransformDescriptorSet}, {});
     for (const auto &mesh : mMeshData->mMeshes)
@@ -290,8 +291,6 @@ void AnimatedModelComponent::init()
         mMeshData = initCache(mFilePath);
     }
 
-    mTransformComponent = mGameObject->getRequiredComponent<TransformComponent>();
-
     // Uniform buffer
     vk::DeviceSize size = sizeof(mBoneTransforms);
     mBoneTransformBuffer.init(size, vk::BufferUsageFlagBits::eUniformBuffer,
@@ -302,7 +301,7 @@ void AnimatedModelComponent::init()
     vk::DescriptorSetAllocateInfo dsAI;
     dsAI.setDescriptorPool(VulkanEngine::mDescriptorPool)
         .setSetLayouts(VulkanEngine::mAnimatedModelPipeline.mBoneTransformDescriptorLayout);
-    mBoneTransformDescriptorSet = VulkanEngine::mDevice.allocateDescriptorSets(dsAI)[0];
+    mBoneTransformDescriptorSet = VulkanEngine::mDevice.allocateDescriptorSets(dsAI).value[0];
     vk::DescriptorBufferInfo bufferInfo;
     bufferInfo.setBuffer(mBoneTransformBuffer.getBuffer())
         .setOffset(0)

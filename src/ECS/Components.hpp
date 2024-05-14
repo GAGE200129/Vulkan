@@ -10,7 +10,7 @@ public:
     virtual void renderImGui() noexcept {}
     virtual void init() {}
     virtual void lateInit() {}
-    virtual void update(float delta) {}
+    virtual void update() {}
     virtual void render() {}
     virtual void debugRender() {}
     virtual void shutdown() noexcept {}

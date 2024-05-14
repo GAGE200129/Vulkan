@@ -5,7 +5,7 @@
 class StaticModelPipeline
 {
 public:
-    void init();
+    bool init();
     void cleanup();
 
 public:

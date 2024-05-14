@@ -1,12 +1,13 @@
 #include "pch.hpp"
 #include "AnimatorComponent.hpp"
 
+#include "GameObject.hpp"
+
 void AnimatorComponent::init()
 {
     mAnimationTimeSec = 0.0f;
     mCurrentAnimation = nullptr;
     mAnimatedModel = mGameObject->getRequiredComponent<AnimatedModelComponent>();
-    mTransformComponent = mGameObject->getRequiredComponent<TransformComponent>();
 }
 
 void AnimatorComponent::setCurrentAnimation(const std::string &name)
@@ -22,9 +23,9 @@ void AnimatorComponent::setCurrentAnimation(const std::string &name)
         }
     }
 }
-void AnimatorComponent::update(float delta)
+void AnimatorComponent::update()
 {
-    mAnimationTimeSec += delta;
+    mAnimationTimeSec += EngineConstants::TICK_TIME;
 
     if (mCurrentAnimation != nullptr)
     {

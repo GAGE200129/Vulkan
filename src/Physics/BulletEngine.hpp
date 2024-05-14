@@ -10,7 +10,7 @@ class BulletEngine
 
 public:
     static void init();
-    static void update(float delta);
+    static void update();
     static void cleanup();
 
 private:

@@ -29,9 +29,9 @@ void BulletEngine::init()
     sDynamicWorld->addCollisionObject(sGlobalPlane);
 }
 
-void BulletEngine::update(float delta)
+void BulletEngine::update()
 {
-    sDynamicWorld->stepSimulation(delta);
+    sDynamicWorld->stepSimulation(EngineConstants::TICK_TIME, 0, EngineConstants::TICK_TIME);
 }
 
 void BulletEngine::cleanup()

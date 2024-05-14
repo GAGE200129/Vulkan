@@ -20,10 +20,10 @@ public:
             c->lateInit();
     }
 
-    void update(float delta)
+    void update()
     {
         for (auto &c : mComponents)
-            c->update(delta);
+            c->update();
     }
 
     void render()
@@ -43,6 +43,9 @@ public:
         for (auto &c : mComponents)
             c->shutdown();
     }
+
+    void renderImgui() noexcept;
+    const glm::mat4x4 buildTransform() noexcept;
 
     template <typename T>
     T *getComponent() noexcept
@@ -84,6 +87,9 @@ public:
     std::string mName;
     std::vector<std::unique_ptr<Component>> mComponents;
 
+    glm::vec3 mPosition = {0, 0, 0}, mScale = {1, 1, 1};
+    glm::quat mRotation = glm::quat(1, 0, 0, 0);
+
     // Static fields
 public:
     static GameObject &addGameObject(const std::string &name);
@@ -102,11 +108,11 @@ public:
         }
     }
 
-    static void globalUpdate(float delta)
+    static void globalUpdate()
     {
         for (const auto &go : sGameObjects)
         {
-            go->update(delta);
+            go->update();
         }
     }
 

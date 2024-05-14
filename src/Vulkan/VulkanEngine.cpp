@@ -15,6 +15,12 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 
     switch (messageSeverity)
     {
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+        spdlog::info("{}", pCallbackData->pMessage);
+        break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+        spdlog::warn("{}", pCallbackData->pMessage);
+        break;
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
         spdlog::error("{}", pCallbackData->pMessage);
         break;
@@ -80,7 +86,7 @@ void VulkanEngine::cleanupSwapchain()
     mInstance.destroySurfaceKHR(mSurface);
 }
 
-void VulkanEngine::initSwapchain()
+bool VulkanEngine::initSwapchain()
 {
     uint32_t imageCount = mSurfaceCapabilities.minImageCount + 1;
     if (mSurfaceCapabilities.maxImageCount > 0 && imageCount > mSurfaceCapabilities.maxImageCount)
@@ -112,15 +118,35 @@ void VulkanEngine::initSwapchain()
         createInfo.setImageSharingMode(vk::SharingMode::eExclusive);
     }
 
-    mSwapchain = mDevice.createSwapchainKHR(createInfo);
-    mSwapchainImages = mDevice.getSwapchainImagesKHR(mSwapchain);
+    auto [swapChainResult, swapChain] = mDevice.createSwapchainKHR(createInfo);
+    auto [swapChainImagesResult, swapChainImages] = mDevice.getSwapchainImagesKHR(swapChain);
+    if (swapChainResult != vk::Result::eSuccess ||
+        swapChainImagesResult != vk::Result::eSuccess)
+    {
+        spdlog::critical("Failed to create swap chain: {} {}",
+                         vk::to_string(swapChainResult),
+                         vk::to_string(swapChainImagesResult));
+        return false;
+    }
+
+    mSwapchain = swapChain;
+    mSwapchainImages = swapChainImages;
+    return true;
 }
 
-vk::ShaderModule VulkanEngine::initShaderModule(const std::vector<char> &code)
+bool VulkanEngine::initShaderModule(const std::vector<char> &code, vk::ShaderModule& module)
 {
     vk::ShaderModuleCreateInfo ci;
     ci.setPCode((const uint32_t *)code.data()).setCodeSize(code.size());
-    return mDevice.createShaderModule(ci);
+
+    auto[result, shaderModule] = mDevice.createShaderModule(ci);
+    if(result != vk::Result::eSuccess)
+    {
+        spdlog::critical("Failed to create shader module: {}", vk::to_string(result));
+        return false;   
+    }
+    module = shaderModule;
+    return true;
 }
 
 uint32_t VulkanEngine::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags props)
@@ -138,30 +164,45 @@ uint32_t VulkanEngine::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFla
     throw std::runtime_error("Failed to find suitable memory type !");
 }
 
-void VulkanEngine::recreateSwapchain()
+bool VulkanEngine::recreateSwapchain()
 {
-    mDevice.waitIdle();
+    if(mDevice.waitIdle() != vk::Result::eSuccess)
+    {
+        spdlog::critical("Wait idle failed !");
+        return false;
+    }
     cleanupSwapchain();
-    initSurface();
-    mSurfaceCapabilities = mPhysicalDevice.value().getSurfaceCapabilitiesKHR(mSurface);
-    initSwapExtent();
-    initSwapchain();
-    initSwapchainImageViews();
-    initDepthBuffer();
-    initSwapchainFramebuffers();
+    if(!initSurface())
+        return false;
+    mSurfaceCapabilities = mPhysicalDevice.value().getSurfaceCapabilitiesKHR(mSurface).value;
+    if(!initSwapExtent())
+        return false;
+    if(!initSwapchain())
+        return false;
+    if(!initSwapchainImageViews())
+        return false;
+    if(!initDepthBuffer())
+        return false;
+    if(!initSwapchainFramebuffers())
+        return false;
+
+    return true;
 }
 
-void VulkanEngine::initSurface()
+bool VulkanEngine::initSurface()
 {
     VkSurfaceKHR surface;
     if (glfwCreateWindowSurface(mInstance, mWindow, nullptr, &surface) != VK_SUCCESS)
     {
-        throw std::runtime_error("Failed to create window surface !");
+        spdlog::critical("Failed to create window surface !");
+        return false;
     }
     mSurface = surface;
+
+    return true;
 }
 
-void VulkanEngine::initSwapchainImageViews()
+bool VulkanEngine::initSwapchainImageViews()
 {
     mSwapchainImageViews.resize(mSwapchainImages.size());
     for (size_t i = 0; i < mSwapchainImages.size(); i++)
@@ -178,61 +219,86 @@ void VulkanEngine::initSwapchainImageViews()
             .setFormat(mSurfaceFormat.format)
             .setComponents(vk::ComponentMapping())
             .setSubresourceRange(crr);
-        mSwapchainImageViews[i] = mDevice.createImageView(ci);
+
+        auto [imageViewResult, imageView] = mDevice.createImageView(ci);
+        if (imageViewResult != vk::Result::eSuccess)
+        {
+            spdlog::critical("Failed to create image view: {}", vk::to_string(imageViewResult));
+            return false;
+        }
+        mSwapchainImageViews[i] = imageView;
     }
+
+    return true;
 }
 
-void VulkanEngine::initDevice()
+bool VulkanEngine::initDevice()
 {
     // Select physical device
     mPhysicalDevice.reset();
-    std::vector<vk::PhysicalDevice> devices = mInstance.enumeratePhysicalDevices();
-    if (devices.size() == 0)
-        throw std::runtime_error("Cannot find physical device !");
+    const auto [devicesResult, devices] = mInstance.enumeratePhysicalDevices();
+    if (devicesResult != vk::Result::eSuccess)
+    {
+        spdlog::critical("Failed to enumerate physical devices: {}", vk::to_string(devicesResult));
+        return false;
+    }
 
     for (const auto &device : devices)
     {
-        vk::PhysicalDeviceProperties properties = device.getProperties();
-        vk::PhysicalDeviceFeatures features = device.getFeatures();
-        mSurfaceCapabilities = device.getSurfaceCapabilitiesKHR(mSurface);
-        std::vector<vk::SurfaceFormatKHR> surfaceFormats = device.getSurfaceFormatsKHR(mSurface);
-        std::vector<vk::PresentModeKHR> presentModes = device.getSurfacePresentModesKHR(mSurface);
+        const vk::PhysicalDeviceProperties properties = device.getProperties();
+        const vk::PhysicalDeviceFeatures features = device.getFeatures();
+        const auto [surfaceCapabilitiesResult, surfaceCapabilities] = device.getSurfaceCapabilitiesKHR(mSurface);
+        const auto [surfaceFormatResult, surfaceFormats] = device.getSurfaceFormatsKHR(mSurface);
+        const auto [presentModesResult, presentModes] = device.getSurfacePresentModesKHR(mSurface);
+        if (surfaceCapabilitiesResult != vk::Result::eSuccess ||
+            surfaceFormatResult != vk::Result::eSuccess ||
+            presentModesResult != vk::Result::eSuccess)
+        {
+            spdlog::critical("Failed to get device and surface features: {} {} {}",
+                             vk::to_string(surfaceCapabilitiesResult),
+                             vk::to_string(surfaceFormatResult),
+                             vk::to_string(presentModesResult));
+            return false;
+        }
 
-        bool is_intergrated = properties.deviceType == vk::PhysicalDeviceType::eIntegratedGpu;
-        bool is_discrete = properties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu;
-        bool has_geometry = features.geometryShader;
-        bool valid_surface_format = false;
+        mSurfaceCapabilities = surfaceCapabilities;
+
+        bool isIntergrated = properties.deviceType == vk::PhysicalDeviceType::eIntegratedGpu;
+        bool isDiscrete = properties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu;
+        bool validSurfaceFormat = false;
         for (const auto &format : surfaceFormats)
         {
             if (format.format == vk::Format::eB8G8R8A8Srgb && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear)
             {
-                valid_surface_format = true;
+                validSurfaceFormat = true;
                 mSurfaceFormat = format;
                 break;
             }
         }
 
-        bool valid_present_mode = false;
+        bool validPresentMode = false;
         for (const auto &mode : presentModes)
         {
             if (mode == vk::PresentModeKHR::eFifo)
             {
-                valid_present_mode = true;
+                validPresentMode = true;
                 mPresentMode = mode;
                 break;
             }
         }
 
         // Select swap extends
-
-        if (is_intergrated || is_discrete && has_geometry && valid_surface_format && valid_present_mode)
+        if (isIntergrated || isDiscrete && validSurfaceFormat && validPresentMode)
         {
             mPhysicalDevice = device;
             break;
         }
     }
     if (!mPhysicalDevice.has_value())
-        throw std::runtime_error("Cannot select physical device !");
+    {
+        spdlog::critical("Failed to find suitable physical device !");
+        return false;
+    }
 
     // Find queue family
     std::vector<vk::QueueFamilyProperties> queueFamilies = mPhysicalDevice.value().getQueueFamilyProperties();
@@ -247,7 +313,7 @@ void VulkanEngine::initDevice()
         {
             mGraphicsQueueFamily = i;
         }
-        if (mPhysicalDevice.value().getSurfaceSupportKHR(i, mSurface))
+        if (mPhysicalDevice.value().getSurfaceSupportKHR(i, mSurface).value)
         {
             mPresentQueueFamily = i;
         }
@@ -261,15 +327,13 @@ void VulkanEngine::initDevice()
     }
 
     if (!mGraphicsQueueFamily.has_value() || !mPresentQueueFamily.has_value() || !mTransferQueueFamily.has_value())
-        throw std::runtime_error("Failed to find family queue !");
+    {
+        spdlog::critical("Failed to find family queue !");
+        return false;
+    }
 
     // Select extensions
-    std::vector<std::string> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
-    std::vector<const char *> deviceExtensionStrings;
-    for (const auto &d : deviceExtensions)
-    {
-        deviceExtensionStrings.push_back(d.c_str());
-    }
+    std::vector<const char *> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
     // Create device
     std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
@@ -288,15 +352,23 @@ void VulkanEngine::initDevice()
     vk::PhysicalDeviceFeatures features = mPhysicalDevice.value().getFeatures();
     deviceCreateInfo.setQueueCreateInfos(queueCreateInfos)
         .setPEnabledFeatures(&features)
-        .setPEnabledExtensionNames(deviceExtensionStrings);
-    mDevice = mPhysicalDevice->createDevice(deviceCreateInfo);
+        .setPEnabledExtensionNames(deviceExtensions);
+    auto [deviceResult, device] = mPhysicalDevice->createDevice(deviceCreateInfo);
+    if (deviceResult != vk::Result::eSuccess)
+    {
+        spdlog::critical("Failed to create device: {}", vk::to_string(deviceResult));
+        return false;
+    }
+    mDevice = device;
     mDynamicDispatcher.init(mDevice);
     mGraphicQueue = mDevice.getQueue(mGraphicsQueueFamily.value(), 0);
     mPresentQueue = mDevice.getQueue(mPresentQueueFamily.value(), 0);
     mTransferQueue = mDevice.getQueue(mTransferQueueFamily.value(), 0);
+
+    return true;
 }
 
-void VulkanEngine::initSwapExtent()
+bool VulkanEngine::initSwapExtent()
 {
     if (mSurfaceCapabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
     {
@@ -315,9 +387,11 @@ void VulkanEngine::initSwapExtent()
         actualExtent.height = std::clamp(actualExtent.height, mSurfaceCapabilities.minImageExtent.height, mSurfaceCapabilities.maxImageExtent.height);
         mSwapExtent = actualExtent;
     }
+
+    return true;
 }
 
-void VulkanEngine::initVulkan()
+bool VulkanEngine::initVulkan()
 {
     vk::ApplicationInfo info;
     info.setApiVersion(VK_MAKE_API_VERSION(0, 1, 0, 0))
@@ -327,46 +401,49 @@ void VulkanEngine::initVulkan()
     vk::InstanceCreateInfo createInfo;
     createInfo.setPApplicationInfo(&info);
 
-    std::vector<std::string> extensions, layers;
-    std::vector<const char *> extensionStringPtrs, layerStringPtrs;
+    std::vector<const char *> extensions, layers;
+    uint32_t glfwExtensionCount = 0;
+    const char **glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+    for (size_t i = 0; i < glfwExtensionCount; i++)
     {
-        uint32_t glfwExtensionCount = 0;
-        const char **glfwExtensions;
-        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-        for (size_t i = 0; i < glfwExtensionCount; i++)
-        {
-            extensions.push_back(glfwExtensions[i]);
-        }
-        extensions.push_back("VK_EXT_debug_utils");
+        extensions.push_back(glfwExtensions[i]);
     }
+    extensions.push_back("VK_EXT_debug_utils");
+    layers.push_back("VK_LAYER_KHRONOS_validation");
+
+    createInfo.setPEnabledExtensionNames(extensions)
+        .setPEnabledLayerNames(layers);
+
+    const auto [instanceResult, instance] = vk::createInstance(createInfo);
+    if (instanceResult != vk::Result::eSuccess)
     {
-        layers.push_back("VK_LAYER_KHRONOS_validation");
+        spdlog::critical("Failed to create instance: {}", vk::to_string(instanceResult));
+        return false;
     }
-
-    for (const auto &s : extensions)
-    {
-        extensionStringPtrs.push_back(s.c_str());
-    }
-
-    for (const auto &l : layers)
-    {
-        layerStringPtrs.push_back(l.c_str());
-    }
-
-    createInfo.setPEnabledExtensionNames(extensionStringPtrs)
-        .setPEnabledLayerNames(layerStringPtrs);
-
-    mInstance = vk::createInstance(createInfo);
+    mInstance = instance;
     mDynamicDispatcher.init(mInstance);
 
     // Create debug messenger
     vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo;
-    debugCreateInfo.setMessageSeverity(vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError)
-        .setMessageType(vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance)
+    debugCreateInfo.setMessageSeverity(vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+                                       vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+                                       vk::DebugUtilsMessageSeverityFlagBitsEXT::eError)
+        .setMessageType(vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+                        vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+                        vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance)
         .setPfnUserCallback(debugCallback)
         .setPUserData(nullptr);
 
-    mDebugMessenger = mInstance.createDebugUtilsMessengerEXT(debugCreateInfo, nullptr, mDynamicDispatcher);
+    const auto [debugMessengerResult, debugMessenger] =
+        mInstance.createDebugUtilsMessengerEXT(debugCreateInfo, nullptr, mDynamicDispatcher);
+    if (debugMessengerResult != vk::Result::eSuccess)
+    {
+        spdlog::critical("Failed to create debug utils: {}", vk::to_string(debugMessengerResult));
+        return false;
+    }
+    mDebugMessenger = debugMessenger;
+
+    return true;
 }
 
 void VulkanEngine::registerLuaScript(lua_State *L)
@@ -391,7 +468,7 @@ void VulkanEngine::registerLuaScript(lua_State *L)
     lua_register(L, "vk_camera_update_params", luaUpdateCameraParams);
 }
 
-void VulkanEngine::initRenderPass()
+bool VulkanEngine::initRenderPass()
 {
     vk::AttachmentDescription colorAttachment;
     colorAttachment.setFormat(mSurfaceFormat.format)
@@ -439,26 +516,51 @@ void VulkanEngine::initRenderPass()
         .setSubpasses(subpass)
         .setDependencies(subpassDependency);
 
-    mRenderPass = mDevice.createRenderPass(renderPassCI);
+    auto [renderPassResult, renderPass] = mDevice.createRenderPass(renderPassCI);
+    if (renderPassResult != vk::Result::eSuccess)
+    {
+        spdlog::critical("Failed to create render pass: {}", vk::to_string(renderPassResult));
+        return false;
+    }
+    mRenderPass = renderPass;
+    return true;
 }
 
-void VulkanEngine::initCommandPool()
+bool VulkanEngine::initCommandPool()
 {
+    spdlog::info("Creating command pool !");
     vk::CommandPoolCreateInfo commandPoolCI;
     commandPoolCI.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
         .setQueueFamilyIndex(mGraphicsQueueFamily.value());
 
-    mCommandPool = mDevice.createCommandPool(commandPoolCI);
+    auto [commandPoolResult, commandPool] = mDevice.createCommandPool(commandPoolCI);
+    if (commandPoolResult != vk::Result::eSuccess)
+    {
+        spdlog::critical("Failed to create command pool: {}", vk::to_string(commandPoolResult));
+        return false;
+    }
+
+    mCommandPool = commandPool;
+    return true;
 }
 
-void VulkanEngine::initCommandBuffer()
+bool VulkanEngine::initCommandBuffer()
 {
     vk::CommandBufferAllocateInfo commandBufferAllocateCI;
     commandBufferAllocateCI.setCommandPool(mCommandPool)
         .setLevel(vk::CommandBufferLevel::ePrimary)
         .setCommandBufferCount(1);
 
-    mCommandBuffer = mDevice.allocateCommandBuffers(commandBufferAllocateCI)[0];
+    auto [commandBufferResult, commandBuffers] = mDevice.allocateCommandBuffers(commandBufferAllocateCI);
+    if (commandBufferResult != vk::Result::eSuccess)
+    {
+        spdlog::critical("Failed to create command buffer: {}", vk::to_string(commandBufferResult));
+        return false;
+    }
+
+    mCommandBuffer = commandBuffers[0];
+
+    return true;
 }
 
 void VulkanEngine::joint()
@@ -555,7 +657,7 @@ void VulkanEngine::render()
     }
 }
 
-void VulkanEngine::initDepthBuffer()
+bool VulkanEngine::initDepthBuffer()
 {
     vk::ImageCreateInfo imageCI;
     imageCI.setImageType(vk::ImageType::e2D)
@@ -568,15 +670,27 @@ void VulkanEngine::initDepthBuffer()
         .setUsage(vk::ImageUsageFlagBits::eDepthStencilAttachment)
         .setSamples(vk::SampleCountFlagBits::e1)
         .setSharingMode(vk::SharingMode::eExclusive);
-
-    mDepthImage = mDevice.createImage(imageCI);
+    auto [depthImageResult, depthImage] = mDevice.createImage(imageCI);
+    if (depthImageResult != vk::Result::eSuccess)
+    {
+        spdlog::critical("Failed to create depth image result: {}", vk::to_string(depthImageResult));
+        return false;
+    }
+    mDepthImage = depthImage;
 
     vk::MemoryRequirements memRequirements = mDevice.getImageMemoryRequirements(mDepthImage);
     vk::MemoryAllocateInfo memAI;
     memAI.setAllocationSize(memRequirements.size)
         .setMemoryTypeIndex(findMemoryType(memRequirements.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal));
 
-    mDepthMemory = mDevice.allocateMemory(memAI);
+    auto [depthMemoryResult, depthMemory] = mDevice.allocateMemory(memAI);
+
+    if (depthMemoryResult != vk::Result::eSuccess)
+    {
+        spdlog::critical("Failed to create depth memory result: {}", vk::to_string(depthMemoryResult));
+        return false;
+    }
+    mDepthMemory = depthMemory;
 
     mDevice.bindImageMemory(mDepthImage, mDepthMemory, {0});
 
@@ -593,21 +707,45 @@ void VulkanEngine::initDepthBuffer()
         .setBaseArrayLayer(0)
         .setLayerCount(1);
 
-    mDepthView = mDevice.createImageView(viewInfo);
+    auto [depthViewResult, depthView] = mDevice.createImageView(viewInfo);
+    if (depthViewResult != vk::Result::eSuccess)
+    {
+        spdlog::critical("Failed to create depth view: {}", vk::to_string(depthViewResult));
+        return false;
+    }
+    mDepthView = depthView;
+    return true;
 }
 
-void VulkanEngine::initSyncObjects()
+bool VulkanEngine::initSyncObjects()
 {
     vk::SemaphoreCreateInfo semaphoreCI;
     vk::FenceCreateInfo fenceCI;
     fenceCI.setFlags(vk::FenceCreateFlagBits::eSignaled);
 
-    mImageAvalidableGSignal = mDevice.createSemaphore(semaphoreCI);
-    mRenderFinishedGSignal = mDevice.createSemaphore(semaphoreCI);
-    mInFlightLocker = mDevice.createFence(fenceCI);
+    auto [result1, imageAvalidableGSignal] = mDevice.createSemaphore(semaphoreCI);
+    auto [result2, renderFinishedGSignal] = mDevice.createSemaphore(semaphoreCI);
+    auto [result3, inFlightLocker] = mDevice.createFence(fenceCI);
+
+    if (result1 != vk::Result::eSuccess ||
+        result2 != vk::Result::eSuccess ||
+        result3 != vk::Result::eSuccess)
+    {
+        spdlog::critical("Failed to create sync objects: {} {} {}", vk::to_string(result1),
+                         vk::to_string(result2),
+                         vk::to_string(result3));
+
+        return false;
+    }
+
+    mImageAvalidableGSignal = imageAvalidableGSignal;
+    mRenderFinishedGSignal = renderFinishedGSignal;
+    mInFlightLocker = inFlightLocker;
+
+    return true;
 }
 
-void VulkanEngine::initDescriptorPool()
+bool VulkanEngine::initDescriptorPool()
 {
     std::array<vk::DescriptorPoolSize, 2> dps;
     dps[0].setDescriptorCount(512).setType(vk::DescriptorType::eUniformBuffer);
@@ -617,7 +755,14 @@ void VulkanEngine::initDescriptorPool()
     descriptorPoolCI.setPoolSizes(dps)
         .setMaxSets(512);
 
-    mDescriptorPool = mDevice.createDescriptorPool(descriptorPoolCI);
+    auto [descriptorPoolResult, descriptorPool] = mDevice.createDescriptorPool(descriptorPoolCI);
+    if (descriptorPoolResult != vk::Result::eSuccess)
+    {
+        spdlog::critical("Failed to create descriptor pool: {}", vk::to_string(descriptorPoolResult));
+        return false;
+    }
+
+    mDescriptorPool = descriptorPool;
 
     vk::DescriptorSetLayoutBinding layoutBinding;
     layoutBinding.setBinding(0)
@@ -627,7 +772,14 @@ void VulkanEngine::initDescriptorPool()
 
     vk::DescriptorSetLayoutCreateInfo layoutCI;
     layoutCI.setBindings(layoutBinding);
-    mGlobalDescriptorLayout = VulkanEngine::mDevice.createDescriptorSetLayout(layoutCI);
+
+    auto [globalDescriptorLayoutResult, globalDescriptorLayout] = mDevice.createDescriptorSetLayout(layoutCI);
+    if (globalDescriptorLayoutResult != vk::Result::eSuccess)
+    {
+        spdlog::critical("Failed to create global descriptor layout: {}", vk::to_string(globalDescriptorLayoutResult));
+        return false;
+    }
+    mGlobalDescriptorLayout = globalDescriptorLayout;
 
     // Uniform buffer
     vk::DeviceSize size = sizeof(VulkanUniformBufferObject);
@@ -639,7 +791,15 @@ void VulkanEngine::initDescriptorPool()
     vk::DescriptorSetAllocateInfo dsAI;
     dsAI.setDescriptorPool(mDescriptorPool)
         .setSetLayouts(mGlobalDescriptorLayout);
-    mGlobalDescriptorSet = mDevice.allocateDescriptorSets(dsAI)[0];
+
+    auto [globalDescriptorSetResult, globalDescriptorSet] = mDevice.allocateDescriptorSets(dsAI);
+    if (globalDescriptorSetResult != vk::Result::eSuccess)
+    {
+        spdlog::critical("Failed to create global descriptor set: {}", vk::to_string(globalDescriptorSetResult));
+        return false;
+    }
+    mGlobalDescriptorSet = globalDescriptorSet[0];
+
     vk::DescriptorBufferInfo bufferInfo;
     bufferInfo.setBuffer(mGlobalUniformBuffer.getBuffer())
         .setOffset(0)
@@ -652,6 +812,8 @@ void VulkanEngine::initDescriptorPool()
         .setDescriptorCount(1)
         .setBufferInfo(bufferInfo);
     mDevice.updateDescriptorSets(writeDescriptor, {});
+
+    return true;
 }
 void VulkanEngine::cleanup() noexcept
 {
@@ -680,7 +842,7 @@ void VulkanEngine::onWindowResize(int width, int height) noexcept
     mWindowResized = true;
 }
 
-void VulkanEngine::initSwapchainFramebuffers()
+bool VulkanEngine::initSwapchainFramebuffers()
 {
     mSwapchainFramebuffers.resize(mSwapchainImageViews.size());
     for (size_t i = 0; i < mSwapchainImageViews.size(); i++)
@@ -694,8 +856,16 @@ void VulkanEngine::initSwapchainFramebuffers()
             .setHeight(mSwapExtent.height)
             .setLayers(1);
 
-        mSwapchainFramebuffers[i] = mDevice.createFramebuffer(framebufferCI);
+        auto [swapchainFrameBufferResult, swapChainFrameBuffer] = mDevice.createFramebuffer(framebufferCI);
+        if (swapchainFrameBufferResult != vk::Result::eSuccess)
+        {
+            spdlog::critical("Failed to create swapchain framebuffer: {}", vk::to_string(swapchainFrameBufferResult));
+            return false;
+        }
+        mSwapchainFramebuffers[i] = swapChainFrameBuffer;
     }
+
+    return true;
 }
 
 std::vector<char> VulkanEngine::readfile(const std::string &file)

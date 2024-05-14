@@ -29,6 +29,7 @@ project "EnGAGE"
       "SPDLOG_COMPILED_LIB"
    }
 
+
    filter "configurations:Debug"
       defines { "DEBUG" }
       symbols "On"
@@ -37,6 +38,12 @@ project "EnGAGE"
       defines { "NDEBUG" }
       optimize "On"
 
+   --Linux--
+   filter { "system:linux", "action:gmake" }
+   buildoptions 
+   {
+      "-Wall -Wextra -Wpedantic"
+   }
 
    --Shader build step--
    filter {'files:res/**.vert'}

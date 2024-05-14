@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Components.hpp"
-#include "TransformComponent.hpp"
 
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 
@@ -9,7 +8,7 @@ class CharacterControllerComponent : public Component
 {
 public:
     void init() override;
-    void update(float delta) override;
+    void update() override;
     void shutdown() noexcept override;
 
     static void registerLuaScript(lua_State *L);
@@ -30,5 +29,4 @@ public:
     btRigidBody *mBody;
     btCollisionShape *mShape;
     btMotionState *mMotionState;
-    TransformComponent *mTransform;
 };

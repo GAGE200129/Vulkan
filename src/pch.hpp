@@ -1,4 +1,3 @@
-#pragma once
 #include <string>
 #include <vector>
 #include <memory>
@@ -22,10 +21,13 @@
 #include <assimp/postprocess.h>
 #include <lua5.4/lua.hpp>
 
-#include <vulkan/vulkan.hpp>
 
-#define GLFW_INCLUDE_NONE
+#define VULKAN_HPP_NO_EXCEPTIONS
+#define VULKAN_HPP_ASSERT(x) 
+#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#include <vulkan/vulkan.hpp>
 #include <spdlog/spdlog.h>
 
 #include "Utils.hpp"
+#include "EngineConstants.hpp"

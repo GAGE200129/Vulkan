@@ -8,7 +8,6 @@
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtx/norm.hpp>
 
-#include "TransformComponent.hpp"
 #include "CharacterControllerComponent.hpp"
 #include "Vulkan/VulkanEngine.hpp"
 #include "GameObject.hpp"
@@ -64,7 +63,6 @@ void ScriptComponent::init()
     VulkanEngine::registerLuaScript(L);
     Input::registerLuaScript(L);
     GameObject::registerLuaScript(L);
-    TransformComponent::registerLuaScript(L);
     CharacterControllerComponent::registerLuaScript(L);
 
     lua_register(L, "vec3_rotate", luaVec3Rotate);
@@ -90,12 +88,12 @@ void ScriptComponent::lateInit()
     }
 }
 
-void ScriptComponent::update(float delta)
+void ScriptComponent::update()
 {
     lua_getglobal(L, "update");
     if (!lua_isfunction(L, -1))
         throw std::runtime_error("Can't find update function !");
-    lua_pushnumber(L, delta);
+    lua_pushnumber(L, EngineConstants::TICK_TIME);
     lua_call(L, 1, 0);
 }
 

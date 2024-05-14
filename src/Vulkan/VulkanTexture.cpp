@@ -121,14 +121,14 @@ void VulkanTexture::init(uint32_t width, uint32_t height, vk::Format format, vk:
         .setSamples(vk::SampleCountFlagBits::e1)
         .setSharingMode(vk::SharingMode::eExclusive);
 
-    mHandle = VulkanEngine::mDevice.createImage(imageCI);
+    mHandle = VulkanEngine::mDevice.createImage(imageCI).value;
 
     vk::MemoryRequirements memRequirements = VulkanEngine::mDevice.getImageMemoryRequirements(mHandle);
     vk::MemoryAllocateInfo memAI;
     memAI.setAllocationSize(memRequirements.size)
         .setMemoryTypeIndex(VulkanEngine::findMemoryType(memRequirements.memoryTypeBits, properties));
 
-    mMemory = VulkanEngine::mDevice.allocateMemory(memAI);
+    mMemory = VulkanEngine::mDevice.allocateMemory(memAI).value;
 
     VulkanEngine::mDevice.bindImageMemory(mHandle, mMemory, {0});
 
@@ -145,7 +145,7 @@ void VulkanTexture::init(uint32_t width, uint32_t height, vk::Format format, vk:
         .setBaseArrayLayer(0)
         .setLayerCount(1);
 
-    mImageView = VulkanEngine::mDevice.createImageView(viewInfo);
+    mImageView = VulkanEngine::mDevice.createImageView(viewInfo).value;
 
     // Create sampler
     vk::SamplerCreateInfo samplerCI;
@@ -163,12 +163,12 @@ void VulkanTexture::init(uint32_t width, uint32_t height, vk::Format format, vk:
         .setCompareOp(vk::CompareOp::eAlways)
         .setMipmapMode(vk::SamplerMipmapMode::eNearest);
 
-    mSampler = VulkanEngine::mDevice.createSampler(samplerCI);
+    mSampler = VulkanEngine::mDevice.createSampler(samplerCI).value;
 
     vk::DescriptorSetAllocateInfo dsAI;
     dsAI.setDescriptorPool(VulkanEngine::mDescriptorPool)
         .setSetLayouts(outputLayout);
-    mDescriptorSet = VulkanEngine::mDevice.allocateDescriptorSets(dsAI)[0];
+    mDescriptorSet = VulkanEngine::mDevice.allocateDescriptorSets(dsAI).value[0];
     vk::DescriptorImageInfo imageInfo;
     imageInfo.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
         .setImageView(mImageView)
@@ -185,12 +185,14 @@ void VulkanTexture::init(uint32_t width, uint32_t height, vk::Format format, vk:
 
 vk::CommandBuffer VulkanTexture::beginSingleTimeCmd()
 {
+    spdlog::info("Creating single time command !");
     vk::CommandBufferAllocateInfo allocInfo;
     allocInfo.setLevel(vk::CommandBufferLevel::ePrimary)
         .setCommandPool(VulkanEngine::mCommandPool)
         .setCommandBufferCount(1);
 
-    vk::CommandBuffer commandBuffer = VulkanEngine::mDevice.allocateCommandBuffers(allocInfo)[0];
+    auto commandBuffers = VulkanEngine::mDevice.allocateCommandBuffers(allocInfo).value;
+    vk::CommandBuffer commandBuffer = commandBuffers[0];
     vk::CommandBufferBeginInfo beginInfo;
     beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 

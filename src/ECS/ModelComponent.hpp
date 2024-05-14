@@ -2,7 +2,6 @@
 
 #include "Components.hpp"
 #include "GameObject.hpp"
-#include "TransformComponent.hpp"
 
 #include <Vulkan/VulkanBuffer.hpp>
 #include <Vulkan/VulkanTexture.hpp>
@@ -21,8 +20,6 @@ public:
         {
             mMeshData = initCache(mFilePath);
         }
-
-        mTransformComponent = mGameObject->getRequiredComponent<TransformComponent>();
     }
 
     void render() override;
@@ -52,7 +49,6 @@ private:
         std::vector<unsigned int> mIndices;
     };
     MeshData *mMeshData;
-    TransformComponent *mTransformComponent;
     std::string mFilePath;
 
     // static field

@@ -3,28 +3,35 @@
 
 #include "VulkanEngine.hpp"
 
-void StaticModelPipeline::init()
+bool StaticModelPipeline::init()
 {
     // Descriptor layout
 
+    vk::DescriptorSetLayoutBinding layoutBinding;
+    layoutBinding.setBinding(0)
+        .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+        .setDescriptorCount(1)
+        .setStageFlags(vk::ShaderStageFlagBits::eFragment);
+
+    vk::DescriptorSetLayoutCreateInfo layoutCI;
+    layoutCI.setBindings(layoutBinding);
+    
+    auto[imageDescriptorResult, imageDescriptor] = VulkanEngine::mDevice.createDescriptorSetLayout(layoutCI);
+    if(imageDescriptorResult != vk::Result::eSuccess)
     {
-        vk::DescriptorSetLayoutBinding layoutBinding;
-        layoutBinding.setBinding(0)
-            .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-            .setDescriptorCount(1)
-            .setStageFlags(vk::ShaderStageFlagBits::eFragment);
-
-        vk::DescriptorSetLayoutCreateInfo layoutCI;
-        layoutCI.setBindings(layoutBinding);
-        mImageDescriptorLayout = VulkanEngine::mDevice.createDescriptorSetLayout(layoutCI);
+        spdlog::critical("Failed to create image descriptor layout: {}", vk::to_string(imageDescriptorResult));
+        return false;
     }
-
+    mImageDescriptorLayout = imageDescriptor;
     // Pipeline
     auto vertexCode = VulkanEngine::readfile("res/shaders/static_model.vert.spv");
     auto fragmentCode = VulkanEngine::readfile("res/shaders/static_model.frag.spv");
 
-    vk::ShaderModule vertexModule = VulkanEngine::initShaderModule(vertexCode);
-    vk::ShaderModule fragmentModule = VulkanEngine::initShaderModule(fragmentCode);
+    vk::ShaderModule vertexModule, fragmentModule;
+    if(!VulkanEngine::initShaderModule(vertexCode, vertexModule))
+        return false;
+    if(!VulkanEngine::initShaderModule(fragmentCode, fragmentModule))
+        return false;
     vk::PipelineShaderStageCreateInfo vertStageCI, fragStageCI;
     vertStageCI.setStage(vk::ShaderStageFlagBits::eVertex)
         .setPName("main")
@@ -126,7 +133,14 @@ void StaticModelPipeline::init()
     pipelineLayoutCI.setSetLayouts(layouts)
         .setPushConstantRanges(pushConstantCI);
 
-    mLayout = VulkanEngine::mDevice.createPipelineLayout(pipelineLayoutCI);
+    auto[layoutResult, layout] = VulkanEngine::mDevice.createPipelineLayout(pipelineLayoutCI);
+    if(layoutResult != vk::Result::eSuccess)
+    {
+        spdlog::critical("Failed to create pipeline layout: {}", vk::to_string(layoutResult));
+        return false;
+    }
+    mLayout = layout;
+
     vk::GraphicsPipelineCreateInfo graphicsPipelineCI;
     graphicsPipelineCI.setStages(shaderStages)
         .setPVertexInputState(&vertexInputCI)
@@ -152,11 +166,12 @@ void StaticModelPipeline::init()
 
     VulkanEngine::mDevice.destroyShaderModule(vertexModule);
     VulkanEngine::mDevice.destroyShaderModule(fragmentModule);
+
+    return true;
 }
 
 void StaticModelPipeline::cleanup()
 {
-
     VulkanEngine::mDevice.destroyDescriptorSetLayout(mImageDescriptorLayout);
     VulkanEngine::mDevice.destroyPipeline(mPipeline);
     VulkanEngine::mDevice.destroyPipelineLayout(mLayout);

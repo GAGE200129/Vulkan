@@ -51,24 +51,47 @@ class VulkanEngine
     friend class Map;
 
 public:
-    static void init(GLFWwindow *window)
+    static bool init(GLFWwindow *window)
     {
+        spdlog::info("Creating a vulkan context !");
         mWindow = window;
-        initVulkan();
-        initSurface();
-        initDevice();
-        initSwapExtent();
-        initSwapchain();
-        initSwapchainImageViews();
-        initRenderPass();
-        initDescriptorPool();
-        mStaticModelPipeline.init();
-        mAnimatedModelPipeline.init();
-        initDepthBuffer();
-        initSwapchainFramebuffers();
-        initCommandPool();
-        initCommandBuffer();
-        initSyncObjects();
+        if(!initVulkan())
+            return false;
+        if(!initSurface())
+            return false;
+        if(!initDevice())
+            return false;
+        if(!initSwapExtent())
+            return false;
+
+        if(!initSwapchain())
+            return false;
+
+        if(!initSwapchainImageViews())
+            return false;
+
+        if(!initRenderPass())
+            return false;
+        
+        if(!initDescriptorPool())
+            return false;
+
+        if(!mStaticModelPipeline.init())
+            return false;
+        if(!mAnimatedModelPipeline.init())
+            return false;
+        if(!initDepthBuffer())
+            return false;
+        if(!initSwapchainFramebuffers())
+            return false;
+        if(!initCommandPool())
+            return false;
+        if(!initCommandBuffer())
+            return false;
+        if(!initSyncObjects())
+            return false;
+
+        return true;
     }
     static void registerLuaScript(lua_State *L);
     static void joint();
@@ -79,22 +102,22 @@ public:
     inline static VulkanCamera &getCamera() { return mCamera; }
 
 private:
-    static void initSwapExtent();
-    static void initSwapchain();
-    static void initSwapchainImageViews();
-    static void initSurface();
-    static void initDevice();
-    static void initVulkan();
-    static vk::ShaderModule initShaderModule(const std::vector<char> &code);
-    static void initRenderPass();
-    static void initSwapchainFramebuffers();
-    static void initCommandPool();
-    static void initCommandBuffer();
-    static void initSyncObjects();
-    static void initDescriptorPool();
-    static void recreateSwapchain();
+    static bool initSwapExtent();
+    static bool initSwapchain();
+    static bool initSwapchainImageViews();
+    static bool initSurface();
+    static bool initDevice();
+    static bool initVulkan();
+    static bool initShaderModule(const std::vector<char> &code, vk::ShaderModule& module);
+    static bool initRenderPass();
+    static bool initSwapchainFramebuffers();
+    static bool initCommandPool();
+    static bool initCommandBuffer();
+    static bool initSyncObjects();
+    static bool initDescriptorPool();
+    static bool recreateSwapchain();
     static void cleanupSwapchain();
-    static void initDepthBuffer();
+    static bool initDepthBuffer();
     static uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags props);
 
 private:

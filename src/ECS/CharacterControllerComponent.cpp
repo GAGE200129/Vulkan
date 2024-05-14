@@ -4,7 +4,8 @@
 #include <btBulletDynamicsCommon.h>
 #include <BulletCollision/CollisionDispatch/btGhostObject.h>
 
-#include "Bullet/BulletEngine.hpp"
+#include "Physics/BulletEngine.hpp"
+#include "GameObject.hpp"
 
 #include <glm/gtx/string_cast.hpp>
 
@@ -41,12 +42,10 @@ public:
 
 void CharacterControllerComponent::init()
 {
-    mTransform = mGameObject->getRequiredComponent<TransformComponent>();
-
     mShape = new btCapsuleShape(RADIUS, HEIGHT);
     btTransform t;
     t.setIdentity();
-    t.setOrigin(btVector3(mTransform->position.x, mTransform->position.y, mTransform->position.z));
+    t.setOrigin(btVector3(mGameObject->mPosition.x, mGameObject->mPosition.y, mGameObject->mPosition.z));
     mMotionState = new btDefaultMotionState(t);
 
     btRigidBody::btRigidBodyConstructionInfo info(4000.0f, mMotionState, mShape);
@@ -56,7 +55,7 @@ void CharacterControllerComponent::init()
     mBody->setFriction(0);
     BulletEngine::sDynamicWorld->addRigidBody(mBody);
 }
-void CharacterControllerComponent::update(float delta)
+void CharacterControllerComponent::update()
 {
     FindGround callback;
     callback.mMe = mBody;
@@ -75,7 +74,7 @@ void CharacterControllerComponent::update(float delta)
     }
     else if (mOnGround || linearVelocity[2] > 0)
     {
-        linearVelocity += moveDirection * (WALK_ACCEL * delta);
+        linearVelocity += moveDirection * (WALK_ACCEL * EngineConstants::TICK_TIME);
         btScalar speed2 = pow(linearVelocity.x(), 2) + pow(linearVelocity.z(), 2);
         constexpr float MAX_VELOCITY_SQUARED = MAX_VELOCITY * MAX_VELOCITY;
         if (speed2 > MAX_VELOCITY_SQUARED)
@@ -91,11 +90,11 @@ void CharacterControllerComponent::update(float delta)
     btVector3 &pos = t.getOrigin();
     btQuaternion rot = t.getRotation().normalized();
 
-    mTransform->position = {pos.x(), pos.y(), pos.z()};
-    mTransform->rotation.x = rot.x();
-    mTransform->rotation.y = rot.y();
-    mTransform->rotation.z = rot.z();
-    mTransform->rotation.w = rot.w();
+    mGameObject->mPosition = {pos.x(), pos.y(), pos.z()};
+    mGameObject->mRotation.x = rot.x();
+    mGameObject->mRotation.y = rot.y();
+    mGameObject->mRotation.z = rot.z();
+    mGameObject->mRotation.w = rot.w();
 }
 
 void CharacterControllerComponent::registerLuaScript(lua_State *L)

@@ -12,15 +12,11 @@
 #include "ECS/RigidBodyComponent.hpp"
 #include "ECS/BoxColliderComponent.hpp"
 #include "ECS/CharacterControllerComponent.hpp"
-#include "Bullet/BulletEngine.hpp"
+#include "Physics/BulletEngine.hpp"
 
+#include "EngineConstants.hpp"
 #include "Input.hpp"
 
-#ifdef DEBUG
-static constexpr bool gDebugEnabled = true;
-#else
-static constexpr bool gDebugEnabled = false;
-#endif
 
 extern void debugMain();
 extern bool gDebugPaused;
@@ -32,7 +28,8 @@ static void windowResizeFn(GLFWwindow *window, int width, int height) noexcept
 
 GLFWwindow *gMainWindow;
 
-void run()
+
+int main()
 {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -41,7 +38,8 @@ void run()
     gMainWindow = glfwCreateWindow(1600, 900, "Vulkan", nullptr, nullptr);
     glfwSetFramebufferSizeCallback(gMainWindow, windowResizeFn);
     BulletEngine::init();
-    VulkanEngine::init(gMainWindow);
+    if(!VulkanEngine::init(gMainWindow))
+        return -1;
     Input::init(gMainWindow);
 
     std::vector<AnimatorComponent *> animators;
@@ -51,18 +49,16 @@ void run()
         for (int j = 5; j < 15; j += 2)
         {
             GameObject *go = &GameObject::addGameObject("Testing");
-            TransformComponent *c = go->addComponent<TransformComponent>();
             animators.push_back(go->addComponent<AnimatorComponent>());
             go->addComponent<AnimatedModelComponent>("res/models/box.glb");
             go->addComponent<BoxColliderComponent>(glm::vec3{0.0f, 3.0f, 0.0f}, glm::vec3{1.0f, 3.0f, 1.0f});
             go->addComponent<RigidBodyComponent>(1.0f);
-            c->position.x = i;
-            c->position.z = j;
+            go->mPosition.x = i;
+            go->mPosition.z = j;
         }
     }
 
     GameObject &go1 = GameObject::addGameObject("Testing1");
-    go1.addComponent<TransformComponent>();
     go1.addComponent<ModelComponent>("res/models/box_textured.glb");
     go1.addComponent<CharacterControllerComponent>();
     go1.addComponent<ScriptComponent>("res/scripts/testing.lua");
@@ -71,12 +67,11 @@ void run()
 
     // Launch debugger
     std::unique_ptr<std::thread> debugThread;
-    if (gDebugEnabled)
+    if (EngineConstants::DEBUG_ENABLED)
         debugThread = std::make_unique<std::thread>(debugMain);
 
     double lastTime = glfwGetTime();
     double lag = 0;
-    constexpr double MS_PER_TICK = 1.0 / 60.0;
     while (!glfwWindowShouldClose(gMainWindow))
     {
         double current = glfwGetTime();
@@ -86,18 +81,18 @@ void run()
         if (gDebugPaused)
             continue;
         lag += elapsed;
-        while (lag >= MS_PER_TICK)
+        while (lag >= EngineConstants::TICK_TIME)
         {
             glfwPollEvents();
-            BulletEngine::update(MS_PER_TICK);
-            GameObject::globalUpdate(MS_PER_TICK);
+            BulletEngine::update();
+            GameObject::globalUpdate();
             Input::update();
-            lag -= MS_PER_TICK;
+            lag -= EngineConstants::TICK_TIME;
         }
 
         VulkanEngine::render();
     }
-    if (gDebugEnabled)
+    if (EngineConstants::DEBUG_ENABLED)
         debugThread->join();
 
     VulkanEngine::joint();
@@ -109,19 +104,6 @@ void run()
     BulletEngine::cleanup();
     glfwDestroyWindow(gMainWindow);
     glfwTerminate();
-}
 
-int main()
-{
-    try
-    {
-        run();
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << std::endl;
-        return EXIT_FAILURE;
-    }
-
-    return EXIT_SUCCESS;
+    return 0;
 }

@@ -7,7 +7,7 @@ class AnimatorComponent : public Component
 {
 public:
   void init() override;
-  void update(float delta) override;
+  void update() override;
 
   void setCurrentAnimation(const std::string &name);
 
@@ -22,5 +22,4 @@ private:
   double mAnimationTimeTick;
   const aiAnimation *mCurrentAnimation;
   AnimatedModelComponent *mAnimatedModel;
-  TransformComponent *mTransformComponent;
 };

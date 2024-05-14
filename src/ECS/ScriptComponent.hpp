@@ -8,7 +8,7 @@ public:
     ScriptComponent(const std::string &filePath) : mFilePath(filePath) {}
     void init() override;
     void lateInit() override;
-    void update(float delta) override;
+    void update() override;
     void shutdown() noexcept override;
 
 private:

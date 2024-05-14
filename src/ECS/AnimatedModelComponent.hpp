@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Components.hpp"
-#include "TransformComponent.hpp"
 
 #include "Vulkan/VulkanTexture.hpp"
 
@@ -14,7 +13,7 @@ class AnimatedModelComponent : public Component
 public:
     AnimatedModelComponent(const std::string &filePath) : mFilePath(filePath) {}
     void init() override;
-    void update(float delta) override;
+    void update() override;
     void render() override;
     void debugRender() override;
     void shutdown() noexcept override;
@@ -53,7 +52,6 @@ private:
     };
 
     MeshData *mMeshData;
-    TransformComponent *mTransformComponent;
     std::string mFilePath;
     std::array<glm::mat4, 100> mBoneTransforms;
     VulkanBuffer mBoneTransformBuffer;
