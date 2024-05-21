@@ -10,6 +10,7 @@ std::bitset<500> Input::mKeysPressed, Input::mPrevKeyPressed;
 
 void Input::keyPressedFn(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
+
     if (action == GLFW_PRESS)
     {
         mKeysPressed[key] = true;

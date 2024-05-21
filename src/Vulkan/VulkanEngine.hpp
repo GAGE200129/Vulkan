@@ -1,8 +1,5 @@
 #pragma once
-#include "VulkanBuffer.hpp"
-
-#include "StaticModelPipeline.hpp"
-#include "AnimatedModelPipeline.hpp"
+#include "Camera.hpp"
 
 struct VulkanUniformBufferObject
 {
@@ -10,156 +7,112 @@ struct VulkanUniformBufferObject
     glm::mat4 proj;
 };
 
-class VulkanCamera
+struct VulkanTexture
 {
-public:
-    glm::mat4 getProjection(const vk::Extent2D &extent)
-    {
-        glm::mat4 proj = glm::perspectiveRH_ZO(glm::radians(fov), (float)extent.width / (float)extent.height,
-                                               nearPlane, farPlane);
-        return proj;
-    }
-
-    glm::mat4 getView()
-    {
-        glm::mat4 result;
-
-        result = glm::rotate(glm::mat4(1.0f), glm::radians(-pitch), {1, 0, 0});
-        result = glm::rotate(result, glm::radians(-yaw), {0, 1, 0});
-        result = glm::translate(result, -position);
-
-        return result;
-    }
-
-public:
-    glm::vec3 position;
-    float pitch, yaw;
-    float nearPlane, farPlane, fov;
+    vk::Image handle;
+    vk::DeviceMemory memory;
+    vk::ImageView imageView;
+    vk::Sampler sampler;
+    vk::DescriptorSet descriptorSet;
 };
 
-struct GLFWwindow;
-class VulkanTexture;
-class VulkanEngine
+struct VulkanBuffer
 {
-    friend class VulkanBuffer;
-    friend class VulkanTexture;
-    friend class ModelComponent;
-    friend class AnimatedModelComponent;
-    friend class StaticModelPipeline;
-    friend class AnimatedModelPipeline;
-    friend class MapPipeline;
-    friend class Map;
+    vk::Buffer buffer;
+    vk::DeviceMemory bufferMemory;
+};
 
-public:
-    static bool init(GLFWwindow *window)
-    {
-        spdlog::info("Creating a vulkan context !");
-        mWindow = window;
-        if(!initVulkan())
-            return false;
-        if(!initSurface())
-            return false;
-        if(!initDevice())
-            return false;
-        if(!initSwapExtent())
-            return false;
+struct VulkanStaticModelPipeline
+{
+    vk::PipelineLayout layout;
+    vk::Pipeline pipeline;
+    vk::DescriptorSetLayout imageDescriptorLayout;
+};
 
-        if(!initSwapchain())
-            return false;
+struct VulkanData
+{
+    GLFWwindow *window = nullptr;
+    bool windowResized = false;
+    vk::Instance instance;
+    std::optional<vk::PhysicalDevice> physicalDevice;
+    vk::Device device;
+    std::optional<uint32_t> graphicsQueueFamily;
+    std::optional<uint32_t> presentQueueFamily;
+    std::optional<uint32_t> transferQueueFamily;
+    vk::Queue graphicQueue, presentQueue, transferQueue;
+    vk::SurfaceKHR surface;
+    vk::SwapchainKHR swapchain;
+    std::vector<vk::Image> swapchainImages;
+    std::vector<vk::ImageView> swapchainImageViews;
+    std::vector<vk::Framebuffer> swapchainFramebuffers;
+    vk::DebugUtilsMessengerEXT debugMessenger;
+    vk::DispatchLoaderDynamic dynamicDispatcher = vk::DispatchLoaderDynamic(vkGetInstanceProcAddr);
+    vk::SurfaceCapabilitiesKHR surfaceCapabilities;
+    vk::SurfaceFormatKHR surfaceFormat;
+    vk::PresentModeKHR presentMode;
+    vk::Extent2D swapExtent;
+    vk::RenderPass renderPass;
+    vk::DescriptorPool descriptorPool;
+    VulkanStaticModelPipeline staticModelPipeline;
+    vk::CommandPool commandPool;
+    vk::CommandBuffer commandBuffer;
+    vk::Semaphore imageAvalidableGSignal, renderFinishedGSignal;
+    vk::Fence inFlightLocker;
+    vk::Image depthImage;
+    vk::DeviceMemory depthMemory;
+    vk::ImageView depthView;
+    uint32_t currentSwapchainImageIndex = 0;
+    vk::DescriptorSetLayout globalDescriptorLayout;
+    vk::DescriptorSet globalDescriptorSet;
+    VulkanBuffer globalUniformBuffer;
+    void *globalUniformBufferMap;
 
-        if(!initSwapchainImageViews())
-            return false;
+};
 
-        if(!initRenderPass())
-            return false;
-        
-        if(!initDescriptorPool())
-            return false;
 
-        if(!mStaticModelPipeline.init())
-            return false;
-        if(!mAnimatedModelPipeline.init())
-            return false;
-        if(!initDepthBuffer())
-            return false;
-        if(!initSwapchainFramebuffers())
-            return false;
-        if(!initCommandPool())
-            return false;
-        if(!initCommandBuffer())
-            return false;
-        if(!initSyncObjects())
-            return false;
+namespace VulkanEngine
+{
+    bool init();
+    void joint();
+    void render(const Camera& camera);
+    void cleanup();
+    bool initSwapExtent();
+    bool initSwapchain();
+    bool initSwapchainImageViews();
+    bool initSurface();
+    bool initDevice();
+    bool initVulkan();
+    bool initShaderModule(const std::vector<char> &code, vk::ShaderModule& module);
+    bool initRenderPass();
+    bool initSwapchainFramebuffers();
+    bool initCommandPool();
+    bool initCommandBuffer();
+    bool initSyncObjects();
+    bool initDescriptorPool();
+    bool recreateSwapchain();
+    void cleanupSwapchain();
+    bool initDepthBuffer();
+    uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags props);
 
-        return true;
-    }
-    static void registerLuaScript(lua_State *L);
-    static void joint();
-    static void render();
-    static void cleanup() noexcept;
-    static void onWindowResize(int width, int height) noexcept;
-    static std::vector<char> readfile(const std::string &file);
-    inline static VulkanCamera &getCamera() { return mCamera; }
+    //Static model pipeline
+    bool staticModelPipelineInit();
+    void staticModelPipelineCleanup();
 
-private:
-    static bool initSwapExtent();
-    static bool initSwapchain();
-    static bool initSwapchainImageViews();
-    static bool initSurface();
-    static bool initDevice();
-    static bool initVulkan();
-    static bool initShaderModule(const std::vector<char> &code, vk::ShaderModule& module);
-    static bool initRenderPass();
-    static bool initSwapchainFramebuffers();
-    static bool initCommandPool();
-    static bool initCommandBuffer();
-    static bool initSyncObjects();
-    static bool initDescriptorPool();
-    static bool recreateSwapchain();
-    static void cleanupSwapchain();
-    static bool initDepthBuffer();
-    static uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags props);
+    //Textures
+    bool textureLoadFromFile(const std::string &filePath, vk::DescriptorSetLayout layout, VulkanTexture& outTexture);
+    void textureInit(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tilting,
+              vk::ImageUsageFlags usage, vk::MemoryPropertyFlags, vk::DescriptorSetLayout layout, VulkanTexture& outTexture);
+    void textureTransitionLayout(vk::Image handle, vk::Format format, vk::ImageLayout oldLayout, vk::ImageLayout newLayout);
+    void textureCleanup(VulkanTexture& texture);
 
-private:
-    static GLFWwindow *mWindow;
-    static bool mWindowResized;
-    static vk::Instance mInstance;
-    static std::optional<vk::PhysicalDevice> mPhysicalDevice;
-    static vk::Device mDevice;
-    static std::optional<uint32_t> mGraphicsQueueFamily;
-    static std::optional<uint32_t> mPresentQueueFamily;
-    static std::optional<uint32_t> mTransferQueueFamily;
-    static vk::Queue mGraphicQueue, mPresentQueue, mTransferQueue;
-    static vk::SurfaceKHR mSurface;
-    static vk::SwapchainKHR mSwapchain;
-    static std::vector<vk::Image> mSwapchainImages;
-    static std::vector<vk::ImageView> mSwapchainImageViews;
-    static std::vector<vk::Framebuffer> mSwapchainFramebuffers;
-    static vk::DebugUtilsMessengerEXT mDebugMessenger;
-    static vk::DispatchLoaderDynamic mDynamicDispatcher;
-    static vk::SurfaceCapabilitiesKHR mSurfaceCapabilities;
-    static vk::SurfaceFormatKHR mSurfaceFormat;
-    static vk::PresentModeKHR mPresentMode;
-    static vk::Extent2D mSwapExtent;
-    static vk::RenderPass mRenderPass;
-    static vk::DescriptorPool mDescriptorPool;
-    static vk::DescriptorSetLayout mGlobalDescriptorLayout;
-    static vk::DescriptorSet mGlobalDescriptorSet;
-    static VulkanBuffer mGlobalUniformBuffer;
-    static void *mGlobalUniformBufferMap;
+    //Buffer
+    bool bufferInit(vk::DeviceSize size, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags props, VulkanBuffer& outBuffer);
+    void bufferInitAndTransferToLocalDevice(const void *data, vk::DeviceSize size, vk::BufferUsageFlagBits usage, VulkanBuffer& outBuffer);
+    void bufferCopy(const void *data, vk::DeviceSize size, VulkanBuffer& outBuffer);
+    void bufferCopy(const VulkanBuffer &src, VulkanBuffer &dst, const vk::DeviceSize size);
+    void bufferCleanup(VulkanBuffer& buffer);
+    void* bufferGetMapped(VulkanBuffer& buffer, vk::DeviceSize offset, vk::DeviceSize size);
 
-    static StaticModelPipeline mStaticModelPipeline;
-    static AnimatedModelPipeline mAnimatedModelPipeline;
 
-    static vk::CommandPool mCommandPool;
-    static vk::CommandBuffer mCommandBuffer;
-
-    static vk::Semaphore mImageAvalidableGSignal, mRenderFinishedGSignal;
-    static vk::Fence mInFlightLocker;
-
-    static vk::Image mDepthImage;
-    static vk::DeviceMemory mDepthMemory;
-    static vk::ImageView mDepthView;
-    static uint32_t mCurrentSwapChainImageIndex;
-    static VulkanCamera mCamera;
+    extern VulkanData gData;
 };

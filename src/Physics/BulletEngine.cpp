@@ -13,6 +13,7 @@ btCollisionShape *BulletEngine::sGlobalPlaneCollision;
 btCollisionObject *BulletEngine::sGlobalPlane;
 void BulletEngine::init()
 {
+    spdlog::info("Bullet engine init.");
     sCollisionConfiguration = new btDefaultCollisionConfiguration();
     sDispatcher = new btCollisionDispatcher(sCollisionConfiguration);
     sBroadphaseInterface = new btDbvtBroadphase();

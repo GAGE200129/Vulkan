@@ -1,10 +1,12 @@
 #include "pch.hpp"
-#include "StaticModelPipeline.hpp"
 
 #include "VulkanEngine.hpp"
 
-bool StaticModelPipeline::init()
+#include "Asset/FileLoader.hpp"
+
+bool VulkanEngine::staticModelPipelineInit()
 {
+    spdlog::info("Static model pipeline init.");
     // Descriptor layout
 
     vk::DescriptorSetLayoutBinding layoutBinding;
@@ -16,16 +18,17 @@ bool StaticModelPipeline::init()
     vk::DescriptorSetLayoutCreateInfo layoutCI;
     layoutCI.setBindings(layoutBinding);
     
-    auto[imageDescriptorResult, imageDescriptor] = VulkanEngine::mDevice.createDescriptorSetLayout(layoutCI);
+    auto[imageDescriptorResult, imageDescriptor] = VulkanEngine::gData.device.createDescriptorSetLayout(layoutCI);
     if(imageDescriptorResult != vk::Result::eSuccess)
     {
         spdlog::critical("Failed to create image descriptor layout: {}", vk::to_string(imageDescriptorResult));
         return false;
     }
-    mImageDescriptorLayout = imageDescriptor;
+    gData.staticModelPipeline.imageDescriptorLayout = imageDescriptor;
     // Pipeline
-    auto vertexCode = VulkanEngine::readfile("res/shaders/static_model.vert.spv");
-    auto fragmentCode = VulkanEngine::readfile("res/shaders/static_model.frag.spv");
+    std::vector<char> vertexCode, fragmentCode;
+    FileLoader::filePathToVectorOfChar("res/shaders/static_model.vert.spv", vertexCode);
+    FileLoader::filePathToVectorOfChar("res/shaders/static_model.frag.spv", fragmentCode);
 
     vk::ShaderModule vertexModule, fragmentModule;
     if(!VulkanEngine::initShaderModule(vertexCode, vertexModule))
@@ -65,13 +68,13 @@ bool StaticModelPipeline::init()
     vk::Viewport viewport;
     viewport.setX(0)
         .setY(0)
-        .setWidth(VulkanEngine::mSwapExtent.width)
-        .setHeight(VulkanEngine::mSwapExtent.height)
+        .setWidth(VulkanEngine::gData.swapExtent.width)
+        .setHeight(VulkanEngine::gData.swapExtent.height)
         .setMinDepth(0.0f)
         .setMaxDepth(1.0f);
     vk::Rect2D scissor;
     scissor.setOffset({0, 0})
-        .setExtent(VulkanEngine::mSwapExtent);
+        .setExtent(VulkanEngine::gData.swapExtent);
     vk::PipelineViewportStateCreateInfo viewportStateCI;
     viewportStateCI.setViewports(viewport)
         .setScissors(scissor);
@@ -129,17 +132,17 @@ bool StaticModelPipeline::init()
     pushConstantCI.setStageFlags(vk::ShaderStageFlagBits::eVertex)
         .setSize(sizeof(glm::mat4x4));
 
-    auto layouts = std::array{VulkanEngine::mGlobalDescriptorLayout, mImageDescriptorLayout};
+    auto layouts = std::array{VulkanEngine::gData.globalDescriptorLayout, gData.staticModelPipeline.imageDescriptorLayout};
     pipelineLayoutCI.setSetLayouts(layouts)
         .setPushConstantRanges(pushConstantCI);
 
-    auto[layoutResult, layout] = VulkanEngine::mDevice.createPipelineLayout(pipelineLayoutCI);
+    auto[layoutResult, layout] = VulkanEngine::gData.device.createPipelineLayout(pipelineLayoutCI);
     if(layoutResult != vk::Result::eSuccess)
     {
         spdlog::critical("Failed to create pipeline layout: {}", vk::to_string(layoutResult));
         return false;
     }
-    mLayout = layout;
+    gData.staticModelPipeline.layout = layout;
 
     vk::GraphicsPipelineCreateInfo graphicsPipelineCI;
     graphicsPipelineCI.setStages(shaderStages)
@@ -151,28 +154,29 @@ bool StaticModelPipeline::init()
         .setPDepthStencilState(&depthStencil)
         .setPColorBlendState(&colorBlendingCI)
         .setPDynamicState(&dynamicStateCI)
-        .setLayout(mLayout)
-        .setRenderPass(VulkanEngine::mRenderPass)
+        .setLayout(gData.staticModelPipeline.layout)
+        .setRenderPass(VulkanEngine::gData.renderPass)
         .setSubpass(0)
         .setBasePipelineHandle(nullptr)
         .setBasePipelineIndex(-1);
 
-    auto graphicsPipelineResult = VulkanEngine::mDevice.createGraphicsPipeline(nullptr, graphicsPipelineCI);
+    auto graphicsPipelineResult = VulkanEngine::gData.device.createGraphicsPipeline(nullptr, graphicsPipelineCI);
     if (graphicsPipelineResult.result != vk::Result::eSuccess)
     {
         throw std::runtime_error("Failed to create graphics pipeline !");
     }
-    mPipeline = graphicsPipelineResult.value;
+    gData.staticModelPipeline.pipeline = graphicsPipelineResult.value;
 
-    VulkanEngine::mDevice.destroyShaderModule(vertexModule);
-    VulkanEngine::mDevice.destroyShaderModule(fragmentModule);
+    VulkanEngine::gData.device.destroyShaderModule(vertexModule);
+    VulkanEngine::gData.device.destroyShaderModule(fragmentModule);
 
     return true;
 }
 
-void StaticModelPipeline::cleanup()
+void VulkanEngine::staticModelPipelineCleanup()
 {
-    VulkanEngine::mDevice.destroyDescriptorSetLayout(mImageDescriptorLayout);
-    VulkanEngine::mDevice.destroyPipeline(mPipeline);
-    VulkanEngine::mDevice.destroyPipelineLayout(mLayout);
+    spdlog::info("Static model pipeline cleanup.");
+    VulkanEngine::gData.device.destroyDescriptorSetLayout(gData.staticModelPipeline.imageDescriptorLayout);
+    VulkanEngine::gData.device.destroyPipeline(gData.staticModelPipeline.pipeline);
+    VulkanEngine::gData.device.destroyPipelineLayout(gData.staticModelPipeline.layout);
 }

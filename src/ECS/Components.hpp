@@ -7,17 +7,16 @@ public:
     Component() = default;
     virtual ~Component() = default;
 
-    virtual void renderImGui() noexcept {}
+    virtual void renderImGui() {}
     virtual void init() {}
     virtual void lateInit() {}
     virtual void update() {}
     virtual void render() {}
-    virtual void debugRender() {}
-    virtual void shutdown() noexcept {}
+    virtual void shutdown()  {}
 
-    const GameObject &getGameObject() const noexcept { return *mGameObject; }
-    GameObject &getGameObject() noexcept { return *mGameObject; }
-    void setGameObject(GameObject *go) noexcept { mGameObject = go; }
+    const GameObject &getGameObject() const  { return *mGameObject; }
+    GameObject &getGameObject() { return *mGameObject; }
+    void setGameObject(GameObject *go) { mGameObject = go; }
 
 protected:
     GameObject *mGameObject;

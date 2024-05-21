@@ -19,7 +19,7 @@
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
-#include <lua5.4/lua.hpp>
+#include <luajit-2.1/lua.hpp>
 
 
 #define VULKAN_HPP_NO_EXCEPTIONS

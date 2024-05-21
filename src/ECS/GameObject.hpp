@@ -32,23 +32,16 @@ public:
             c->render();
     }
 
-    void debugRender()
-    {
-        for (auto &c : mComponents)
-            c->debugRender();
-    }
-
-    void shutdown() noexcept
+    void shutdown()
     {
         for (auto &c : mComponents)
             c->shutdown();
     }
 
-    void renderImgui() noexcept;
-    const glm::mat4x4 buildTransform() noexcept;
+    const glm::mat4x4 buildTransform();
 
     template <typename T>
-    T *getComponent() noexcept
+    T *getComponent()
     {
 
         for (const auto &c : mComponents)
@@ -93,7 +86,6 @@ public:
     // Static fields
 public:
     static GameObject &addGameObject(const std::string &name);
-    static void registerLuaScript(lua_State *L);
 
     static void globalInit()
     {
@@ -124,14 +116,6 @@ public:
         }
     }
 
-    // Only call this for the debugger please do not call it in the main game
-    static void globalDebugRender()
-    {
-        for (const auto &go : sGameObjects)
-        {
-            go->debugRender();
-        }
-    }
 
     static void globalShutdown()
     {

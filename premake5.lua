@@ -17,7 +17,7 @@ project "EnGAGE"
       "libs/imgui-docking/backends/imgui_impl_glfw.cpp"
 
    }
-   links { "glfw", "vulkan", "spdlog", "fmt", "lua5.4", "assimp", "LinearMath", "BulletCollision", "BulletDynamics", "GL" }
+   links { "glfw", "vulkan", "spdlog", "fmt", "luajit-5.1", "assimp", "LinearMath", "BulletCollision", "BulletDynamics", "GL" }
    includedirs { 
       "src",
       "libs/EnTT/single_include",
