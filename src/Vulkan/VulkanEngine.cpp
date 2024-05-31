@@ -1,5 +1,6 @@
 #include "pch.hpp"
 #include "VulkanEngine.hpp"
+#include "EngineConstants.hpp"
 
 #include "ECS/Components.hpp"
 
@@ -30,8 +31,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 
 VulkanData VulkanEngine::gData = {};
 
-
-bool VulkanEngine::init()
+bool VulkanEngine::initWindow()
 {
     spdlog::info("Creating a vulkan window !");
     glfwInit();
@@ -39,12 +39,21 @@ bool VulkanEngine::init()
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
     gData.window = glfwCreateWindow(EngineConstants::DISPLAY_WIDTH, EngineConstants::DISPLAY_HEIGHT,
          EngineConstants::DISPLAY_TITLE, nullptr, nullptr);
+    if(!gData.window)
+    {
+        spdlog::critical("Failed to create vulkan window !");
+        return false;
+    }
     glfwSetFramebufferSizeCallback(gData.window, [](GLFWwindow *pWindow, int width, int height)
     {
         gData.windowResized = true;
     });
 
+    return true;
+}
 
+bool VulkanEngine::init()
+{
     spdlog::info("Creating a vulkan context !");
     if (!initVulkan())
         return false;
@@ -70,6 +79,9 @@ bool VulkanEngine::init()
     if (!staticModelPipelineInit())
         return false;
 
+    if(!mapPipelineInit())
+        return false;
+
     if (!initDepthBuffer())
         return false;
     if (!initSwapchainFramebuffers())
@@ -79,6 +91,9 @@ bool VulkanEngine::init()
     if (!initCommandBuffer())
         return false;
     if (!initSyncObjects())
+        return false;
+
+    if(!initWidget())
         return false;
 
     return true;
@@ -149,7 +164,7 @@ void VulkanEngine::joint()
     gData.device.waitIdle();
 }
 
-void VulkanEngine::render(const Camera &camera)
+void VulkanEngine::beginFrame(const Camera &camera)
 {
     constexpr uint64_t UINT64_T_MAX = std::numeric_limits<uint64_t>::max();
     if (gData.device.waitForFences(gData.inFlightLocker, true, UINT64_MAX) != vk::Result::eSuccess)
@@ -205,10 +220,12 @@ void VulkanEngine::render(const Camera &camera)
     scissor.setOffset({0, 0})
         .setExtent(gData.swapExtent);
     cmdBuffer.setScissor(0, scissor);
+}
 
-    //Render
-    
-
+void VulkanEngine::endFrame()
+{
+    vk::CommandBuffer &cmdBuffer = gData.commandBuffer;
+    widgetEndFrame(cmdBuffer);
     cmdBuffer.endRenderPass();
     cmdBuffer.end();
 
@@ -301,6 +318,8 @@ bool VulkanEngine::initDepthBuffer()
 
 void VulkanEngine::cleanup()
 {
+    cleanupWidget();
+
     gData.device.destroySemaphore(gData.imageAvalidableGSignal);
     gData.device.destroySemaphore(gData.renderFinishedGSignal);
     gData.device.destroyFence(gData.inFlightLocker);
@@ -308,6 +327,7 @@ void VulkanEngine::cleanup()
     gData.device.destroyCommandPool(gData.commandPool);
 
     staticModelPipelineCleanup();
+    mapPipelineCleanup();
     bufferCleanup(gData.globalUniformBuffer);
     gData.device.destroyDescriptorSetLayout(gData.globalDescriptorLayout);
     gData.device.destroyDescriptorPool(gData.descriptorPool);

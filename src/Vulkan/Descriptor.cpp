@@ -3,13 +3,16 @@
 
 bool VulkanEngine::initDescriptorPool()
 {
+    //Descriptor pool
     std::array<vk::DescriptorPoolSize, 2> dps;
     dps[0].setDescriptorCount(512).setType(vk::DescriptorType::eUniformBuffer);
     dps[1].setDescriptorCount(512).setType(vk::DescriptorType::eCombinedImageSampler);
 
     vk::DescriptorPoolCreateInfo descriptorPoolCI;
-    descriptorPoolCI.setPoolSizes(dps)
-        .setMaxSets(512);
+    descriptorPoolCI
+        .setPoolSizes(dps)
+        .setMaxSets(512)
+        .setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
 
     auto [descriptorPoolResult, descriptorPool] = gData.device.createDescriptorPool(descriptorPoolCI);
     if (descriptorPoolResult != vk::Result::eSuccess)
@@ -17,9 +20,9 @@ bool VulkanEngine::initDescriptorPool()
         spdlog::critical("Failed to create descriptor pool: {}", vk::to_string(descriptorPoolResult));
         return false;
     }
-
     gData.descriptorPool = descriptorPool;
 
+    //Global descriptor
     vk::DescriptorSetLayoutBinding layoutBinding;
     layoutBinding.setBinding(0)
         .setDescriptorType(vk::DescriptorType::eUniformBuffer)

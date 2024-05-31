@@ -29,6 +29,13 @@ struct VulkanStaticModelPipeline
     vk::DescriptorSetLayout imageDescriptorLayout;
 };
 
+struct VulkanMapPipeline
+{
+    vk::PipelineLayout layout;
+    vk::Pipeline pipeline;
+    vk::DescriptorSetLayout diffuseDescriptorLayout;
+};
+
 struct VulkanData
 {
     GLFWwindow *window = nullptr;
@@ -42,6 +49,7 @@ struct VulkanData
     vk::Queue graphicQueue, presentQueue, transferQueue;
     vk::SurfaceKHR surface;
     vk::SwapchainKHR swapchain;
+    size_t swapchainImageCount;
     std::vector<vk::Image> swapchainImages;
     std::vector<vk::ImageView> swapchainImageViews;
     std::vector<vk::Framebuffer> swapchainFramebuffers;
@@ -54,6 +62,7 @@ struct VulkanData
     vk::RenderPass renderPass;
     vk::DescriptorPool descriptorPool;
     VulkanStaticModelPipeline staticModelPipeline;
+    VulkanMapPipeline mapPipeline;
     vk::CommandPool commandPool;
     vk::CommandBuffer commandBuffer;
     vk::Semaphore imageAvalidableGSignal, renderFinishedGSignal;
@@ -72,9 +81,11 @@ struct VulkanData
 
 namespace VulkanEngine
 {
+    bool initWindow();
     bool init();
     void joint();
-    void render(const Camera& camera);
+    void beginFrame(const Camera& camera);
+    void endFrame();
     void cleanup();
     bool initSwapExtent();
     bool initSwapchain();
@@ -89,6 +100,10 @@ namespace VulkanEngine
     bool initCommandBuffer();
     bool initSyncObjects();
     bool initDescriptorPool();
+    bool initWidget();
+    void widgetBeginFrame();
+    void widgetEndFrame(vk::CommandBuffer& cmd);
+    void cleanupWidget();
     bool recreateSwapchain();
     void cleanupSwapchain();
     bool initDepthBuffer();
@@ -97,6 +112,10 @@ namespace VulkanEngine
     //Static model pipeline
     bool staticModelPipelineInit();
     void staticModelPipelineCleanup();
+
+    //Map pipeline
+    bool mapPipelineInit();
+    void mapPipelineCleanup();
 
     //Textures
     bool textureLoadFromFile(const std::string &filePath, vk::DescriptorSetLayout layout, VulkanTexture& outTexture);

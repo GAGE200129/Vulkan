@@ -1,5 +1,6 @@
 #include "pch.hpp"
 #include "VulkanEngine.hpp"
+#include "EngineConstants.hpp"
 
 bool VulkanEngine::initDevice()
 {

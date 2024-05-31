@@ -144,8 +144,8 @@ void VulkanEngine::textureInit(uint32_t width, uint32_t height, vk::Format forma
                  vk::to_string(tiling),
                  vk::to_string(usage),
                  vk::to_string(properties));
+    vk::Device &device = VulkanEngine::gData.device;
     vk::ImageCreateInfo imageCI;
-
     imageCI.setImageType(vk::ImageType::e2D)
         .setExtent(vk::Extent3D(width, height, 1))
         .setMipLevels(1)
@@ -156,9 +156,6 @@ void VulkanEngine::textureInit(uint32_t width, uint32_t height, vk::Format forma
         .setUsage(usage)
         .setSamples(vk::SampleCountFlagBits::e1)
         .setSharingMode(vk::SharingMode::eExclusive);
-
-    vk::Device &device = VulkanEngine::gData.device;
-
     outTexture.handle = device.createImage(imageCI).value;
 
     vk::MemoryRequirements memRequirements = device.getImageMemoryRequirements(outTexture.handle);
@@ -167,7 +164,6 @@ void VulkanEngine::textureInit(uint32_t width, uint32_t height, vk::Format forma
         .setMemoryTypeIndex(VulkanEngine::findMemoryType(memRequirements.memoryTypeBits, properties));
 
     outTexture.memory = device.allocateMemory(memAI).value;
-
     device.bindImageMemory(outTexture.handle, outTexture.memory, {0});
 
     // Create Image view
@@ -175,7 +171,7 @@ void VulkanEngine::textureInit(uint32_t width, uint32_t height, vk::Format forma
     viewInfo
         .setImage(outTexture.handle)
         .setViewType(vk::ImageViewType::e2D)
-        .setFormat(vk::Format::eR8G8B8A8Srgb)
+        .setFormat(format)
         .subresourceRange
         .setAspectMask(vk::ImageAspectFlagBits::eColor)
         .setBaseMipLevel(0)
@@ -194,7 +190,7 @@ void VulkanEngine::textureInit(uint32_t width, uint32_t height, vk::Format forma
         .setAddressModeV(vk::SamplerAddressMode::eRepeat)
         .setAddressModeW(vk::SamplerAddressMode::eRepeat)
         .setAnisotropyEnable(false)
-        .setMaxAnisotropy(VulkanEngine::gData.physicalDevice->getProperties().limits.maxSamplerAnisotropy)
+        .setMaxAnisotropy(gData.physicalDevice->getProperties().limits.maxSamplerAnisotropy)
         .setBorderColor(vk::BorderColor::eIntOpaqueBlack)
         .setUnnormalizedCoordinates(false)
         .setCompareEnable(false)
@@ -204,7 +200,7 @@ void VulkanEngine::textureInit(uint32_t width, uint32_t height, vk::Format forma
     outTexture.sampler = device.createSampler(samplerCI).value;
 
     vk::DescriptorSetAllocateInfo dsAI;
-    dsAI.setDescriptorPool(VulkanEngine::gData.descriptorPool)
+    dsAI.setDescriptorPool(gData.descriptorPool)
         .setSetLayouts(layout);
     outTexture.descriptorSet = device.allocateDescriptorSets(dsAI).value[0];
     vk::DescriptorImageInfo imageInfo;
@@ -223,9 +219,9 @@ void VulkanEngine::textureInit(uint32_t width, uint32_t height, vk::Format forma
 
 void VulkanEngine::textureCleanup(VulkanTexture& texture)
 {
+    gData.device.freeDescriptorSets(gData.descriptorPool, texture.descriptorSet);
     gData.device.destroyImage(texture.handle);
     gData.device.destroyImageView(texture.imageView);
     gData.device.freeMemory(texture.memory);
     gData.device.destroySampler(texture.sampler);
-    gData.device.freeDescriptorSets(gData.descriptorPool, texture.descriptorSet);
 }

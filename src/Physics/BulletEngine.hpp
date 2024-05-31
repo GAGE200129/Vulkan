@@ -1,18 +1,15 @@
 #pragma once
 
-#include "btBulletDynamicsCommon.h"
-#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorldMt.h>
-
 class BulletEngine
 {
-    friend class RigidBodyComponent;
-    friend class CharacterControllerComponent;
-
 public:
     static void init();
     static void update();
     static void cleanup();
 
+
+    static btRigidBody* createRigidBody(btRigidBody::btRigidBodyConstructionInfo info);
+    static btCollisionObject* createCollisionObject(btCollisionShape* shape, btTransform transform);
 private:
     static btCollisionConfiguration *sCollisionConfiguration;
     static btCollisionDispatcher *sDispatcher;
@@ -20,6 +17,7 @@ private:
     static btConstraintSolver *sSolver;
     static btConstraintSolverPoolMt *sSolverPool;
     static btDynamicsWorld *sDynamicWorld;
-    static btCollisionShape *sGlobalPlaneCollision;
-    static btCollisionObject *sGlobalPlane;
+
+    static std::vector<btRigidBody*> sRigidBodies;
+    static std::vector<btCollisionObject*> sCollisionObjects;
 };

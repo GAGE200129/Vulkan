@@ -10,6 +10,7 @@
 #include <thread>
 #include <bitset>
 #include <condition_variable>
+#include <chrono>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -21,6 +22,9 @@
 #include <assimp/postprocess.h>
 #include <luajit-2.1/lua.hpp>
 
+#include <BulletCollision/btBulletCollisionCommon.h>
+#include <BulletDynamics/btBulletDynamicsCommon.h>
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorldMt.h>
 
 #define VULKAN_HPP_NO_EXCEPTIONS
 #define VULKAN_HPP_ASSERT(x) 
@@ -30,4 +34,3 @@
 #include <spdlog/spdlog.h>
 
 #include "Utils.hpp"
-#include "EngineConstants.hpp"

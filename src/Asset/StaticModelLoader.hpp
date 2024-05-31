@@ -9,7 +9,7 @@
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
 
-struct StaticMeshData
+struct StaticModelData
 {
     struct MeshEntry
     {
@@ -32,15 +32,11 @@ struct StaticMeshData
     std::vector<unsigned int> mIndices;
 };
 
-class StaticModelLoader
+namespace StaticModelLoader
 {
-public:
-    static StaticMeshData *get(const std::string& filePath);
-    static StaticMeshData *initCache(const std::string &filePath);
-    static void clearCache();
-private:
-    static bool populateMeshData(StaticMeshData* meshData, const aiScene* scene);
-    static bool populateTextures(StaticMeshData* meshData, const aiScene* scene);
-private:
-    static std::map<std::string, std::unique_ptr<StaticMeshData>> sCache;
-};
+    StaticModelData *get(const std::string& filePath);
+    StaticModelData *initCache(const std::string &filePath);
+    void clearCache();
+    bool populateMeshData(StaticModelData* modelData, const aiScene* scene);
+    bool populateTextures(StaticModelData* modelData, const aiScene* scene);
+}

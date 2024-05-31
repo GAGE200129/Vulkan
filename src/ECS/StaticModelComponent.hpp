@@ -18,6 +18,6 @@ public:
     void render() override;
 
 private:
-    StaticMeshData *mMeshData;
+    StaticModelData *mMeshData;
     std::string mFilePath;
 };

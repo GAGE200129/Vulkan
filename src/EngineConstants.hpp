@@ -1,19 +1,23 @@
 #pragma once
 
-#include <Vulkan/VulkanEngine.hpp>
+#include <cstdint>
+#include <vulkan/vulkan.hpp>
+
 
 namespace EngineConstants
 {
     constexpr unsigned int DISPLAY_WIDTH = 1600;
-    constexpr unsigned int DISPLAY_HEIGHT = 600;
+    constexpr unsigned int DISPLAY_HEIGHT = 900;
     constexpr const char*  DISPLAY_TITLE = "EnGAGE";
     constexpr double TICK_TIME = 1.0 / 60.0;
-    constexpr size_t TILE_SET_SIZE = 64;
+    constexpr double FRAME_TIME = 1.0 / 60.0;
     constexpr size_t ANIMATION_MAX_BONES = 100;
+    constexpr size_t PATH_LENGTH = 256;
+
+    // Vulkan
     constexpr vk::Format VULKAN_SURFACE_FORMAT = vk::Format::eB8G8R8A8Srgb;
     constexpr vk::ColorSpaceKHR VULKAN_COLOR_SPACE = vk::ColorSpaceKHR::eSrgbNonlinear;
-    constexpr vk::PresentModeKHR VULKAN_PRESENT_MODE = vk::PresentModeKHR::eFifo;
-
+    constexpr vk::PresentModeKHR VULKAN_PRESENT_MODE = vk::PresentModeKHR::eImmediate;
     constexpr const char* VULKAN_EXTENSIONS[] = 
     {
         "VK_EXT_debug_utils",
@@ -30,6 +34,12 @@ namespace EngineConstants
     {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
+
+    //Map
+    constexpr size_t MAP_MAX_PLANES_PER_BRUSH = 20u;
+    constexpr size_t MAP_MAX_VERTICES_PER_POLYGON = 20u;
+    constexpr size_t MAP_MAX_BOXES = 2048u;
+
 
 
 

@@ -3,11 +3,13 @@
 
 #include <stb/stb_image.h>
 
-std::map<std::string, std::unique_ptr<StaticMeshData>> StaticModelLoader::sCache;
-
-StaticMeshData *StaticModelLoader::get(const std::string &filePath)
+namespace StaticModelLoader
 {
+    std::map<std::string, std::unique_ptr<StaticModelData>> sCache;
+}
 
+StaticModelData *StaticModelLoader::get(const std::string &filePath)
+{
     if (sCache.find(filePath) != sCache.end())
     {
         return sCache.at(filePath).get();
@@ -18,7 +20,7 @@ StaticMeshData *StaticModelLoader::get(const std::string &filePath)
     }
 }
 
-StaticMeshData *StaticModelLoader::initCache(const std::string &filePath)
+StaticModelData *StaticModelLoader::initCache(const std::string &filePath)
 {
     Assimp::Importer importer;
 
@@ -31,7 +33,7 @@ StaticMeshData *StaticModelLoader::initCache(const std::string &filePath)
     }
 
     spdlog::info("Caching model: {}", filePath);
-    auto meshData = std::make_unique<StaticMeshData>();
+    auto meshData = std::make_unique<StaticModelData>();
     // Count and reserve vertex data for all meshes in scene
     unsigned int numVertices = 0, numIndices = 0, numBones = 0;
     meshData->mMeshes.resize(pScene->mNumMeshes);
@@ -82,7 +84,7 @@ StaticMeshData *StaticModelLoader::initCache(const std::string &filePath)
     return ptr;
 }
 
-bool StaticModelLoader::populateMeshData(StaticMeshData *meshData, const aiScene *scene)
+bool StaticModelLoader::populateMeshData(StaticModelData *meshData, const aiScene *scene)
 {
     // Populate mesh datas
     for (unsigned int i = 0; i < scene->mNumMeshes; i++)
@@ -117,7 +119,7 @@ bool StaticModelLoader::populateMeshData(StaticMeshData *meshData, const aiScene
     return true;
 }
 
-bool StaticModelLoader::populateTextures(StaticMeshData *meshData, const aiScene *scene)
+bool StaticModelLoader::populateTextures(StaticModelData *meshData, const aiScene *scene)
 {
     for (unsigned int i = 0; i < scene->mNumMaterials; i++)
     {

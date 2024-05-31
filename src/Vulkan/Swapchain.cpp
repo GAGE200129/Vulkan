@@ -27,6 +27,7 @@ bool VulkanEngine::initSwapchain()
     {
         imageCount = gData.surfaceCapabilities.maxImageCount;
     }
+    gData.swapchainImageCount = imageCount;
 
     vk::SwapchainCreateInfoKHR createInfo;
     createInfo.setSurface(gData.surface)

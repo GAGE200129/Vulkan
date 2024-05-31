@@ -1,62 +1,94 @@
 #include "pch.hpp"
 #include "Input.hpp"
 
-GLFWwindow *Input::mWindow = nullptr;
-double Input::mPrevMouseX = 0;
-double Input::mPrevMouseY = 0;
-double Input::mDx = 0;
-double Input::mDy = 0;
-std::bitset<500> Input::mKeysPressed, Input::mPrevKeyPressed;
+InputData Input::gData = {};
 
-void Input::keyPressedFn(GLFWwindow *window, int key, int scancode, int action, int mods)
+void keyPressedFn(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
 
     if (action == GLFW_PRESS)
     {
-        mKeysPressed[key] = true;
+        Input::gData.keysPressed[key] = true;
     }
     else if (action == GLFW_RELEASE)
     {
-        mKeysPressed[key] = false;
+        Input::gData.keysPressed[key] = false;
     }
 }
 
-void Input::init(GLFWwindow *window) noexcept
+void buttonPressedFn(GLFWwindow *window, int button, int action, int mods)
 {
-    mWindow = window;
-    glfwSetKeyCallback(window, keyPressedFn);
+    if (action == GLFW_PRESS)
+    {
+        Input::gData.buttonPressed[button] = true;
+    }
+    else if (action == GLFW_RELEASE)
+    {
+        Input::gData.buttonPressed[button] = false;
+    }
 }
 
-void Input::lockCursor() noexcept
+void Input::init(GLFWwindow *window)
 {
-    glfwSetInputMode(mWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    glfwSetInputMode(mWindow, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+    gData.window = window;
+    glfwSetKeyCallback(window, keyPressedFn);
+    glfwSetMouseButtonCallback(window, buttonPressedFn);
 }
-void Input::unlockCursor() noexcept
+
+void Input::setCursorMode(bool lock)
 {
-    glfwSetInputMode(mWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-    glfwSetInputMode(mWindow, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
+    if (lock)
+    {
+        glfwSetInputMode(gData.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        glfwSetInputMode(gData.window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+    }
+    else
+    {
+        glfwSetInputMode(gData.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        glfwSetInputMode(gData.window, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
+    }
+}
+
+bool Input::isButtonDown(int button)
+{
+    return glfwGetMouseButton(gData.window, button) == GLFW_PRESS;
+}
+
+bool Input::isButtonDownOnce(int button)
+{
+    return !gData.prevButtonPressed[button] && gData.buttonPressed[button];
+}
+
+double Input::getDx()
+{
+    return gData.dx;
+}
+
+double Input::getDy()
+{
+    return gData.dy;
 }
 
 void Input::update()
 {
     double x, y;
-    glfwGetCursorPos(mWindow, &x, &y);
-    mDx = x - mPrevMouseX;
-    mDy = y - mPrevMouseY;
-    mPrevMouseX = x;
-    mPrevMouseY = y;
+    glfwGetCursorPos(gData.window, &x, &y);
+    gData.dx = x - gData.prevMouseX;
+    gData.dy = y - gData.prevMouseY;
+    gData.prevMouseX = x;
+    gData.prevMouseY = y;
 
-    mPrevKeyPressed = mKeysPressed;
+    gData.prevKeyPressed = gData.keysPressed;
+    gData.prevButtonPressed = gData.buttonPressed;
 }
-bool Input::isKeyDown(int key) noexcept
+bool Input::isKeyDown(int key)
 {
-    return glfwGetKey(mWindow, key) == GLFW_PRESS;
+    return glfwGetKey(gData.window, key) == GLFW_PRESS;
 }
 
-bool Input::isKeyDownOnce(int key) noexcept
+bool Input::isKeyDownOnce(int key)
 {
-    return !mPrevKeyPressed[key] && mKeysPressed[key];
+    return !gData.prevKeyPressed[key] && gData.keysPressed[key];
 }
 
 void Input::registerLuaScript(lua_State *L)
@@ -213,19 +245,7 @@ void Input::registerLuaScript(lua_State *L)
         return 2;
     };
 
-    auto luaMouseSetLock = [](lua_State *L) -> int
-    {
-        bool v = lua_toboolean(L, 1);
-
-        if (v)
-            lockCursor();
-        else
-            unlockCursor();
-        return 0;
-    };
-
     lua_register(L, "input_key_is_down", luaIsKeyDown);
     lua_register(L, "input_key_is_down_once", luaIsKeyDownOnce);
     lua_register(L, "input_mouse_get_delta", luaGetMouseDelta);
-    lua_register(L, "input_mouse_set_lock", luaMouseSetLock);
 }

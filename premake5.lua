@@ -6,14 +6,14 @@ workspace "GAGE"
 project "EnGAGE"
    kind "ConsoleApp"
    language "C++"
-   cppdialect "c++17"
+   cppdialect "c++20"
    targetdir "bin/%{cfg.buildcfg}"
    pchheader "src/pch.hpp"
 
    files {
       "src/**.hpp", "src/**.cpp", "res/**.vert", "res/**.frag",
       "libs/imgui-docking/*.cpp",
-      "libs/imgui-docking/backends/imgui_impl_opengl2.cpp",
+      "libs/imgui-docking/backends/imgui_impl_vulkan.cpp",
       "libs/imgui-docking/backends/imgui_impl_glfw.cpp"
 
    }

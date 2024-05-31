@@ -65,10 +65,10 @@ void VulkanEngine::bufferCopy(const VulkanBuffer &src, VulkanBuffer &dst,const  
 
     vk::SubmitInfo submitI;
     submitI.setCommandBuffers(cmdBuf);
-    VulkanEngine::gData.transferQueue.submit(submitI);
-    VulkanEngine::gData.transferQueue.waitIdle();
+    gData.transferQueue.submit(submitI);
+    gData.transferQueue.waitIdle();
 
-    VulkanEngine::gData.device.freeCommandBuffers(VulkanEngine::gData.commandPool, cmdBuf);
+    gData.device.freeCommandBuffers(gData.commandPool, cmdBuf);
 }
 
 void VulkanEngine::bufferCleanup(VulkanBuffer& buffer)

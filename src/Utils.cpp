@@ -1,6 +1,11 @@
 #include "pch.hpp"
 #include "Utils.hpp"
 
+btVector3 Utils::glmToBtVec3(const glm::vec3& a)
+{
+    return btVector3(a.x, a.y, a.z);
+}
+
 glm::mat4x4 Utils::aiToGlmMatrix4x4(const aiMatrix4x4 &a)
 {
     glm::mat4x4 b;
@@ -41,4 +46,28 @@ glm::vec3 Utils::aiToGlmVec3(const aiVector3D &a)
     result.y = a.y;
     result.z = a.z;
     return result;
+}
+
+glm::vec3 Utils::btToGlmVec3(const btVector3 &a)
+{
+    return glm::vec3(a.x(), a.y(), a.z());
+}
+
+bool Utils::filePathToVectorOfChar(const std::string& filePath, std::vector<char>& v)
+{
+    std::ifstream f(filePath, std::ios::ate | std::ios::binary);
+
+    if (!f.is_open())
+    {
+        spdlog::error("failed to open file: {}", filePath);
+        return false;
+    }
+
+    size_t fileSize = (size_t)f.tellg();
+    v.resize(fileSize);
+    f.seekg(0);
+    f.read(v.data(), fileSize);
+    f.close();
+
+    return true;
 }

@@ -2,28 +2,29 @@
 
 struct GLFWwindow;
 struct lua_State;
-class Input
+
+struct InputData
 {
-public:
-    static void init(GLFWwindow *window) noexcept;
-    static void update();
+    GLFWwindow * window;
+    double prevMouseX, prevMouseY;
+    double dx, dy;
+    std::bitset<500> keysPressed, prevKeyPressed;
+    std::bitset<6> buttonPressed, prevButtonPressed;
+};
 
-    static void registerLuaScript(lua_State *L);
-    static bool isKeyDown(int key) noexcept;
-    static bool isKeyDownOnce(int key) noexcept;
-    static void lockCursor() noexcept;
-    static void unlockCursor() noexcept;
-    inline static double getDx() noexcept { return mDx; }
-    inline static double getDy() noexcept { return mDy; }
+namespace Input
+{
+    void init(GLFWwindow *window);
+    void update();
+    void registerLuaScript(lua_State *L);
+    bool isKeyDown(int key);
+    bool isButtonDown(int button);
+    bool isKeyDownOnce(int key);
+    bool isButtonDownOnce(int button);
+    void setCursorMode(bool locked);
+    double getDx();
+    double getDy();
+    void registerScriptKeys(lua_State *L);
 
-    static void registerScriptKeys(lua_State *L);
-
-private:
-    static void keyPressedFn(GLFWwindow *window, int key, int scancode, int action, int mods);
-
-private:
-    static GLFWwindow *mWindow;
-    static double mPrevMouseX, mPrevMouseY;
-    static double mDx, mDy;
-    static std::bitset<500> mKeysPressed, mPrevKeyPressed;
+    extern InputData gData;
 };
