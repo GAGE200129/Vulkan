@@ -1,10 +1,12 @@
 #include "pch.hpp"
+#include "../VulkanEngine.hpp"
 
-#include "VulkanEngine.hpp"
+#include "Map/Map.hpp"
 
-bool VulkanEngine::staticModelPipelineInit()
+bool VulkanEngine::mapPipelineInit()
 {
-    spdlog::info("Static model pipeline init.");
+    vk::Device& device = gData.device;
+    spdlog::info("Map pipeline init.");
     // Descriptor layout
 
     vk::DescriptorSetLayoutBinding layoutBinding;
@@ -16,17 +18,17 @@ bool VulkanEngine::staticModelPipelineInit()
     vk::DescriptorSetLayoutCreateInfo layoutCI;
     layoutCI.setBindings(layoutBinding);
     
-    auto[imageDescriptorResult, imageDescriptor] = VulkanEngine::gData.device.createDescriptorSetLayout(layoutCI);
-    if(imageDescriptorResult != vk::Result::eSuccess)
+    auto[diffuseDescriptorResult, diffuseDescriptor] = device.createDescriptorSetLayout(layoutCI);
+    if(diffuseDescriptorResult != vk::Result::eSuccess)
     {
-        spdlog::critical("Failed to create image descriptor layout: {}", vk::to_string(imageDescriptorResult));
+        spdlog::critical("Failed to create diffuse descriptor layout: {}", vk::to_string(diffuseDescriptorResult));
         return false;
     }
-    gData.staticModelPipeline.imageDescriptorLayout = imageDescriptor;
+    gData.mapPipeline.diffuseDescriptorLayout = diffuseDescriptor;
     // Pipeline
     std::vector<char> vertexCode, fragmentCode;
-    Utils::filePathToVectorOfChar("res/shaders/static_model.vert.spv", vertexCode);
-    Utils::filePathToVectorOfChar("res/shaders/static_model.frag.spv", fragmentCode);
+    Utils::filePathToVectorOfChar("res/shaders/map.vert.spv", vertexCode);
+    Utils::filePathToVectorOfChar("res/shaders/map.frag.spv", fragmentCode);
 
     vk::ShaderModule vertexModule, fragmentModule;
     if(!VulkanEngine::initShaderModule(vertexCode, vertexModule))
@@ -47,16 +49,16 @@ bool VulkanEngine::staticModelPipelineInit()
     dynamicStateCI.setDynamicStates(dynamicStates);
     vk::PipelineVertexInputStateCreateInfo vertexInputCI;
 
-    // Position, normal, uv
-    std::array<vk::VertexInputBindingDescription, 3> vertexInputBindingDescriptions;
-    vertexInputBindingDescriptions[0].setBinding(0).setStride(sizeof(glm::vec3)).setInputRate(vk::VertexInputRate::eVertex);
-    vertexInputBindingDescriptions[1].setBinding(1).setStride(sizeof(glm::vec3)).setInputRate(vk::VertexInputRate::eVertex);
-    vertexInputBindingDescriptions[2].setBinding(2).setStride(sizeof(glm::vec2)).setInputRate(vk::VertexInputRate::eVertex);
+    // Position, normal
+    std::array<vk::VertexInputBindingDescription, 1> vertexInputBindingDescriptions;
+    vertexInputBindingDescriptions[0].setBinding(0).setStride(sizeof(MapVertex)).setInputRate(vk::VertexInputRate::eVertex);
 
     std::array<vk::VertexInputAttributeDescription, 3> vertexInputAttributeDescription;
     vertexInputAttributeDescription[0].setBinding(0).setLocation(0).setFormat(vk::Format::eR32G32B32Sfloat);
-    vertexInputAttributeDescription[1].setBinding(1).setLocation(1).setFormat(vk::Format::eR32G32B32Sfloat);
-    vertexInputAttributeDescription[2].setBinding(2).setLocation(2).setFormat(vk::Format::eR32G32Sfloat);
+    vertexInputAttributeDescription[1].setBinding(0).setLocation(1).setFormat(vk::Format::eR32G32B32Sfloat)
+        .setOffset(sizeof(glm::vec3));
+    vertexInputAttributeDescription[2].setBinding(0).setLocation(2).setFormat(vk::Format::eR32G32Sfloat)
+        .setOffset(sizeof(glm::vec3) * 2);
 
     vertexInputCI.setVertexBindingDescriptions(vertexInputBindingDescriptions)
         .setVertexAttributeDescriptions(vertexInputAttributeDescription);
@@ -83,7 +85,7 @@ bool VulkanEngine::staticModelPipelineInit()
         .setPolygonMode(vk::PolygonMode::eFill)
         .setLineWidth(1.0f)
         .setCullMode(vk::CullModeFlagBits::eBack)
-        .setFrontFace(vk::FrontFace::eCounterClockwise)
+        .setFrontFace(vk::FrontFace::eClockwise)
         .setDepthBiasEnable(false)
         .setDepthBiasConstantFactor(0.0f)
         .setDepthBiasSlopeFactor(0.0f)
@@ -126,21 +128,16 @@ bool VulkanEngine::staticModelPipelineInit()
         .setStencilTestEnable(false);
 
     vk::PipelineLayoutCreateInfo pipelineLayoutCI;
-    vk::PushConstantRange pushConstantCI;
-    pushConstantCI.setStageFlags(vk::ShaderStageFlagBits::eVertex)
-        .setSize(sizeof(glm::mat4x4));
+    auto layouts = std::array{gData.globalDescriptorLayout, gData.mapPipeline.diffuseDescriptorLayout};
+    pipelineLayoutCI.setSetLayouts(layouts);
 
-    auto layouts = std::array{VulkanEngine::gData.globalDescriptorLayout, gData.staticModelPipeline.imageDescriptorLayout};
-    pipelineLayoutCI.setSetLayouts(layouts)
-        .setPushConstantRanges(pushConstantCI);
-
-    auto[layoutResult, layout] = VulkanEngine::gData.device.createPipelineLayout(pipelineLayoutCI);
+    auto[layoutResult, layout] = device.createPipelineLayout(pipelineLayoutCI);
     if(layoutResult != vk::Result::eSuccess)
     {
         spdlog::critical("Failed to create pipeline layout: {}", vk::to_string(layoutResult));
         return false;
     }
-    gData.staticModelPipeline.layout = layout;
+    gData.mapPipeline.layout = layout;
 
     vk::GraphicsPipelineCreateInfo graphicsPipelineCI;
     graphicsPipelineCI.setStages(shaderStages)
@@ -152,18 +149,19 @@ bool VulkanEngine::staticModelPipelineInit()
         .setPDepthStencilState(&depthStencil)
         .setPColorBlendState(&colorBlendingCI)
         .setPDynamicState(&dynamicStateCI)
-        .setLayout(gData.staticModelPipeline.layout)
-        .setRenderPass(VulkanEngine::gData.renderPass)
+        .setLayout(layout)
+        .setRenderPass(gData.renderPass)
         .setSubpass(0)
         .setBasePipelineHandle(nullptr)
         .setBasePipelineIndex(-1);
 
-    auto graphicsPipelineResult = VulkanEngine::gData.device.createGraphicsPipeline(nullptr, graphicsPipelineCI);
+    auto graphicsPipelineResult = device.createGraphicsPipeline(nullptr, graphicsPipelineCI);
     if (graphicsPipelineResult.result != vk::Result::eSuccess)
     {
-        throw std::runtime_error("Failed to create graphics pipeline !");
+        spdlog::critical("Failed to create graphics pipeline: {}", vk::to_string(graphicsPipelineResult.result));
+        return false;
     }
-    gData.staticModelPipeline.pipeline = graphicsPipelineResult.value;
+    gData.mapPipeline.pipeline = graphicsPipelineResult.value;
 
     VulkanEngine::gData.device.destroyShaderModule(vertexModule);
     VulkanEngine::gData.device.destroyShaderModule(fragmentModule);
@@ -171,10 +169,10 @@ bool VulkanEngine::staticModelPipelineInit()
     return true;
 }
 
-void VulkanEngine::staticModelPipelineCleanup()
+void VulkanEngine::mapPipelineCleanup()
 {
-    spdlog::info("Static model pipeline cleanup.");
-    VulkanEngine::gData.device.destroyDescriptorSetLayout(gData.staticModelPipeline.imageDescriptorLayout);
-    VulkanEngine::gData.device.destroyPipeline(gData.staticModelPipeline.pipeline);
-    VulkanEngine::gData.device.destroyPipelineLayout(gData.staticModelPipeline.layout);
-}
+    spdlog::info("Map pipeline cleanup.");
+    VulkanEngine::gData.device.destroyDescriptorSetLayout(gData.mapPipeline.diffuseDescriptorLayout);
+    VulkanEngine::gData.device.destroyPipeline(gData.mapPipeline.pipeline);
+    VulkanEngine::gData.device.destroyPipelineLayout(gData.mapPipeline.layout);
+}   

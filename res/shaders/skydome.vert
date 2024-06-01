@@ -4,8 +4,7 @@ layout(location = 0) in vec3 inPos;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec2 inUv;
 
-layout(location = 0) out vec2 FSUv;
-layout(location = 1) out vec3 FSNormal;
+layout(location = 0) out float FSHeight;
 
 layout(set = 0, binding = 0) uniform GlobalUBO
 {
@@ -15,7 +14,6 @@ layout(set = 0, binding = 0) uniform GlobalUBO
 
 
 void main() { 
-    FSUv = inUv;
-    FSNormal = inNormal;
-    gl_Position = globalUBO.proj * globalUBO.view * vec4(inPos, 1.0);
+    FSHeight = inPos.y;
+    gl_Position = globalUBO.proj * mat4(mat3(globalUBO.view)) * vec4(inPos.x, inPos.y - 0.2, inPos.z, 1.0);
 }

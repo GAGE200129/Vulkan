@@ -9,7 +9,8 @@ public:
 
 
     static btRigidBody* createRigidBody(btRigidBody::btRigidBodyConstructionInfo info);
-    static btCollisionObject* createCollisionObject(btCollisionShape* shape, btTransform transform);
+
+    inline static btDynamicsWorld* getWorld() { return sDynamicWorld; }
 private:
     static btCollisionConfiguration *sCollisionConfiguration;
     static btCollisionDispatcher *sDispatcher;
@@ -19,5 +20,4 @@ private:
     static btDynamicsWorld *sDynamicWorld;
 
     static std::vector<btRigidBody*> sRigidBodies;
-    static std::vector<btCollisionObject*> sCollisionObjects;
 };

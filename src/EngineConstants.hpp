@@ -10,7 +10,7 @@ namespace EngineConstants
     constexpr unsigned int DISPLAY_HEIGHT = 900;
     constexpr const char*  DISPLAY_TITLE = "EnGAGE";
     constexpr double TICK_TIME = 1.0 / 60.0;
-    constexpr double FRAME_TIME = 1.0 / 60.0;
+    constexpr double FRAME_TIME = 1.0 / 30.0;
     constexpr size_t ANIMATION_MAX_BONES = 100;
     constexpr size_t PATH_LENGTH = 256;
 

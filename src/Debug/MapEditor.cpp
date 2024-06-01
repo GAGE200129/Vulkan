@@ -5,6 +5,9 @@
 
 #include "Map/Map.hpp"
 
+#include "Input.hpp"
+#include "Physics/BulletEngine.hpp"
+
 void Debug::mapEditorRenderImgui()
 {
     ImGui::Begin("Map editor");
@@ -36,7 +39,58 @@ void Debug::mapEditorRenderImgui()
         std::strncpy(b.faces[5].texturePath, "res/textures/x.jpg", EngineConstants::PATH_LENGTH);
         b.faces[5].scaleX = 0.01f;
         b.faces[5].scaleY = 0.01f;
-        Map::addBox(b);
+        Map::boxAdd(b);
     }
+    if (gData.selectedBox)
+    {
+        Box *box = gData.selectedBox;
+        ImGui::Separator();
+        ImGui::Text("Box");
+
+        bool dirty = false;
+        dirty |= ImGui::DragFloat3("Center", &box->center.x, 0.1f);
+        dirty |= ImGui::DragFloat3("Half size", &box->halfSize.x, 0.1f);
+
+        ImGui::Separator();
+        for (int i = 0; i < 6; i++)
+        {
+            Face &f = box->faces[i];
+            ImGui::PushID(i);
+            dirty |= ImGui::DragFloat2("Scale", &f.scaleX, 0.01f);
+            dirty |= ImGui::InputText("Path", f.texturePath, EngineConstants::PATH_LENGTH);
+            ImGui::PopID();
+        }
+        ImGui::Separator();
+
+        if (dirty)
+        {
+            Map::boxUpdate(box);
+        }
+    }
+
     ImGui::End();
+}
+
+void Debug::mapEditorPickBrush()
+{
+    if (!gData.lockCamera)
+        return;
+    if (Input::isButtonDown(GLFW_MOUSE_BUTTON_LEFT))
+    {
+        btVector3 begin(gData.camera.position.x, gData.camera.position.y, gData.camera.position.z);
+        btVector3 end = begin + btVector3(gData.cameraForward.x, gData.cameraForward.y, gData.cameraForward.z) * 100.0f;
+
+        btCollisionWorld::ClosestRayResultCallback rayResult(begin, end);
+
+        // Perform raycast
+        BulletEngine::getWorld()->rayTest(begin, end, rayResult);
+        if (rayResult.hasHit())
+        {
+            gData.selectedBox = (Box*)rayResult.m_collisionObject->getUserPointer();
+        }
+        else
+        {
+            gData.selectedBox = nullptr;
+        }
+    }
 }

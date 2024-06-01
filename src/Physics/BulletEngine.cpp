@@ -13,7 +13,9 @@ btConstraintSolver *BulletEngine::sSolver;
 btConstraintSolverPoolMt *BulletEngine::sSolverPool;
 btDynamicsWorld *BulletEngine::sDynamicWorld;
 std::vector<btRigidBody*> BulletEngine::sRigidBodies;
-std::vector<btCollisionObject*> BulletEngine::sCollisionObjects;
+
+static btStaticPlaneShape* gPlaneShape = nullptr;
+static btCollisionObject* gPlaneObject = nullptr;
 
 void BulletEngine::init()
 {
@@ -26,11 +28,16 @@ void BulletEngine::init()
     sDynamicWorld = new btDiscreteDynamicsWorldMt(sDispatcher, sBroadphaseInterface, sSolverPool, sSolver, sCollisionConfiguration);
     sDynamicWorld->setGravity(btVector3(0, -9.8, 0));
 
-    btStaticPlaneShape* planeShape = new btStaticPlaneShape(btVector3(0, 1, 0), 0);
+    gPlaneShape = new btStaticPlaneShape(btVector3(0, 1, 0), 0);
     btTransform t;
     t.setOrigin(btVector3(0, 0, 0));
     t.setRotation(btQuaternion(0, 0, 0, 1));
-    createCollisionObject(planeShape, t);
+    gPlaneObject = new btCollisionObject();
+    gPlaneObject->setWorldTransform(t);
+    gPlaneObject->setCollisionShape(gPlaneShape);
+    gPlaneObject->setFriction(1.0);
+
+    sDynamicWorld->addCollisionObject(gPlaneObject);
 }
 
 void BulletEngine::update()
@@ -47,18 +54,6 @@ btRigidBody* BulletEngine::createRigidBody(btRigidBody::btRigidBodyConstructionI
     return pBody;
 }
 
-btCollisionObject* BulletEngine::createCollisionObject(btCollisionShape* shape, btTransform transform)
-{
-    btCollisionObject* object = new btCollisionObject();
-    object->setWorldTransform(transform);
-    object->setCollisionShape(shape);
-    object->setFriction(1.0);
-
-    sDynamicWorld->addCollisionObject(object);
-    sCollisionObjects.push_back(object);
-
-    return object;
-}
 
 void BulletEngine::cleanup()
 {
@@ -73,13 +68,10 @@ void BulletEngine::cleanup()
         delete rigidBody;
     }
 
-    for(btCollisionObject* collisionObject : sCollisionObjects)
-    {
-        if(collisionObject->getCollisionShape())
-            delete collisionObject->getCollisionShape();
-        
-        delete collisionObject;
-    }
+    sDynamicWorld->removeCollisionObject(gPlaneObject);
+    delete gPlaneShape;
+    delete gPlaneObject;
+    
     delete sDynamicWorld;
     delete sSolverPool;
     delete sSolver;

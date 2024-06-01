@@ -79,7 +79,13 @@ bool VulkanEngine::init()
     if (!staticModelPipelineInit())
         return false;
 
-    if(!mapPipelineInit())
+    if (!mapPipelineInit())
+        return false;
+
+    if (!skydomePipelineInit())
+        return false;
+
+    if(!raymarchPipelineInit())
         return false;
 
     if (!initDepthBuffer())
@@ -191,7 +197,7 @@ void VulkanEngine::beginFrame(const Camera &camera)
 
     std::array<vk::ClearValue, 2> clearValues;
 
-    clearValues[0].setColor(std::array{0.1f, 0.1f, 0.1f, 1.0f});
+    clearValues[0].setColor(std::array{0.0f, 0.0f, 0.0f, 1.0f});
     clearValues[1].setDepthStencil({1.0f, 0});
     vk::RenderPassBeginInfo renderpassBeginInfo;
     renderpassBeginInfo.setRenderPass(gData.renderPass)
@@ -328,6 +334,8 @@ void VulkanEngine::cleanup()
 
     staticModelPipelineCleanup();
     mapPipelineCleanup();
+    skydomePipelineCleanup();
+    raymarchPipelineCleanup();
     bufferCleanup(gData.globalUniformBuffer);
     gData.device.destroyDescriptorSetLayout(gData.globalDescriptorLayout);
     gData.device.destroyDescriptorPool(gData.descriptorPool);

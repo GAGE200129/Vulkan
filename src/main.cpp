@@ -21,7 +21,9 @@ int main()
     Input::init(VulkanEngine::gData.window);
     if (!VulkanEngine::init())
         return -1;
-   
+    VulkanEngine::skydomeInit();
+    VulkanEngine::raymarchInit();
+    Map::init();
 
 
     Box b = {};
@@ -52,7 +54,7 @@ int main()
     b.faces[5].scaleY = 0.01f;
 
 
-    Map::addBox(b);
+    Map::boxAdd(b);
 
     Player player;
 
@@ -89,10 +91,14 @@ int main()
         VulkanEngine::widgetBeginFrame();
         Debug::renderImgui();
 
-        VulkanEngine::beginFrame(Debug::gData.enabled ? Debug::gData.camera : player.getCamera());
+        const Camera& currentCamera = Debug::gData.enabled ? Debug::gData.camera : player.getCamera();
+        VulkanEngine::beginFrame(currentCamera);
+        VulkanEngine::skydomeRender();
+        VulkanEngine::raymarchRender(currentCamera);
         player.render();
         character.render();
         Map::render();
+        
         Debug::render();
         VulkanEngine::endFrame();
 
@@ -104,6 +110,8 @@ int main()
     }
 
     VulkanEngine::joint();
+    VulkanEngine::raymarchCleanup();
+    VulkanEngine::skydomeCleanup();
     Map::cleanup();
     StaticModelLoader::clearCache();
     VulkanEngine::cleanup();

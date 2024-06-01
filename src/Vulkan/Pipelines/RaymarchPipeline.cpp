@@ -1,34 +1,33 @@
 #include "pch.hpp"
-#include "VulkanEngine.hpp"
 
-#include "Map/Map.hpp"
+#include "../VulkanEngine.hpp"
 
-bool VulkanEngine::mapPipelineInit()
+bool VulkanEngine::raymarchPipelineInit()
 {
-    vk::Device& device = gData.device;
-    spdlog::info("Map pipeline init.");
+    spdlog::info("Raymarch pipeline init.");
+
     // Descriptor layout
 
     vk::DescriptorSetLayoutBinding layoutBinding;
     layoutBinding.setBinding(0)
-        .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+        .setDescriptorType(vk::DescriptorType::eUniformBuffer)
         .setDescriptorCount(1)
         .setStageFlags(vk::ShaderStageFlagBits::eFragment);
 
     vk::DescriptorSetLayoutCreateInfo layoutCI;
     layoutCI.setBindings(layoutBinding);
     
-    auto[diffuseDescriptorResult, diffuseDescriptor] = device.createDescriptorSetLayout(layoutCI);
-    if(diffuseDescriptorResult != vk::Result::eSuccess)
+    auto[descriptorLayoutResult, descriptorLayout] = gData.device.createDescriptorSetLayout(layoutCI);
+    if(descriptorLayoutResult != vk::Result::eSuccess)
     {
-        spdlog::critical("Failed to create diffuse descriptor layout: {}", vk::to_string(diffuseDescriptorResult));
+        spdlog::critical("Failed to create descriptor layout: {}", vk::to_string(descriptorLayoutResult));
         return false;
     }
-    gData.mapPipeline.diffuseDescriptorLayout = diffuseDescriptor;
+
     // Pipeline
     std::vector<char> vertexCode, fragmentCode;
-    Utils::filePathToVectorOfChar("res/shaders/map.vert.spv", vertexCode);
-    Utils::filePathToVectorOfChar("res/shaders/map.frag.spv", fragmentCode);
+    Utils::filePathToVectorOfChar("res/shaders/raymarch.vert.spv", vertexCode);
+    Utils::filePathToVectorOfChar("res/shaders/raymarch.frag.spv", fragmentCode);
 
     vk::ShaderModule vertexModule, fragmentModule;
     if(!VulkanEngine::initShaderModule(vertexCode, vertexModule))
@@ -49,18 +48,12 @@ bool VulkanEngine::mapPipelineInit()
     dynamicStateCI.setDynamicStates(dynamicStates);
     vk::PipelineVertexInputStateCreateInfo vertexInputCI;
 
-    // Position, normal
-    std::array<vk::VertexInputBindingDescription, 3> vertexInputBindingDescriptions;
-    vertexInputBindingDescriptions[0].setBinding(0).setStride(sizeof(MapVertex)).setInputRate(vk::VertexInputRate::eVertex);
-    vertexInputBindingDescriptions[1].setBinding(0).setStride(sizeof(MapVertex)).setInputRate(vk::VertexInputRate::eVertex);
-    vertexInputBindingDescriptions[2].setBinding(0).setStride(sizeof(MapVertex)).setInputRate(vk::VertexInputRate::eVertex);
+    // Position, normal, uv
+    std::array<vk::VertexInputBindingDescription, 1> vertexInputBindingDescriptions;
+    vertexInputBindingDescriptions[0].setBinding(0).setStride(sizeof(glm::vec3)).setInputRate(vk::VertexInputRate::eVertex);
 
-    std::array<vk::VertexInputAttributeDescription, 3> vertexInputAttributeDescription;
+    std::array<vk::VertexInputAttributeDescription, 1> vertexInputAttributeDescription;
     vertexInputAttributeDescription[0].setBinding(0).setLocation(0).setFormat(vk::Format::eR32G32B32Sfloat);
-    vertexInputAttributeDescription[1].setBinding(0).setLocation(1).setFormat(vk::Format::eR32G32B32Sfloat)
-        .setOffset(sizeof(glm::vec3));
-    vertexInputAttributeDescription[2].setBinding(0).setLocation(2).setFormat(vk::Format::eR32G32Sfloat)
-        .setOffset(sizeof(glm::vec3) * 2);
 
     vertexInputCI.setVertexBindingDescriptions(vertexInputBindingDescriptions)
         .setVertexAttributeDescriptions(vertexInputAttributeDescription);
@@ -70,13 +63,13 @@ bool VulkanEngine::mapPipelineInit()
     vk::Viewport viewport;
     viewport.setX(0)
         .setY(0)
-        .setWidth(VulkanEngine::gData.swapExtent.width)
-        .setHeight(VulkanEngine::gData.swapExtent.height)
+        .setWidth(gData.swapExtent.width)
+        .setHeight(gData.swapExtent.height)
         .setMinDepth(0.0f)
         .setMaxDepth(1.0f);
     vk::Rect2D scissor;
     scissor.setOffset({0, 0})
-        .setExtent(VulkanEngine::gData.swapExtent);
+        .setExtent(gData.swapExtent);
     vk::PipelineViewportStateCreateInfo viewportStateCI;
     viewportStateCI.setViewports(viewport)
         .setScissors(scissor);
@@ -86,8 +79,8 @@ bool VulkanEngine::mapPipelineInit()
         .setRasterizerDiscardEnable(false)
         .setPolygonMode(vk::PolygonMode::eFill)
         .setLineWidth(1.0f)
-        .setCullMode(vk::CullModeFlagBits::eBack)
-        .setFrontFace(vk::FrontFace::eClockwise)
+        .setCullMode(vk::CullModeFlagBits::eNone)
+        .setFrontFace(vk::FrontFace::eCounterClockwise)
         .setDepthBiasEnable(false)
         .setDepthBiasConstantFactor(0.0f)
         .setDepthBiasSlopeFactor(0.0f)
@@ -130,16 +123,16 @@ bool VulkanEngine::mapPipelineInit()
         .setStencilTestEnable(false);
 
     vk::PipelineLayoutCreateInfo pipelineLayoutCI;
-    auto layouts = std::array{gData.globalDescriptorLayout, gData.mapPipeline.diffuseDescriptorLayout};
+    auto layouts = std::array{gData.globalDescriptorLayout};
     pipelineLayoutCI.setSetLayouts(layouts);
 
-    auto[layoutResult, layout] = device.createPipelineLayout(pipelineLayoutCI);
+    auto[layoutResult, layout] = gData.device.createPipelineLayout(pipelineLayoutCI);
     if(layoutResult != vk::Result::eSuccess)
     {
         spdlog::critical("Failed to create pipeline layout: {}", vk::to_string(layoutResult));
         return false;
     }
-    gData.mapPipeline.layout = layout;
+    
 
     vk::GraphicsPipelineCreateInfo graphicsPipelineCI;
     graphicsPipelineCI.setStages(shaderStages)
@@ -157,24 +150,26 @@ bool VulkanEngine::mapPipelineInit()
         .setBasePipelineHandle(nullptr)
         .setBasePipelineIndex(-1);
 
-    auto graphicsPipelineResult = device.createGraphicsPipeline(nullptr, graphicsPipelineCI);
+    auto graphicsPipelineResult = gData.device.createGraphicsPipeline(nullptr, graphicsPipelineCI);
     if (graphicsPipelineResult.result != vk::Result::eSuccess)
     {
-        spdlog::critical("Failed to create graphics pipeline: {}", vk::to_string(graphicsPipelineResult.result));
+        spdlog::critical("Failed to create graphics pipeline !");
         return false;
     }
-    gData.mapPipeline.pipeline = graphicsPipelineResult.value;
+    gData.raymarchPipeline.pipeline = graphicsPipelineResult.value;
+    gData.raymarchPipeline.layout = layout;
+    gData.raymarchPipeline.descriptorLayout = descriptorLayout;
 
-    VulkanEngine::gData.device.destroyShaderModule(vertexModule);
-    VulkanEngine::gData.device.destroyShaderModule(fragmentModule);
+    gData.device.destroyShaderModule(vertexModule);
+    gData.device.destroyShaderModule(fragmentModule);
 
     return true;
 }
 
-void VulkanEngine::mapPipelineCleanup()
+void VulkanEngine::raymarchPipelineCleanup()
 {
-    spdlog::info("Map pipeline cleanup.");
-    VulkanEngine::gData.device.destroyDescriptorSetLayout(gData.mapPipeline.diffuseDescriptorLayout);
-    VulkanEngine::gData.device.destroyPipeline(gData.mapPipeline.pipeline);
-    VulkanEngine::gData.device.destroyPipelineLayout(gData.mapPipeline.layout);
-}   
+    spdlog::info("Raymarch pipeline cleanup.");
+    gData.device.destroyPipeline(gData.raymarchPipeline.pipeline);
+    gData.device.destroyPipelineLayout(gData.raymarchPipeline.layout);
+    gData.device.destroyDescriptorSetLayout(gData.raymarchPipeline.descriptorLayout);
+}

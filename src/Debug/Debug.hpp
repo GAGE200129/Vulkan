@@ -2,6 +2,8 @@
 
 #include "Vulkan/Camera.hpp"
 
+#include "Map/Map.hpp"
+
 struct DebugData
 {
     bool enabled;
@@ -10,6 +12,8 @@ struct DebugData
     glm::vec3   cameraForward;
     Camera      camera;
     float       cameraSpeed;
+
+    Box*        selectedBox;
 };
 
 namespace Debug
@@ -22,6 +26,7 @@ namespace Debug
     void debugCameraUpdate();
 
     void mapEditorRenderImgui();
+    void mapEditorPickBrush();
     
     extern DebugData gData;
 }

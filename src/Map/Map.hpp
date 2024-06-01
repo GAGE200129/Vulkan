@@ -42,11 +42,14 @@ struct MapData
 namespace Map
 {
     void init();
-    void addBox(Box box);
+
     void render();
     void cleanup();
 
     VulkanTexture getTexture(const std::string& filePath);
+
+    void boxAdd(Box box);
+    void boxUpdate(Box* box);
 
     extern MapData gData;
 };

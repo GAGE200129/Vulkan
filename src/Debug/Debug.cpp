@@ -21,7 +21,8 @@ DebugData Debug::gData =
                 .farPlane = 1000.0f,
                 .fov = 90.0f
             },
-        .cameraSpeed = 5.0f
+        .cameraSpeed = 5.0f,
+        .selectedBox = nullptr
     };
 
 void Debug::update()
@@ -36,6 +37,7 @@ void Debug::update()
     if (!gData.enabled || io.WantCaptureKeyboard || io.WantCaptureMouse)
         return;
     debugCameraUpdate();
+    mapEditorPickBrush();
 }
 
 void Debug::renderImgui()
@@ -44,6 +46,7 @@ void Debug::renderImgui()
         return;
     ImGui::Begin("Debugger");
     ImGui::SliderFloat("Camera speed", &gData.cameraSpeed, 1.0f, 10.0f);
+    ImGui::Text("%p", gData.selectedBox);
     ImGui::End();   
 
     ImGui::ShowDemoWindow();

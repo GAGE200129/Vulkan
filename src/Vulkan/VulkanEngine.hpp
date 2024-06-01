@@ -1,6 +1,8 @@
 #pragma once
 #include "Camera.hpp"
 
+#include "Pipelines/Pipelines.hpp"
+
 struct VulkanUniformBufferObject
 {
     glm::mat4 view;
@@ -22,19 +24,20 @@ struct VulkanBuffer
     vk::DeviceMemory bufferMemory;
 };
 
-struct VulkanStaticModelPipeline
+struct VulkanSkydome
 {
-    vk::PipelineLayout layout;
-    vk::Pipeline pipeline;
-    vk::DescriptorSetLayout imageDescriptorLayout;
+    struct Vertex
+    {
+        glm::vec3 position;
+        glm::vec3 normal;
+        glm::vec2 textureCoord;
+    };
+
+    VulkanBuffer buffer;
+    std::vector<Vertex> vertices;
 };
 
-struct VulkanMapPipeline
-{
-    vk::PipelineLayout layout;
-    vk::Pipeline pipeline;
-    vk::DescriptorSetLayout diffuseDescriptorLayout;
-};
+
 
 struct VulkanData
 {
@@ -63,6 +66,7 @@ struct VulkanData
     vk::DescriptorPool descriptorPool;
     VulkanStaticModelPipeline staticModelPipeline;
     VulkanMapPipeline mapPipeline;
+    
     vk::CommandPool commandPool;
     vk::CommandBuffer commandBuffer;
     vk::Semaphore imageAvalidableGSignal, renderFinishedGSignal;
@@ -76,6 +80,9 @@ struct VulkanData
     VulkanBuffer globalUniformBuffer;
     void *globalUniformBufferMap;
 
+
+    VulkanSkydomePipeline skydomePipeline;
+    VulkanRaymarchPipeline raymarchPipeline;
 };
 
 
@@ -109,6 +116,19 @@ namespace VulkanEngine
     bool initDepthBuffer();
     uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags props);
 
+
+    //Skydome
+    void skydomeInit();
+    void skydomeRender();
+    void skydomeCleanup();
+
+    //Raymarch
+    bool raymarchInit();
+    void raymarchRender(const Camera& camera);
+    void raymarchCleanup();
+    bool raymarchPipelineInit();
+    void raymarchPipelineCleanup();
+
     //Static model pipeline
     bool staticModelPipelineInit();
     void staticModelPipelineCleanup();
@@ -116,6 +136,11 @@ namespace VulkanEngine
     //Map pipeline
     bool mapPipelineInit();
     void mapPipelineCleanup();
+
+    //Skydome pipeline
+    bool skydomePipelineInit();
+    void skydomePipelineCleanup();
+   
 
     //Textures
     bool textureLoadFromFile(const std::string &filePath, vk::DescriptorSetLayout layout, VulkanTexture& outTexture);

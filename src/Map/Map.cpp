@@ -3,6 +3,8 @@
 
 #include <stb/stb_image.h>
 
+#include "Physics/BulletEngine.hpp"
+
 struct MapData Map::gData = {};
 
 void Map::init()
@@ -47,9 +49,15 @@ void Map::cleanup()
                 VulkanEngine::bufferCleanup(f.vertexBuffer);
             }
         }
+
+        BulletEngine::getWorld()->removeCollisionObject(box.physicsCollider);
+        if (box.physicsCollider->getCollisionShape())
+            delete box.physicsCollider->getCollisionShape();
+
+        delete box.physicsCollider;
     }
 
-    for(auto&[filePath, texture] : gData.textures)
+    for (auto &[filePath, texture] : gData.textures)
     {
         VulkanEngine::textureCleanup(texture);
     }
@@ -58,7 +66,7 @@ void Map::cleanup()
 
 VulkanTexture Map::getTexture(const std::string &filePath)
 {
-    if(gData.textures.find(filePath) != gData.textures.end())
+    if (gData.textures.find(filePath) != gData.textures.end())
     {
         return gData.textures.at(filePath);
     }
