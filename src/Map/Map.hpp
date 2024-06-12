@@ -45,11 +45,16 @@ namespace Map
 
     void render();
     void cleanup();
+    void save(const std::string& filePath);
+    void load(const std::string& filePath);
 
     VulkanTexture getTexture(const std::string& filePath);
 
+    //Box
     void boxAdd(Box box);
     void boxUpdate(Box* box);
+    void boxSave(std::ofstream &stream, const Box& box);
+    void boxLoad(const std::vector<std::string>& tokens, Box& box);
 
     extern MapData gData;
 };

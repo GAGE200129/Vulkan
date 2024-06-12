@@ -82,9 +82,6 @@ bool VulkanEngine::init()
     if (!mapPipelineInit())
         return false;
 
-    if (!skydomePipelineInit())
-        return false;
-
     if(!raymarchPipelineInit())
         return false;
 
@@ -334,7 +331,6 @@ void VulkanEngine::cleanup()
 
     staticModelPipelineCleanup();
     mapPipelineCleanup();
-    skydomePipelineCleanup();
     raymarchPipelineCleanup();
     bufferCleanup(gData.globalUniformBuffer);
     gData.device.destroyDescriptorSetLayout(gData.globalDescriptorLayout);

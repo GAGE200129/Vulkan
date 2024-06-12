@@ -114,8 +114,8 @@ bool VulkanEngine::raymarchPipelineInit()
 
     vk::PipelineDepthStencilStateCreateInfo depthStencil;
     depthStencil
-        .setDepthTestEnable(true)
-        .setDepthWriteEnable(true)
+        .setDepthTestEnable(false)
+        .setDepthWriteEnable(false)
         .setDepthCompareOp(vk::CompareOp::eLess)
         .setDepthBoundsTestEnable(false)
         .setMinDepthBounds(0.0f)

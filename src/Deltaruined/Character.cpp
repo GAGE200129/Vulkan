@@ -31,29 +31,29 @@ void Character::update()
 
 void Character::render() const
 {
-    vk::CommandBuffer &cmdBuffer = VulkanEngine::gData.commandBuffer;
-    vk::Pipeline &pipeline = VulkanEngine::gData.staticModelPipeline.pipeline;
-    vk::PipelineLayout &pipelineLayout = VulkanEngine::gData.staticModelPipeline.layout;
+    // vk::CommandBuffer &cmdBuffer = VulkanEngine::gData.commandBuffer;
+    // vk::Pipeline &pipeline = VulkanEngine::gData.staticModelPipeline.pipeline;
+    // vk::PipelineLayout &pipelineLayout = VulkanEngine::gData.staticModelPipeline.layout;
 
-    cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
-    cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, {VulkanEngine::gData.globalDescriptorSet}, {});
-    cmdBuffer.bindVertexBuffers(0, mModel->mPositionBuffer.buffer, {0});
-    cmdBuffer.bindVertexBuffers(1, mModel->mNormalBuffer.buffer, {0});
-    cmdBuffer.bindVertexBuffers(2, mModel->mUvBuffer.buffer, {0});
-    cmdBuffer.bindIndexBuffer(mModel->mIndexBuffer.buffer, 0, vk::IndexType::eUint32);
+    // cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
+    // cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, {VulkanEngine::gData.globalDescriptorSet}, {});
+    // cmdBuffer.bindVertexBuffers(0, mModel->mPositionBuffer.buffer, {0});
+    // cmdBuffer.bindVertexBuffers(1, mModel->mNormalBuffer.buffer, {0});
+    // cmdBuffer.bindVertexBuffers(2, mModel->mUvBuffer.buffer, {0});
+    // cmdBuffer.bindIndexBuffer(mModel->mIndexBuffer.buffer, 0, vk::IndexType::eUint32);
     
-    glm::mat4x4 modelTransform = buildModelTransform();
-    cmdBuffer.pushConstants(pipelineLayout,
-                            vk::ShaderStageFlagBits::eVertex, 0, sizeof(modelTransform), &modelTransform);
+    // glm::mat4x4 modelTransform = buildModelTransform();
+    // cmdBuffer.pushConstants(pipelineLayout,
+    //                         vk::ShaderStageFlagBits::eVertex, 0, sizeof(modelTransform), &modelTransform);
     
-    for (const auto &mesh : mModel->mMeshes)
-    {
-        const StaticModelData::Material &material = mModel->mMaterials[mesh.materialIndex];
+    // for (const auto &mesh : mModel->mMeshes)
+    // {
+    //     const StaticModelData::Material &material = mModel->mMaterials[mesh.materialIndex];
 
-        cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout,
-                                     1, {material.mDiffuse.descriptorSet}, {});
-        cmdBuffer.drawIndexed(mesh.numIndices, 1, mesh.baseIndex, mesh.baseVertex, 0);
-    }
+    //     cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout,
+    //                                  1, {material.mDiffuse.descriptorSet}, {});
+    //     cmdBuffer.drawIndexed(mesh.numIndices, 1, mesh.baseIndex, mesh.baseVertex, 0);
+    // }
 }
 
 glm::mat4x4 Character::buildModelTransform() const

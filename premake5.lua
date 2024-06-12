@@ -11,7 +11,7 @@ project "EnGAGE"
    pchheader "src/pch.hpp"
 
    files {
-      "src/**.hpp", "src/**.cpp", "res/**.vert", "res/**.frag",
+      "src/**.hpp", "src/**.cpp", "res/**.vert", "res/**.frag", "res/**.comp",
       "libs/imgui-docking/*.cpp",
       "libs/imgui-docking/backends/imgui_impl_vulkan.cpp",
       "libs/imgui-docking/backends/imgui_impl_glfw.cpp"
@@ -46,6 +46,15 @@ project "EnGAGE"
    }
 
    --Shader build step--
+
+   filter {'files:res/**.comp'}
+      buildmessage 'Compiling %{file.relpath}'
+   
+      buildcommands {
+         'glslc "%{file.relpath}" -o "%{file.relpath}.spv"'
+      }
+      buildoutputs { '%{file.relpath}.spv' }
+   
    filter {'files:res/**.vert'}
       buildmessage 'Compiling %{file.relpath}'
 
@@ -54,7 +63,7 @@ project "EnGAGE"
       }
       buildoutputs { '%{file.relpath}.spv' }
 
-
+      
    filter {'files:res/**.frag'}
       buildmessage 'Compiling %{file.relpath}'
    
@@ -62,3 +71,6 @@ project "EnGAGE"
          'glslc "%{file.relpath}" -o "%{file.relpath}.spv"'
       }
       buildoutputs { '%{file.relpath}.spv' }
+
+
+   

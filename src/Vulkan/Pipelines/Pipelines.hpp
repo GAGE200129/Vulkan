@@ -18,6 +18,7 @@ struct VulkanSkydomePipeline
 {
     vk::PipelineLayout layout;
     vk::Pipeline pipeline;
+    vk::DescriptorSetLayout descriptorLayout;
 }; 
 
 struct VulkanRaymarchPipeline

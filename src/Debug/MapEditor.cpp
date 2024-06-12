@@ -10,6 +10,18 @@
 
 void Debug::mapEditorRenderImgui()
 {
+    const char* boxFaces[] = 
+    {
+        "top",
+        "bottom",
+        "front",
+        "back",
+        "left",
+        "right",
+    };
+
+    static char mapSavePath[EngineConstants::PATH_LENGTH] = {};
+
     ImGui::Begin("Map editor");
     if (ImGui::Button("Spawn brush"))
     {
@@ -41,6 +53,15 @@ void Debug::mapEditorRenderImgui()
         b.faces[5].scaleY = 0.01f;
         Map::boxAdd(b);
     }
+    ImGui::InputText("Save path", mapSavePath, EngineConstants::PATH_LENGTH);
+    if(ImGui::Button("Save"))
+    {
+        Map::save(std::string(mapSavePath));
+    }
+    if(ImGui::Button("Load"))
+    {
+        Map::load(std::string(mapSavePath));
+    }
     if (gData.selectedBox)
     {
         Box *box = gData.selectedBox;
@@ -56,7 +77,8 @@ void Debug::mapEditorRenderImgui()
         {
             Face &f = box->faces[i];
             ImGui::PushID(i);
-            dirty |= ImGui::DragFloat2("Scale", &f.scaleX, 0.01f);
+            ImGui::Text("%s", boxFaces[i]);
+            dirty |= ImGui::DragFloat2("Scale", &f.scaleX, 0.001f);
             dirty |= ImGui::InputText("Path", f.texturePath, EngineConstants::PATH_LENGTH);
             ImGui::PopID();
         }

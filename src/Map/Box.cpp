@@ -61,6 +61,50 @@ void Map::boxUpdate(Box *box)
     }
 }
 
+void Map::boxSave(std::ofstream &stream, const Box &box)
+{
+    stream << "box "
+           << box.center.x << " "
+           << box.center.y << " "
+           << box.center.z << " "
+
+           << box.halfSize.x << " "
+           << box.halfSize.y << " "
+           << box.halfSize.z << " ";
+
+    for (int i = 0; i < 6; i++)
+    {
+        const Face &face = box.faces[i];
+        stream << face.texturePath << " "
+               << face.scaleX << " "
+               << face.scaleY << " ";
+    }
+
+    stream << "\n";
+}
+void Map::boxLoad(const std::vector<std::string> &tokens, Box &box)
+{
+    
+    box.center.x = std::stof(tokens[1]);
+    box.center.y = std::stof(tokens[2]);
+    box.center.z = std::stof(tokens[3]);
+
+    box.halfSize.x = std::stof(tokens[4]);
+    box.halfSize.y = std::stof(tokens[5]);
+    box.halfSize.z = std::stof(tokens[6]);
+
+    int j = 0;
+    for (int i = 0; i < 6; i++)
+    {
+        Face& face = box.faces[i];
+        std::strncpy(face.texturePath, tokens[j + 7].c_str(), EngineConstants::PATH_LENGTH);
+        face.scaleX = std::stof(tokens[j + 8]);
+        face.scaleY = std::stof(tokens[j + 9]);
+        j += 3;
+    }
+
+}
+
 static void boxInitCollider(Box &box)
 {
     btBoxShape *s = new btBoxShape(Utils::glmToBtVec3(box.halfSize));
@@ -267,6 +311,4 @@ static void processTop(const glm::vec3 &min, const glm::vec3 &max, Face &face, M
         v[i].normal = normal;
     }
     processTextureCoord(face, v, tangent, biTangent);
-
-    
 }

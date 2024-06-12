@@ -24,19 +24,6 @@ struct VulkanBuffer
     vk::DeviceMemory bufferMemory;
 };
 
-struct VulkanSkydome
-{
-    struct Vertex
-    {
-        glm::vec3 position;
-        glm::vec3 normal;
-        glm::vec2 textureCoord;
-    };
-
-    VulkanBuffer buffer;
-    std::vector<Vertex> vertices;
-};
-
 
 
 struct VulkanData
@@ -117,13 +104,9 @@ namespace VulkanEngine
     uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags props);
 
 
-    //Skydome
-    void skydomeInit();
-    void skydomeRender();
-    void skydomeCleanup();
-
     //Raymarch
     bool raymarchInit();
+    void raymarchUpdate();
     void raymarchRender(const Camera& camera);
     void raymarchCleanup();
     bool raymarchPipelineInit();
@@ -137,9 +120,6 @@ namespace VulkanEngine
     bool mapPipelineInit();
     void mapPipelineCleanup();
 
-    //Skydome pipeline
-    bool skydomePipelineInit();
-    void skydomePipelineCleanup();
    
 
     //Textures

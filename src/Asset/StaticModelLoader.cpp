@@ -155,57 +155,8 @@ bool StaticModelLoader::populateTextures(StaticModelData *meshData, const aiScen
         }
         meshData->mMaterials.emplace_back();
         VulkanTexture &diffuseTexture = meshData->mMaterials.back().mDiffuse;
-        size_t imageSize = width * height * 4;
-        // Create a staging buffer and copy to it
-        VulkanBuffer staging;
-        VulkanEngine::bufferInit(imageSize, vk::BufferUsageFlagBits::eTransferSrc,
-                     vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-                     staging);
-        VulkanEngine::bufferCopy(imageData, imageSize, staging);
-
-        // Create image handle
-        VulkanEngine::textureInit(width, height,
-                                  vk::Format::eR8G8B8A8Srgb,
-                                  vk::ImageTiling::eOptimal,
-                                  vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
-                                  vk::MemoryPropertyFlagBits::eDeviceLocal, VulkanEngine::gData.staticModelPipeline.imageDescriptorLayout,
-                                  diffuseTexture);
-
-        // Upload image to GPU
-        VulkanEngine::textureTransitionLayout(diffuseTexture.handle, vk::Format::eR8G8B8Srgb,
-                                              vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
-
-        vk::CommandBufferAllocateInfo allocInfo;
-        allocInfo.setLevel(vk::CommandBufferLevel::ePrimary)
-            .setCommandPool(VulkanEngine::gData.commandPool)
-            .setCommandBufferCount(1);
-
-        auto commandBuffers = VulkanEngine::gData.device.allocateCommandBuffers(allocInfo).value;
-        vk::CommandBuffer commandBuffer = commandBuffers[0];
-        vk::CommandBufferBeginInfo beginInfo;
-        beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-
-        commandBuffer.begin(beginInfo);
-
-        vk::BufferImageCopy region;
-        region.imageSubresource.setAspectMask(vk::ImageAspectFlagBits::eColor)
-            .setLayerCount(1);
-        region.setImageOffset(vk::Offset3D(0, 0, 0))
-            .setImageExtent(vk::Extent3D(width, height, 1));
-
-        commandBuffer.copyBufferToImage(staging.buffer, diffuseTexture.handle, vk::ImageLayout::eTransferDstOptimal, {region});
-        commandBuffer.end();
-
-        vk::SubmitInfo submitInfo;
-        submitInfo.setCommandBuffers(commandBuffer);
-        VulkanEngine::gData.graphicQueue.submit(submitInfo);
-        VulkanEngine::gData.graphicQueue.waitIdle();
-        VulkanEngine::gData.device.freeCommandBuffers(VulkanEngine::gData.commandPool, commandBuffer);
-
-        VulkanEngine::textureTransitionLayout(diffuseTexture.handle, vk::Format::eR8G8B8Srgb,
-                                              vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
-
-        VulkanEngine::bufferCleanup(staging);
+        //VulkanEngine::textureLoadFromMemory(imageData, width, height, 4, 
+            //VulkanEngine::gData.staticModelPipeline.imageDescriptorLayout, diffuseTexture);
 
         if (needDecoder)
             stbi_image_free(imageData);

@@ -1,5 +1,7 @@
 #version 450
 
+const vec3 gLightDirection = vec3(-1, -1, -1);
+
 layout(location = 0) out vec4 outColor;
 
 layout(set = 0, binding = 0) uniform RaymarchUBO
@@ -7,102 +9,139 @@ layout(set = 0, binding = 0) uniform RaymarchUBO
     int width, height;
     float cameraNear, cameraFar;
     vec3 cameraPosition;
+    float time;
     mat4 cameraRotation;
 } ubo;
 
-float sdSphere(vec3 p, float s)
-{
-    return length(p) - s;
+float randNoise(vec3 co){
+    return fract(sin(dot(co, vec3(12.9898, 78.233, 42.9962))) * 43758.5453);
 }
 
-float sdBox(vec3 p, vec3 b)
+float randNoise2(vec3 p) 
+{
+    vec3 u = floor(p);
+    vec3 v = fract(p);
+    vec3 s = smoothstep(0.0, 1.0, v);
+    
+    float a = randNoise(u);
+    float b = randNoise(u + vec3(1.0, 0.0, 0.0));
+    float c = randNoise(u + vec3(0.0, 1.0, 0.0));
+    float d = randNoise(u + vec3(1.0, 1.0, 0.0));
+    float e = randNoise(u + vec3(0.0, 0.0, 1.0));
+    float f = randNoise(u + vec3(1.0, 0.0, 1.0));
+    float g = randNoise(u + vec3(0.0, 1.0, 1.0));
+    float h = randNoise(u + vec3(1.0, 1.0, 1.0));
+    
+    return mix(mix(mix(a, b, s.x), mix(c, d, s.x), s.y),
+               mix(mix(e, f, s.x), mix(g, h, s.x), s.y),
+               s.z);
+}
+
+
+float fbm(vec3 p) {
+    vec3 q = p + ubo.time * 0.01 * vec3(1.0, -0.2, -1.0);
+    float g = randNoise2(q);
+
+    float f = 0.0;
+    float scale = 1.1;
+    float factor = 2.02;
+
+    for (int i = 0; i < 6; i++) {
+        f += scale * randNoise2(q);
+        q *= factor;
+        factor += 0.21;
+        scale *= 0.5;
+    }
+
+    return f;
+}
+
+
+
+float sdSphere(vec3 p, float radius)
+{
+    return length(p) - radius;
+}
+
+float sdBox( vec3 p, vec3 b )
 {
     vec3 q = abs(p) - b;
-    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+    return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
 }
 
-float smin(float a, float b, float k)
+
+float scene(vec3 p)
 {
-    float h = max(k - abs(a-b) , 0.0) / k;
-    return min(a, b) - h * h * h * k * (1.0 / 6.0);
+    //p.xz = fract(p.xz) - 0.5;
+    p.y -= 2.0;
+    float box = sdBox(p, vec3(10.0, 0.5, 10.0));
+    float noise = fbm(p);
+
+    return -box + noise;
 }
 
-float sdMandelBlub(vec3 p)
-{
-    const float power = 2.0;
 
-    vec3 z = p;
-    float dr = 1;
-    float r;
-    for(int i = 0; i < 15; i++)
+vec3 getNormal(vec3 p) {
+  vec2 e = vec2(.01, 0);
+
+  vec3 n = scene(p) - vec3(
+    scene(p-e.xyy),
+    scene(p-e.yxy),
+    scene(p-e.yyx));
+
+  return normalize(n);
+}
+
+
+void rayMarch(vec3 ro, vec3 rd, out vec4 color)
+{
+    const int marchSteps = 5;
+    const float stepSize = 0.8;
+    float t = 0.0;
+    vec3 p = ro + rd * t;
+    vec4 res = vec4(0.0);
+    for(int i = 0; i < marchSteps; i++)
     {
-        r = length(z);
-        if(r > 2)
-            break;
+        float d = scene(p);
 
-        float theta = acos(z.z / r) * power;
-        float phi = atan(z.y, z.x) * power;
-        float zr = pow(r, power);
-        dr = pow(r, power - 1) * power * dr + 1;
+        if(d > 0.0)
+        {
+            vec3 normal = getNormal(p);
 
-        z = zr * vec3(sin(theta) * cos(phi), sin(phi) * cos(theta), cos(theta));
-        z += p;
+            float diffuse = clamp((scene(p) - scene(p + 0.3 * -gLightDirection)) / 0.3, 0.0, 1.0 );
+            vec3 lin = vec3(0.60,0.60,0.75) * 1.1 + 0.8 * vec3(1.0,0.6,0.3) * diffuse;
+            vec4 mixColor = vec4(mix(vec3(1.0, 1.0, 1.0), vec3(0.0, 0.0, 0.0), d), d );
+            mixColor.rgb *= lin;
+
+            mixColor.rgb *= mixColor.a;
+            res += mixColor * (1.0 - res.a);
+        }
+
+        t += stepSize;
+        p = ro + rd * t;
     }
-    return 0.5 * log(r) * r / dr;
-}
 
-
-
-float map(vec3 p)
-{
-
-   // p = fract(p) - 0.5;
-
-    //vec3 boxPos = vec3(5, 0, 1);
-    //float box = sdBox(p, vec3(0.1));
-
-    float mandelBlub = sdMandelBlub(p - vec3(5, 0, 0));
-    return mandelBlub;
-}
-
-vec3 palete(float t)
-{
-    vec3 a = vec3(0.5, 0.5, 0.5);
-    vec3 b = vec3(0.5, 0.5, 0.5);
-    vec3 c = vec3(1.0, 1.0, 1.0);
-    vec3 d = vec3(0.263, 0.416, 0.557);
-
-
-    return a + b * cos(6.28318 * (c * t + d));
+    color = res;
 }
 
 void main() { 
     vec2 resolution = vec2(ubo.width, ubo.height);
     vec2 uv = (gl_FragCoord.xy * 2.0 - resolution) / resolution.y;
 
-    vec3 rayOrigin = vec3(ubo.cameraPosition.x, ubo.cameraPosition.y, ubo.cameraPosition.z);
+    vec3 rayOrigin = vec3(0, 0, 0);
     vec3 rayDirection = normalize(ubo.cameraRotation * vec4(vec3(uv.x, -uv.y, -1), 0)).xyz;
-    vec3 finalColor = vec3(0);
 
-    float t = 0.0;
+    const vec4 baseColor = vec4(0.18, 0.27, 0.47, 1.0);
+    float red = -0.22 * rayDirection.y + baseColor.x; 
+    float green = -0.25 * rayDirection.y + baseColor.y; 
+    float blue = -0.19 * rayDirection.y + baseColor.z; 
+    vec4 skyColor = vec4(red, green, blue, 1);
+    vec4 cloudColor = vec4(0);
+    rayMarch(rayOrigin, rayDirection, cloudColor);
+    outColor = cloudColor + skyColor;
 
-    for(int i = 0; i < 180; i++)
-    {
-        vec3 p = rayOrigin + rayDirection * t;
-
-        p.y += sin(i) * 0.35;
-        p.x += cos(i) * 0.35;
-
-        float d = map(p);
-        t += d;
-
-        if(d < 0.001) break;
-        if(t > ubo.cameraFar) break;
-    }
-
-    finalColor = palete(t * 0.04);
-    outColor = vec4(finalColor, 1);
+    
 
     float cameraRange = ubo.cameraFar - ubo.cameraNear;
-    gl_FragDepth = 0.999999; //t / cameraRange;
+    gl_FragDepth = 0.0;
 }   

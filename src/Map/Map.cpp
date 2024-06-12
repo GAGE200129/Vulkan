@@ -12,6 +12,54 @@ void Map::init()
     gData.boxes.reserve(EngineConstants::MAP_MAX_BOXES);
 }
 
+void Map::save(const std::string &filePath)
+{
+    std::ofstream stream(filePath, std::ios_base::out | std::ios_base::trunc);
+
+    for(const Box& box : gData.boxes)
+    {
+        boxSave(stream, box);
+    }
+    
+    
+}
+
+void Map::load(const std::string& filePath)
+{
+    auto split = [](const char *str, char c = ' ') -> std::vector<std::string>
+    {
+        std::vector<std::string> result;
+
+        do
+        {
+            const char *begin = str;
+
+            while (*str != c && *str)
+                str++;
+
+            result.push_back(std::string(begin, str));
+        } while (0 != *str++);
+
+        return result;
+    };
+
+    std::ifstream stream(filePath);
+    if(!stream.is_open())
+        return;
+    
+    VulkanEngine::gData.device.waitIdle();
+    cleanup();
+    std::string line;
+    while(std::getline(stream, line))
+    {
+        auto tokens = split(line.c_str());
+        Box box;
+        boxLoad(tokens, box);
+        boxAdd(box);
+    }
+
+}
+
 void Map::render()
 {
     vk::CommandBuffer &cmdBuffer = VulkanEngine::gData.commandBuffer;
@@ -62,6 +110,7 @@ void Map::cleanup()
         VulkanEngine::textureCleanup(texture);
     }
     gData.boxes.clear();
+    gData.textures.clear();
 }
 
 VulkanTexture Map::getTexture(const std::string &filePath)
