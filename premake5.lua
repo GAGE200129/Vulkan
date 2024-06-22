@@ -1,27 +1,22 @@
 -- premake5.lua
 workspace "GAGE"
    configurations { "Debug", "Release" }
-   
-
-project "EnGAGE"
-   kind "ConsoleApp"
+   toolset "gcc"
    language "C++"
-   cppdialect "c++20"
-   targetdir "bin/%{cfg.buildcfg}"
-   pchheader "src/pch.hpp"
+   cppdialect "c++17"
+
+project "Core"
+   location "Core"
+   kind "StaticLib"
+   targetdir "bin/%{prj.name}/%{cfg.buildcfg}"
+   objdir "obj/%{prj.name}/%{cfg.buildcfg}"
 
    files {
-      "src/**.hpp", "src/**.cpp", "res/**.vert", "res/**.frag", "res/**.comp",
-      "libs/imgui-docking/*.cpp",
-      "libs/imgui-docking/backends/imgui_impl_vulkan.cpp",
-      "libs/imgui-docking/backends/imgui_impl_glfw.cpp"
-
+      "%{prj.location}/src/**.hpp", "%{prj.location}/src/**.cpp",
    }
-   links { "glfw", "vulkan", "spdlog", "fmt", "luajit-5.1", "assimp", "LinearMath", "BulletCollision", "BulletDynamics", "GL" }
+   links { "glfw", "vulkan", "spdlog", "fmt", "luajit-5.1", "LinearMath", "BulletCollision", "BulletDynamics"}
    includedirs { 
-      "src",
-      "libs/EnTT/single_include",
-      "libs/imgui-docking"
+      "%{prj.location}/src",
    }
    
    defines 
@@ -39,38 +34,60 @@ project "EnGAGE"
       optimize "On"
 
    --Linux--
-   filter { "system:linux", "action:gmake" }
+   filter { "system:linux" }
    buildoptions 
    {
       "-Wall -Wextra -Wpedantic"
    }
 
-   --Shader build step--
+project "UnitTest"
+   location "UnitTest"
+   kind "ConsoleApp"
+   targetdir "bin/%{prj.name}/%{cfg.buildcfg}"
+   objdir "obj/%{prj.name}/%{cfg.buildcfg}"
 
-   filter {'files:res/**.comp'}
-      buildmessage 'Compiling %{file.relpath}'
-   
-      buildcommands {
-         'glslc "%{file.relpath}" -o "%{file.relpath}.spv"'
-      }
-      buildoutputs { '%{file.relpath}.spv' }
-   
-   filter {'files:res/**.vert'}
-      buildmessage 'Compiling %{file.relpath}'
+   files {
+      "%{prj.location}/**.hpp", "%{prj.location}/**.cpp",
+   }
+   links { "Core" }
+   includedirs { 
+      "%{prj.location}",
+      "%{wks.location}"
+   }
 
-      buildcommands {
-         'glslc "%{file.relpath}" -o "%{file.relpath}.spv"'
-      }
-      buildoutputs { '%{file.relpath}.spv' }
 
-      
-   filter {'files:res/**.frag'}
-      buildmessage 'Compiling %{file.relpath}'
-   
-      buildcommands {
-         'glslc "%{file.relpath}" -o "%{file.relpath}.spv"'
-      }
-      buildoutputs { '%{file.relpath}.spv' }
+   filter "configurations:Debug"
+      defines { "DEBUG" }
+      symbols "On"
+
+   filter "configurations:Release"
+      defines { "NDEBUG" }
+      optimize "On"
+
+
+project "Sandbox"
+   location "Sandbox"
+   kind "ConsoleApp"
+   targetdir "bin/%{prj.name}/%{cfg.buildcfg}"
+   objdir "obj/%{prj.name}/%{cfg.buildcfg}"
+
+   files {
+      "%{prj.location}/**.hpp", "%{prj.location}/**.cpp",
+   }
+   links { "Core", "bfd" }
+   includedirs { 
+      "%{prj.location}",
+      "%{wks.location}"
+   }
+
+
+   filter "configurations:Debug"
+      defines { "DEBUG" }
+      symbols "On"
+
+   filter "configurations:Release"
+      defines { "NDEBUG" }
+      optimize "On"
 
 
    
