@@ -12,6 +12,7 @@ namespace gage::log
             .function_ = function,
             .line_ = line,
             .timestamp_ = std::chrono::system_clock::now(),
+            .trace_ = std::nullopt
         }
     {
 
@@ -21,6 +22,10 @@ namespace gage::log
     {
         if(sink_) 
         {
+            if(level_ <= Level::Error)
+            {
+                trace_.emplace();
+            }
             sink_->submit(*this);
         }
     }

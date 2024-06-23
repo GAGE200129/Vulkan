@@ -1,9 +1,13 @@
 #pragma once
 
+#include "Level.hpp"
+
+#include <Core/src/utils/StackTrace.hpp>
+
 #include <chrono>
 #include <string>
+#include <optional>
 
-#include "Level.hpp"
 
 namespace gage::log
 {
@@ -15,5 +19,6 @@ namespace gage::log
         const char* function_;
         int line_;
         std::chrono::system_clock::time_point timestamp_;
+        std::optional<utils::StackTrace> trace_;
     };
 }

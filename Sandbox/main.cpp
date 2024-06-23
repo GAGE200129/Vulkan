@@ -33,16 +33,34 @@ public:
     void submit(log::Entry &e) override
     {
         std::cout << e.note_ << "\n";
+        if(e.trace_)
+            std::cout << e.trace_->print() << "\n";
     }
 };
 
-int main()
-{
+
+
+
+void testing3() {
     log::DefaultChannel channel;
     channel.attach_driver(std::make_shared<StdOutDriver>());
     channel.attach_policy(std::make_unique<log::ServerityLevelPolicy>(log::Level::Info));
     dumb_logger.fatal("Fatal");
     dumb_logger.warn("Warn");
     dumb_logger.error("Error");
+}
+
+void testing2() {
+    testing3();
+}
+
+void testing() {
+    testing2();
+}
+
+
+int main()
+{
+    testing();
     return 0;
 }

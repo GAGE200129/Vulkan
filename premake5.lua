@@ -14,10 +14,11 @@ project "Core"
    files {
       "%{prj.location}/src/**.hpp", "%{prj.location}/src/**.cpp",
    }
-   links { "glfw", "vulkan", "spdlog", "fmt", "luajit-5.1", "LinearMath", "BulletCollision", "BulletDynamics"}
+   links { "glfw", "vulkan", "spdlog", "fmt", "luajit-5.1", "LinearMath", "BulletCollision", "BulletDynamics", "bfd"}
    includedirs { 
       "%{prj.location}/src",
       "%{prj.location}/ThirdParty",
+      "%{wks.location}"
    }
    
    defines 
@@ -50,7 +51,7 @@ project "UnitTest"
    files {
       "%{prj.location}/**.hpp", "%{prj.location}/**.cpp",
    }
-   links { "Core" }
+   links { "Core", "bfd" }
    includedirs { 
       "%{prj.location}",
       "%{wks.location}"
