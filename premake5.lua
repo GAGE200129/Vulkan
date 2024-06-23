@@ -3,7 +3,7 @@ workspace "GAGE"
    configurations { "Debug", "Release" }
    toolset "gcc"
    language "C++"
-   cppdialect "c++17"
+   cppdialect "c++20"
 
 project "Core"
    location "Core"
@@ -17,6 +17,7 @@ project "Core"
    links { "glfw", "vulkan", "spdlog", "fmt", "luajit-5.1", "LinearMath", "BulletCollision", "BulletDynamics"}
    includedirs { 
       "%{prj.location}/src",
+      "%{prj.location}/ThirdParty",
    }
    
    defines 

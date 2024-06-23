@@ -6,12 +6,13 @@ namespace gage::log
 {
     enum class Level
     {
-        Trace,
-        Debug,
-        Info,
-        Warn,
+        None,
+        Fatal,
         Error,
-        Fatal
+        Warn,
+        Info,
+        Debug,
+        Trace,
     };
 
     std::string get_level_name(Level level);

@@ -7,10 +7,11 @@ namespace gage::log
     EntryBuilder::EntryBuilder(const char* file, const char* function, int line) :
         Entry {
             .level_ = Level::Error,
+            .note_ = "",
             .file_ = file,
             .function_ = function,
             .line_ = line,
-            .timestamp_ = std::chrono::system_clock::now()
+            .timestamp_ = std::chrono::system_clock::now(),
         }
     {
 

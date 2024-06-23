@@ -8,6 +8,7 @@ namespace gage::log
     {
     public:
         virtual void submit(Entry& ) = 0;
+        virtual ~IDriver() = default;
     };
 
 
