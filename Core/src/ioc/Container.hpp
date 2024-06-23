@@ -5,6 +5,7 @@
 #include <any>
 #include <functional>
 #include <memory>
+#include <sstream>
 
 namespace gage::ioc
 {
@@ -68,7 +69,7 @@ namespace gage::ioc
                 catch (const std::bad_any_cast&)
                 {
                     std::stringstream ss;
-                    ss << "Bad cast: " << i->second.type().name() << " to: " << typeid(G).name();
+                    ss << std::string("Bad cast: ") << i->second.type().name() << " to: " << typeid(G).name();
                     throw std::runtime_error{ss.str()};
                 }
             }

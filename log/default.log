@@ -1,0 +1,22 @@
+Fatal
+Stack trace (most recent call last):
+#7    Object "", at 0xffffffffffffffff, in 
+#6    Object "/home/gage/Desktop/Programming/GameEngineWorkspace/bin/Sandbox/Release/Sandbox", at 0x55e0b438b004, in 
+#5    Source "./csu/../csu/libc-start.c", line 392, in __libc_start_main_impl
+#4    Source "./csu/../sysdeps/nptl/libc_start_call_main.h", line 58, in __libc_start_call_main
+#3    Object "/home/gage/Desktop/Programming/GameEngineWorkspace/bin/Sandbox/Release/Sandbox", at 0x55e0b438af41, in 
+#2    Object "/home/gage/Desktop/Programming/GameEngineWorkspace/bin/Sandbox/Release/Sandbox", at 0x55e0b438b18c, in 
+#1    Object "/home/gage/Desktop/Programming/GameEngineWorkspace/bin/Sandbox/Release/Sandbox", at 0x55e0b438b3d1, in std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_dispose()
+#0    Object "/home/gage/Desktop/Programming/GameEngineWorkspace/bin/Sandbox/Release/Sandbox", at 0x55e0b438e465, in std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_dispose()
+
+Error
+Stack trace (most recent call last):
+#7    Object "", at 0xffffffffffffffff, in 
+#6    Object "/home/gage/Desktop/Programming/GameEngineWorkspace/bin/Sandbox/Release/Sandbox", at 0x55e0b438b004, in 
+#5    Source "./csu/../csu/libc-start.c", line 392, in __libc_start_main_impl
+#4    Source "./csu/../sysdeps/nptl/libc_start_call_main.h", line 58, in __libc_start_call_main
+#3    Object "/home/gage/Desktop/Programming/GameEngineWorkspace/bin/Sandbox/Release/Sandbox", at 0x55e0b438af41, in 
+#2    Object "/home/gage/Desktop/Programming/GameEngineWorkspace/bin/Sandbox/Release/Sandbox", at 0x55e0b438b25f, in 
+#1    Object "/home/gage/Desktop/Programming/GameEngineWorkspace/bin/Sandbox/Release/Sandbox", at 0x55e0b438b3d1, in std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_dispose()
+#0    Object "/home/gage/Desktop/Programming/GameEngineWorkspace/bin/Sandbox/Release/Sandbox", at 0x55e0b438e465, in std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_dispose()
+

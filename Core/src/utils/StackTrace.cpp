@@ -9,7 +9,6 @@ namespace gage::utils
     {
         p_trace = std::make_unique<backward::StackTrace>();
         p_trace->load_here(32);
-        p_trace->skip_n_firsts(8);
     }
 
     StackTrace::StackTrace(const StackTrace &other)

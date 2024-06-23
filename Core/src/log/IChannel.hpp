@@ -13,7 +13,7 @@ namespace gage::log
     public:
         virtual void submit(Entry& ) = 0;
         virtual void attach_driver(std::shared_ptr<IDriver>) = 0;
-        virtual void attach_policy(std::unique_ptr<IPolicy>) = 0;
+        virtual void attach_policy(std::shared_ptr<IPolicy>) = 0;
     };
 
     

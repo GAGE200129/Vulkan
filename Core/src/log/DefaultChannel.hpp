@@ -14,9 +14,9 @@ namespace gage::log
         ~DefaultChannel();
         void submit(Entry& ) override;
         void attach_driver(std::shared_ptr<IDriver>) override;
-        void attach_policy(std::unique_ptr<IPolicy>) override;
+        void attach_policy(std::shared_ptr<IPolicy>) override;
     private:
         std::vector<std::shared_ptr<IDriver>> driver_ptrs;
-        std::vector<std::unique_ptr<IPolicy>> policy_ptrs;
+        std::vector<std::shared_ptr<IPolicy>> policy_ptrs;
     };
 }

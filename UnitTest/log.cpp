@@ -22,7 +22,7 @@ public:
     }
 
     void attach_driver(std::shared_ptr<log::IDriver> driver) override {}
-    void attach_policy(std::unique_ptr<log::IPolicy> policy) override {}
+    void attach_policy(std::shared_ptr<log::IPolicy> policy) override {}
 
     log::Entry entry_;
 };

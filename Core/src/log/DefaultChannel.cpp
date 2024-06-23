@@ -34,7 +34,7 @@ namespace gage::log
         driver_ptrs.push_back(std::move(driver));
     }
 
-    void DefaultChannel::attach_policy(std::unique_ptr<IPolicy> policy) 
+    void DefaultChannel::attach_policy(std::shared_ptr<IPolicy> policy) 
     {
         policy_ptrs.push_back(std::move(policy));
     }
