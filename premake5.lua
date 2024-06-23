@@ -76,7 +76,7 @@ project "Sandbox"
    files {
       "%{prj.location}/**.hpp", "%{prj.location}/**.cpp",
    }
-   links { "Core", "bfd" }
+   links { "Core", "bfd", "glfw" }
    includedirs { 
       "%{prj.location}",
       "%{wks.location}"

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IChannel.hpp"
+#include "EntryBuilder.hpp"
 
 namespace gage::log
 {
