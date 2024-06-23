@@ -12,7 +12,8 @@ namespace gage::log
             .function_ = function,
             .line_ = line,
             .timestamp_ = std::chrono::system_clock::now(),
-            .trace_ = std::nullopt
+            .trace_ = std::nullopt,
+            .vk_result_ = std::nullopt
         }
     {
 
@@ -79,6 +80,12 @@ namespace gage::log
     {
         level_ = Level::Fatal;
         note_ = std::move(str);
+        return *this;
+    }
+
+    EntryBuilder& EntryBuilder::vk_result(unsigned int result)
+    {
+        vk_result_ = result;
         return *this;
     }
 

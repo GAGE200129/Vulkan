@@ -2,6 +2,8 @@
 
 #include "Entry.hpp"
 
+#include <vulkan/vk_enum_string_helper.h>
+
 namespace gage::log
 {
     DefaultFileDriver::DefaultFileDriver(std::filesystem::path path)
@@ -16,6 +18,10 @@ namespace gage::log
         if (e.trace_)
         {
             file_ << e.trace_->print() << "\n";
+        }
+        if (e.vk_result_)
+        {
+            file_ << "[Vulkan result]: " << string_VkResult((VkResult)e.vk_result_.value()) << "\n";
         }
     }
 }

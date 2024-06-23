@@ -13,12 +13,13 @@ namespace gage::log
         EntryBuilder& note(std::string note);
         EntryBuilder& level(Level level);
         EntryBuilder& channel(IChannel* sink);
-        EntryBuilder& trace(std::string str);
-        EntryBuilder& debug(std::string str);
-        EntryBuilder& info(std::string str);
-        EntryBuilder& warn(std::string str);
-        EntryBuilder& error(std::string str);
-        EntryBuilder& fatal(std::string str);
+        EntryBuilder& trace(std::string str = "");
+        EntryBuilder& debug(std::string str = "");
+        EntryBuilder& info(std::string str = "");
+        EntryBuilder& warn(std::string str = "");
+        EntryBuilder& error(std::string str = "");
+        EntryBuilder& fatal(std::string str = "");
+        EntryBuilder& vk_result(unsigned int result);
 
         ~EntryBuilder();
     private:

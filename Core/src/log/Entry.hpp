@@ -20,5 +20,6 @@ namespace gage::log
         int line_;
         std::chrono::system_clock::time_point timestamp_;
         std::optional<utils::StackTrace> trace_;
+        std::optional<unsigned int> vk_result_;
     };
 }
