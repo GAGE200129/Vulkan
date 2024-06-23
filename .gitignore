@@ -1,6 +1,7 @@
 bin
 obj
 libs
+log
 Makefile
 *.make
 .vscode
