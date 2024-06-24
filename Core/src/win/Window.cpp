@@ -26,6 +26,7 @@ namespace gage::win
     }
     Window::~Window()
     {
+        p_graphics.reset();
         glfwDestroyWindow(p_window);
     }
 
