@@ -14,6 +14,7 @@ namespace gage::win
     Window::Window(int width, int height, std::string title)
     {
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
         p_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
         if(!p_window)
         {

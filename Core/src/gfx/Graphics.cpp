@@ -6,14 +6,8 @@
 #include <VkBootstrap.h>
 #include <Core/src/log/Log.hpp>
 
-#ifndef NDEBUG
-#define vk_check(x, ...) {VkResult result = x; if (result != VK_SUCCESS) { logger.fatal(__VA_ARGS__).vk_result(result); throw GraphicsException{}; } }
-#define vkb_check(x, ...) { if(!x) { std::stringstream ss; ss << std::string(__VA_ARGS__) << x.error().message(); logger.fatal(ss.str()); throw GraphicsException{};} }
-#else
-#define vk_check(x, ...) x
-#define vkb_check(x, ...)
-#endif
-
+#include "Exception.hpp"
+#include "Image.hpp"
 
 using namespace std::string_literals;
 
@@ -87,19 +81,23 @@ namespace gage::gfx
 
 
         // vulkan 1.3 features
-        // VkPhysicalDeviceVulkan13Features features{.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES};
-        // features.dynamicRendering = true;
-        // features.synchronization2 = true;
+        VkPhysicalDeviceVulkan13Features features13 = {};
+        features13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+        features13.dynamicRendering = true;
+        features13.synchronization2 = true;
 
         // vulkan 1.2 features
-        // VkPhysicalDeviceVulkan12Features features12{.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES};
-        // features12.bufferDeviceAddress = true;
-        // features12.descriptorIndexing = true;
+        VkPhysicalDeviceVulkan12Features features12 = {};
+        features12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+        features12.bufferDeviceAddress = true;
+        features12.descriptorIndexing = true;
 
         // use vkbootstrap to select a gpu.
         vkb::PhysicalDeviceSelector selector{vkb_inst};
         auto physical_device_result = selector
-                                                 .set_minimum_version(1, 0)
+                                                 .set_minimum_version(1, 3)
+                                                 .set_required_features_12(features12)
+                                                 .set_required_features_13(features13)
                                                  .set_surface(surface)
                                                  .select();
         vkb_check(physical_device_result, "Failed to select physical device: ");
@@ -143,63 +141,11 @@ namespace gage::gfx
 
         vk_check(vkAllocateCommandBuffers(device, &cmd_alloc_info, &cmd));
 
-        //Create render pass
-        VkAttachmentDescription color_attachment = {};
-        color_attachment.format = swapchain_image_format;
-        color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-        VkAttachmentReference color_attachment_ref = {};
-        //attachment number will index into the pAttachments array in the parent renderpass itself
-        color_attachment_ref.attachment = 0;
-        color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        //we are going to create 1 subpass, which is the minimum you can do
-        VkSubpassDescription subpass = {};
-        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &color_attachment_ref;
-
-        VkRenderPassCreateInfo render_pass_info = {};
-        render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-
-        //connect the color attachment to the info
-        render_pass_info.attachmentCount = 1;
-        render_pass_info.pAttachments = &color_attachment;
-        //connect the subpass to the info
-        render_pass_info.subpassCount = 1;
-        render_pass_info.pSubpasses = &subpass;
-
-        vk_check(vkCreateRenderPass(device, &render_pass_info, nullptr, &main_render_pass));
 
         //Create framebuffers
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
-        VkFramebufferCreateInfo fb_info = {};
-        fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-
-        fb_info.renderPass = main_render_pass;
-        fb_info.attachmentCount = 1;
-        fb_info.width = width;
-        fb_info.height = height;
-        fb_info.layers = 1;
-        
-        main_frame_buffers.clear();
-        main_frame_buffers.reserve(swapchain_images.size());
-
-        //create framebuffers for each of the swapchain image views
-        for (auto& image_view : swapchain_image_views) 
-        {
-            VkFramebuffer frame_buffer;
-            fb_info.pAttachments = &image_view;
-            vk_check(vkCreateFramebuffer(device, &fb_info, nullptr, &frame_buffer));
-            main_frame_buffers.push_back(frame_buffer);
-        }
+    
 
         //Create sync structures
         VkFenceCreateInfo fenceCreateInfo = {};
@@ -227,11 +173,6 @@ namespace gage::gfx
         vkDestroySemaphore(device, render_semaphore, nullptr);
         vkDestroyFence(device, render_fence, nullptr);
 
-        for (auto& frame_buffer : main_frame_buffers) 
-        {
-            vkDestroyFramebuffer(device, frame_buffer, nullptr);
-        }
-        vkDestroyRenderPass(device, main_render_pass, nullptr);
 
         vkDestroyCommandPool(device, cmd_pool, nullptr);
         destroy_swapchain();
@@ -242,47 +183,53 @@ namespace gage::gfx
 		vkDestroyInstance(instance, nullptr);
     }
 
-    void Graphics::end_frame()
+    void Graphics::draw_test_triangle()
     {
-        //wait until the GPU has finished rendering the last frame. Timeout of 1 second
+        vkCmdDraw(cmd, 3, 1, 0, 0);
+    }
+
+    void Graphics::clear(float r, float g, float b)
+    {
+         //wait until the GPU has finished rendering the last frame. Timeout of 1 second
 	    vk_check(vkWaitForFences(device, 1, &render_fence, true, 1000000000));
 	    vk_check(vkResetFences(device, 1, &render_fence));
-        uint32_t swapchainImageIndex;
-	    vk_check(vkAcquireNextImageKHR(device, swapchain, 1000000000, present_semaphore, nullptr, &swapchainImageIndex));
-	    vk_check(vkResetCommandBuffer(cmd, 0));
+	    vk_check(vkAcquireNextImageKHR(device, swapchain, 1000000000, present_semaphore, nullptr, &swapchain_image_index));
 
-        //begin the command buffer recording. We will use this command buffer exactly once, so we want to let Vulkan know that
+        //reset the command buffer
+	    vk_check(vkResetCommandBuffer(cmd, 0));
+          //begin the command buffer recording. We will use this command buffer exactly once, so we want to let Vulkan know that
         VkCommandBufferBeginInfo cmd_begin_info = {};
         cmd_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         cmd_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
         vk_check(vkBeginCommandBuffer(cmd, &cmd_begin_info));
 
+        //make the swapchain image into writeable mode before rendering
+	    transition_image(cmd, swapchain_images[swapchain_image_index], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
         //make a clear-color from frame number. This will flash with a 120*pi frame period.
-        VkClearValue clearValue;
-        clearValue.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+        VkClearColorValue clear_value;
+        clear_value = { { r, g, b, 1.0f } };
 
-        //start the main renderpass.
-        //We will use the clear color from above, and the framebuffer of the index the swapchain gave us
+        VkImageSubresourceRange clear_range = {};
+        clear_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        clear_range.baseMipLevel = 0;
+        clear_range.levelCount = VK_REMAINING_MIP_LEVELS;
+        clear_range.baseArrayLayer = 0;
+        clear_range.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
-        VkRenderPassBeginInfo rp_info = {};
-        rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        //clear image
+	    vkCmdClearColorImage(cmd, swapchain_images[swapchain_image_index], VK_IMAGE_LAYOUT_GENERAL, &clear_value, 1, &clear_range);
 
-        rp_info.renderPass = main_render_pass;
-        rp_info.renderArea.offset.x = 0;
-        rp_info.renderArea.offset.y = 0;
-        rp_info.renderArea.extent = VkExtent2D{320, 240};// TODO: fix this
-        rp_info.framebuffer = main_frame_buffers[swapchainImageIndex];
+        //make the swapchain image into presentable mode
+	    transition_image(cmd, swapchain_images[swapchain_image_index],VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
-        //connect clear values
-        rp_info.clearValueCount = 1;
-        rp_info.pClearValues = &clearValue;
+       
+    }
 
-        vkCmdBeginRenderPass(cmd, &rp_info, VK_SUBPASS_CONTENTS_INLINE);
-
-        //finalize the render pass
-        vkCmdEndRenderPass(cmd);
-        //finalize the command buffer (we can no longer add commands, but it can now be executed)
+    void Graphics::end_frame()
+    {
+        
         vk_check(vkEndCommandBuffer(cmd));
 
         VkSubmitInfo submit = {};
@@ -312,7 +259,7 @@ namespace gage::gfx
         presentInfo.pWaitSemaphores = &render_semaphore;
         presentInfo.waitSemaphoreCount = 1;
 
-        presentInfo.pImageIndices = &swapchainImageIndex;
+        presentInfo.pImageIndices = &swapchain_image_index;
 
         vk_check(vkQueuePresentKHR(graphics_queue, &presentInfo));
     }

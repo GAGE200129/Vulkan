@@ -19,8 +19,12 @@ namespace gage::gfx
     {
     public:
         Graphics(GLFWwindow *window, std::string app_name);
+        Graphics(const Graphics&) = delete;
+        void operator=(const Graphics&) = delete;
         ~Graphics();
 
+        void clear(float r, float g, float b);
+        void draw_test_triangle();
         void end_frame();
         const std::string& get_app_name() const noexcept ;
     private:
@@ -35,6 +39,7 @@ namespace gage::gfx
         VkDevice device{};
         VkPhysicalDevice physical_device{};
 
+        uint32_t swapchain_image_index{};
         VkSwapchainKHR swapchain{};
         VkFormat swapchain_image_format{VK_FORMAT_B8G8R8A8_SRGB};
         std::vector<VkImage> swapchain_images{};
@@ -46,8 +51,6 @@ namespace gage::gfx
         VkQueue graphics_queue{};
 	    uint32_t graphics_queue_family{};
 
-        VkRenderPass main_render_pass{};
-        std::vector<VkFramebuffer> main_frame_buffers{};
 
         VkSemaphore present_semaphore{};
         VkSemaphore render_semaphore{};
