@@ -6,7 +6,7 @@ namespace gage::log
 {
     enum class Level
     {
-        None,
+        None = 0,
         Fatal,
         Error,
         Warn,

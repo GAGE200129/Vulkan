@@ -23,11 +23,9 @@ namespace gage::log
                 std::make_shared<DefaultFileDriver>("log/default.log"),
             };
             std::vector<std::shared_ptr<IPolicy>> policies = {
-                std::make_shared<DefaultPolicy>(Level::Error)
+                std::make_shared<DefaultPolicy>(Level::Trace)
             };
-
-            auto result = std::make_shared<DefaultChannel>(drivers, policies);
-            return result;
+            return std::make_shared<DefaultChannel>(drivers, policies);
         });
     }
 }
