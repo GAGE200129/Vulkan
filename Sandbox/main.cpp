@@ -3,7 +3,10 @@
 #include <Core/src/log/Log.hpp>
 #include <Core/src/win/Window.hpp>
 
+#include <thread>
+
 using namespace gage;
+using namespace std::chrono_literals;
 
 void init()
 {
@@ -13,17 +16,24 @@ void init()
 
 void shutdown()
 {
-
     win::shutdown();
 }
-
 
 
 int main()
 {
     init();
+
+    auto win = std::make_shared<win::Window>(320, 240, "Hello world");
+    auto win2 = std::make_shared<win::Window>(320, 240, "Hello world2");
+
+    while(!win->is_closing() && !win2->is_closing())
+    {
+        
+        std::this_thread::sleep_for(100ms);
     
-    auto win = std::make_shared<win::Window>(1600, 900, "Hello world");
+        win::update();
+    }
 
     shutdown();
     return 0;

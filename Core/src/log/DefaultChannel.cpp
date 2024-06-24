@@ -5,8 +5,9 @@
 
 namespace gage::log
 {
-    DefaultChannel::DefaultChannel(std::vector<std::shared_ptr<IDriver>> drivers) :
-        driver_ptrs{ std::move(drivers) }
+    DefaultChannel::DefaultChannel(std::vector<std::shared_ptr<IDriver>> drivers, std::vector<std::shared_ptr<IPolicy>> policies) :
+        driver_ptrs{ std::move(drivers) },
+        policy_ptrs{ std::move(policies) }
     {
     }
 

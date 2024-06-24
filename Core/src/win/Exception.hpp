@@ -5,5 +5,4 @@
 namespace gage::win
 {
     class WindowException : public utils::Exception{ using Exception::Exception; };
-    class VulkanException : public utils::Exception{ using Exception::Exception; };
 }

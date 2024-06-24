@@ -10,7 +10,7 @@ namespace gage::log
     class DefaultChannel : public IChannel
     {
     public:
-        DefaultChannel(std::vector<std::shared_ptr<IDriver>> = {});
+        DefaultChannel(std::vector<std::shared_ptr<IDriver>> = {}, std::vector<std::shared_ptr<IPolicy>> policies = {});
         ~DefaultChannel();
         void submit(Entry& ) override;
         void attach_driver(std::shared_ptr<IDriver>) override;

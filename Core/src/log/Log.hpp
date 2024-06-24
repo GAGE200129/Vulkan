@@ -5,9 +5,9 @@
 
 namespace gage::log
 {
-    IChannel* get_default_channel();
+    IChannel* get_singeton_channel();
 
     void init();
 }
 
-#define logger log::EntryBuilder{__FILE__, __FUNCTION__, __LINE__ }.channel(log::get_default_channel())
+#define logger log::EntryBuilder{__FILE__, __FUNCTION__, __LINE__ }.channel(log::get_singeton_channel())

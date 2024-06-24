@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <vulkan/vulkan_core.h>
 
 struct GLFWwindow;
 namespace gage::win
@@ -11,12 +10,13 @@ namespace gage::win
     public:
         Window(int width, int height, std::string title);
         ~Window();
+
+        bool is_closing() const;
     private:
-        VkInstance instance;
-        VkSurfaceKHR surface;
         GLFWwindow* p_window;
     };
 
     void init();
+    void update();
     void shutdown();
 };
