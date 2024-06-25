@@ -5,3 +5,5 @@ log
 Makefile
 *.make
 .vscode
+*.spv
+
