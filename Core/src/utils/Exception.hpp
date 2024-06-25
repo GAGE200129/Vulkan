@@ -15,4 +15,6 @@ namespace gage::utils
         std::string message;
         mutable std::string buffer;
     };
+
+    class FileLoaderException : public Exception{ using Exception::Exception; };
 }

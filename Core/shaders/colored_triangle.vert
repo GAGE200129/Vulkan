@@ -20,5 +20,5 @@ void main()
 
 	//output the position of each vertex
 	gl_Position = vec4(positions[gl_VertexIndex], 1.0f);
-	outColor = colors[gl_VertexIndex];
+	outColor = colors[gl_VertexIndex];  
 }

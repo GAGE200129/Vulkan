@@ -6,6 +6,7 @@
 #include <VkBootstrap.h>
 #include <Core/src/log/Log.hpp>
 
+
 #include "Exception.hpp"
 #include "Image.hpp"
 
@@ -58,14 +59,18 @@ namespace gage::gfx
     Graphics::Graphics(GLFWwindow *window, std::string app_name) :
         app_name{ std::move(app_name) }
     {
-        vkb::InstanceBuilder builder;
+        int width, height;
+        glfwGetFramebufferSize(window, &width, &height);
+        draw_extent.width = width;
+        draw_extent.height = height;
 
+        vkb::InstanceBuilder builder;
         // make the vulkan instance, with basic debug features
         auto vkb_instance_result = builder.set_app_name(app_name.c_str())
                             .request_validation_layers(true)
                             .set_debug_callback(debugCallback)
                             .set_debug_callback_user_data_pointer(this)
-                            .require_api_version(1, 0, 0)
+                            .require_api_version(1, 3, 0)
                             .build();
 
         vkb_check(vkb_instance_result, "Failed to create vulkan instance !"s);
@@ -76,9 +81,18 @@ namespace gage::gfx
         instance = vkb_inst.instance;
         debug_messenger = vkb_inst.debug_messenger;
 
+        delete_stack.push([this]()
+        {
+            vkb::destroy_debug_utils_messenger(instance, debug_messenger);
+		    vkDestroyInstance(instance, nullptr);
+        });
+
         vk_check(glfwCreateWindowSurface(instance, window, nullptr, &surface), 
             "Failed to create window surface !");
-
+        delete_stack.push([this]()
+        {
+            vkDestroySurfaceKHR(instance, surface, nullptr);
+        });
 
         // vulkan 1.3 features
         VkPhysicalDeviceVulkan13Features features13 = {};
@@ -95,11 +109,13 @@ namespace gage::gfx
         // use vkbootstrap to select a gpu.
         vkb::PhysicalDeviceSelector selector{vkb_inst};
         auto physical_device_result = selector
-                                                 .set_minimum_version(1, 3)
-                                                 .set_required_features_12(features12)
-                                                 .set_required_features_13(features13)
-                                                 .set_surface(surface)
-                                                 .select();
+            .set_minimum_version(1, 3)
+            .set_required_features_12(features12)
+            .set_required_features_13(features13)
+            .set_surface(surface)
+            .select();
+
+
         vkb_check(physical_device_result, "Failed to select physical device: ");
  
         vkb::PhysicalDevice vkb_physical_device = physical_device_result.value();
@@ -113,7 +129,18 @@ namespace gage::gfx
         device = vkb_device.device;
         physical_device = vkb_physical_device.physical_device;
 
-        create_swapchain(window);
+        delete_stack.push([this]()
+        {
+            vkDestroyDevice(device, nullptr);
+        });
+
+        create_swapchain();
+
+        delete_stack.push([this]()
+        {
+            this->destroy_swapchain();
+        });
+
 
         // use vkbootstrap to get a Graphics queue
         auto graphics_queue_result = vkb_device.get_queue(vkb::QueueType::graphics);
@@ -131,6 +158,10 @@ namespace gage::gfx
         command_pool_info.queueFamilyIndex = graphics_queue_family;
 
         vk_check(vkCreateCommandPool(device, &command_pool_info, nullptr, &cmd_pool));
+        delete_stack.push([this]()
+        {
+            vkDestroyCommandPool(device, cmd_pool, nullptr);
+        });
 
         //Allocate command buffer
         VkCommandBufferAllocateInfo cmd_alloc_info = {};
@@ -140,13 +171,12 @@ namespace gage::gfx
 		cmd_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
         vk_check(vkAllocateCommandBuffers(device, &cmd_alloc_info, &cmd));
+        delete_stack.push([this]()
+        {
+            vkFreeCommandBuffers(device, cmd_pool, 1, &cmd);
+        });
 
-
-        //Create framebuffers
-        int width, height;
-        glfwGetFramebufferSize(window, &width, &height);
     
-
         //Create sync structures
         VkFenceCreateInfo fenceCreateInfo = {};
         fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -154,6 +184,10 @@ namespace gage::gfx
         fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
         vk_check(vkCreateFence(device, &fenceCreateInfo, nullptr, &render_fence));
+        delete_stack.push([this]()
+        {
+            vkDestroyFence(device, render_fence, nullptr);
+        });
 
         //for the semaphores we don't need any flags
         VkSemaphoreCreateInfo semaphoreCreateInfo = {};
@@ -163,32 +197,58 @@ namespace gage::gfx
         vk_check(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &present_semaphore));
         vk_check(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &render_semaphore));
 
+        delete_stack.push([this]()
+        {
+            vkDestroySemaphore(device, present_semaphore, nullptr);
+            vkDestroySemaphore(device, render_semaphore, nullptr);
+        });
+
+
+        graphics_pipeline = std::make_unique<GraphicsPipeline>(device, swapchain_image_format, draw_extent, delete_stack);
+
     }   
 
     Graphics::~Graphics()
     {
         vkDeviceWaitIdle(device);
-
-        vkDestroySemaphore(device, present_semaphore, nullptr);
-        vkDestroySemaphore(device, render_semaphore, nullptr);
-        vkDestroyFence(device, render_fence, nullptr);
-
-
-        vkDestroyCommandPool(device, cmd_pool, nullptr);
-        destroy_swapchain();
-        vkDestroySurfaceKHR(instance, surface, nullptr);
-		vkDestroyDevice(device, nullptr);
-		
-		vkb::destroy_debug_utils_messenger(instance, debug_messenger);
-		vkDestroyInstance(instance, nullptr);
+        
+        //Xoa object nguoc lai
+		while(!delete_stack.empty())
+        {
+            delete_stack.top()(); // call the delete function
+            delete_stack.pop(); // pop the stack
+        }
     }
 
     void Graphics::draw_test_triangle()
     {
+        VkClearValue clear_value = { { 0.5f, 0.0f, 0.0f, 1.0f } };
+
+        VkRenderingAttachmentInfo color_attachment = {};
+        color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        color_attachment.clearValue = clear_value;
+        color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        color_attachment.imageView = swapchain_image_views[swapchain_image_index]; // Link to current swap chain image view
+        color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+        VkRenderingInfo render_info = {};
+        render_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+        render_info.renderArea.offset = {0, 0};
+        render_info.renderArea.extent = draw_extent;
+        render_info.colorAttachmentCount = 1;
+        render_info.pColorAttachments = &color_attachment;
+        render_info.layerCount = 1;
+        vkCmdBeginRendering(cmd, &render_info);
+
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->get());
+
         vkCmdDraw(cmd, 3, 1, 0, 0);
+
+        vkCmdEndRendering(cmd);
     }
 
-    void Graphics::clear(float r, float g, float b)
+    void Graphics::clear()
     {
          //wait until the GPU has finished rendering the last frame. Timeout of 1 second
 	    vk_check(vkWaitForFences(device, 1, &render_fence, true, 1000000000));
@@ -208,28 +268,29 @@ namespace gage::gfx
 	    transition_image(cmd, swapchain_images[swapchain_image_index], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
         //make a clear-color from frame number. This will flash with a 120*pi frame period.
-        VkClearColorValue clear_value;
-        clear_value = { { r, g, b, 1.0f } };
+        // VkClearColorValue clear_value;
+        // clear_value = { { r, g, b, 1.0f } };
 
-        VkImageSubresourceRange clear_range = {};
-        clear_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        clear_range.baseMipLevel = 0;
-        clear_range.levelCount = VK_REMAINING_MIP_LEVELS;
-        clear_range.baseArrayLayer = 0;
-        clear_range.layerCount = VK_REMAINING_ARRAY_LAYERS;
+        // VkImageSubresourceRange clear_range = {};
+        // clear_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        // clear_range.baseMipLevel = 0;
+        // clear_range.levelCount = VK_REMAINING_MIP_LEVELS;
+        // clear_range.baseArrayLayer = 0;
+        // clear_range.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
         //clear image
-	    vkCmdClearColorImage(cmd, swapchain_images[swapchain_image_index], VK_IMAGE_LAYOUT_GENERAL, &clear_value, 1, &clear_range);
+	    //vkCmdClearColorImage(cmd, swapchain_images[swapchain_image_index], VK_IMAGE_LAYOUT_GENERAL, &clear_value, 1, &clear_range);
 
-        //make the swapchain image into presentable mode
-	    transition_image(cmd, swapchain_images[swapchain_image_index],VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        
 
        
     }
 
     void Graphics::end_frame()
     {
-        
+        //make the swapchain image into presentable mode
+	    transition_image(cmd, swapchain_images[swapchain_image_index],VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
         vk_check(vkEndCommandBuffer(cmd));
 
         VkSubmitInfo submit = {};
@@ -271,10 +332,8 @@ namespace gage::gfx
     }
 
 
-    void Graphics::create_swapchain(GLFWwindow *window)
+    void Graphics::create_swapchain()
     {
-        int width, height;
-        glfwGetFramebufferSize(window, &width, &height);
         vkb::SwapchainBuilder swapchainBuilder{physical_device, device, surface};
         auto swapchain_result = swapchainBuilder
             //.use_default_format_selection()
@@ -284,7 +343,7 @@ namespace gage::gfx
             })
             //use vsync present mode
             .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
-            .set_desired_extent(width, height)
+            .set_desired_extent(draw_extent.width, draw_extent.height)
             .set_desired_min_image_count(vkb::SwapchainBuilder::BufferMode::DOUBLE_BUFFERING)
             .add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
             .build();

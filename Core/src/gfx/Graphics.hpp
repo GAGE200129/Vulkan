@@ -3,8 +3,11 @@
 #include <string>
 #include <vector>
 #include <vulkan/vulkan.h>
+#include <functional>
+#include <stack>
 
 #include "Exception.hpp"
+#include "GraphicsPipeline.hpp"
 
 namespace vkb
 {
@@ -23,21 +26,24 @@ namespace gage::gfx
         void operator=(const Graphics&) = delete;
         ~Graphics();
 
-        void clear(float r, float g, float b);
+        void clear();
         void draw_test_triangle();
         void end_frame();
         const std::string& get_app_name() const noexcept ;
     private:
-        void create_swapchain(GLFWwindow* window);
+        void create_swapchain();
         void destroy_swapchain();
 
     private:
         std::string app_name{};
+        std::stack<std::function<void()>> delete_stack{};
         VkInstance instance{};
         VkDebugUtilsMessengerEXT debug_messenger{};
         VkSurfaceKHR surface{};
         VkDevice device{};
         VkPhysicalDevice physical_device{};
+
+        VkExtent2D draw_extent{};
 
         uint32_t swapchain_image_index{};
         VkSwapchainKHR swapchain{};
@@ -55,5 +61,7 @@ namespace gage::gfx
         VkSemaphore present_semaphore{};
         VkSemaphore render_semaphore{};
 	    VkFence render_fence{};
+
+        std::unique_ptr<GraphicsPipeline> graphics_pipeline{};
     };
 }

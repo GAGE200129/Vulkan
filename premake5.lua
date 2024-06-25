@@ -24,6 +24,8 @@ project "Core"
       "%{prj.location}/src/**.cpp",
       "%{prj.location}/ThirdParty/**.hpp",
       "%{prj.location}/ThirdParty/**.cpp",
+      "%{prj.location}/shaders/**.vert",
+      "%{prj.location}/shaders/**.frag",
    }
    links { "glfw", "vulkan", "fmt", "luajit-5.1", "bfd"}
    includedirs { 
@@ -31,13 +33,29 @@ project "Core"
       "%{prj.location}/ThirdParty",
       "%{wks.location}"
    }
+   --Shader compiling--
+   filter {"files:**.vert"}
+      buildmessage "Compiling vertex shader %{file.relpath}"
+      buildcommands {
+         "glslc %{file.relpath} -o %{file.directory}/compiled/%{file.name}.spv"
+      }
+      buildoutputs { "%{file.directory}/compiled/%{file.name}.spv" }
+
+   filter {"files:**.frag"}
+      buildmessage "Compiling fragment shader %{file.relpath}"
+      buildcommands {
+         "glslc %{file.relpath} -o %{file.directory}/compiled/%{file.name}.spv"
+      }
+      buildoutputs { "%{file.directory}/compiled/%{file.name}.spv" }
+
+
    
    --Linux--
    filter { "system:linux" }
-   buildoptions 
-   {
-      "-Wall -Wextra -Wpedantic"
-   }
+      buildoptions 
+      {
+         "-Wall -Wextra -Wpedantic"
+      }
 
 
 project "Sandbox"

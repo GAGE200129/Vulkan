@@ -23,12 +23,12 @@ int main()
         while (!window->is_closing() && !window2->is_closing())
         {
 
-            graphics.clear(0.5f, 0.0f, 0.0f);
-
+            graphics.clear();
+            graphics.draw_test_triangle();
             graphics.end_frame();
 
-            graphics2.clear(0.0f, 0.5f, 0.0f);
-
+            graphics2.clear();
+            graphics2.draw_test_triangle();
             graphics2.end_frame();
             win::update();
         }

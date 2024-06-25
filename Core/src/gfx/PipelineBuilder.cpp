@@ -6,26 +6,52 @@ namespace gage::gfx
 {
     PipelineBuilder::PipelineBuilder()
     {
-        input_assembly = {.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
-        rasterizer = {.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
+        input_assembly = {};
+        input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+
+        rasterizer = {};
+        rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+
         color_blend_attachment = {};
-        multisampling = {.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO};
-        pipeline_Layout = {};
-        depth_stencil = {.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
-        render_info = {.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO};
+
+        multisampling = {};
+        multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+
+
+        depth_stencil = {};
+        depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+
+        render_info = {};
+        render_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
 
         shader_stages.clear();
     }
-    VkPipeline PipelineBuilder::build(VkDevice device)
+    VkPipeline PipelineBuilder::build(VkDevice device, VkPipelineLayout layout, VkExtent2D draw_extent)
     {
         // make viewport state from our stored viewport and scissor.
         // at the moment we wont support multiple viewports or scissors
+
+        VkViewport viewport = {};
+        viewport.x = 0;
+        viewport.y = 0;
+        viewport.width = draw_extent.width;
+        viewport.height = draw_extent.height;
+        viewport.minDepth = 0.f;
+        viewport.maxDepth = 1.f;
+
+        VkRect2D scissor = {};
+        scissor.offset.x = 0;
+        scissor.offset.y = 0;
+        scissor.extent.width = draw_extent.width;
+        scissor.extent.height = draw_extent.height;
+
+
         VkPipelineViewportStateCreateInfo viewport_state = {};
         viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-
+        viewport_state.pViewports = &viewport;
+        viewport_state.pScissors = &scissor;
         viewport_state.viewportCount = 1;
         viewport_state.scissorCount = 1;
-
         // setup dummy color blending. We arent using transparent objects yet
         // the blending is just "no blend", but we do write to the color attachment
         VkPipelineColorBlendStateCreateInfo color_blending = {};
@@ -57,16 +83,16 @@ namespace gage::gfx
         pipeline_info.pMultisampleState = &multisampling;
         pipeline_info.pColorBlendState = &color_blending;
         pipeline_info.pDepthStencilState = &depth_stencil;
-        pipeline_info.layout = pipeline_Layout;
+        pipeline_info.layout = layout;
 
-        VkDynamicState dyn_states[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+        //VkDynamicState dyn_states[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
 
-        VkPipelineDynamicStateCreateInfo dynamic_state_info = {};
-        dynamic_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-        dynamic_state_info.pDynamicStates = dyn_states;
-        dynamic_state_info.dynamicStateCount = 2;
+        //VkPipelineDynamicStateCreateInfo dynamic_state_info = {};
+        //dynamic_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 
-        pipeline_info.pDynamicState = &dynamic_state_info;
+        //dynamic_state_info.dynamicStateCount = 2;
+        //dynamic_state_info.pDynamicStates = dyn_states;
+        //pipeline_info.pDynamicState = &dynamic_state_info;
         VkPipeline pipeline;
         vk_check(vkCreateGraphicsPipelines(device, nullptr, 1, &pipeline_info, nullptr, &pipeline));
 
@@ -163,5 +189,7 @@ namespace gage::gfx
         depth_stencil.back = {};
         depth_stencil.minDepthBounds = 0.f;
         depth_stencil.maxDepthBounds = 1.f;
+
+        return *this;
     }
 }

@@ -9,7 +9,7 @@ namespace gage::gfx
     {
     public:
         PipelineBuilder();
-        VkPipeline build(VkDevice device);
+        VkPipeline build(VkDevice device, VkPipelineLayout layout, VkExtent2D draw_extent);
 
         PipelineBuilder& set_shaders(VkShaderModule vertex_shader, VkShaderModule fragment_shader);
         PipelineBuilder& set_topology(VkPrimitiveTopology topology);
@@ -27,7 +27,6 @@ namespace gage::gfx
         VkPipelineRasterizationStateCreateInfo rasterizer{};
         VkPipelineColorBlendAttachmentState color_blend_attachment{};
         VkPipelineMultisampleStateCreateInfo multisampling{};
-        VkPipelineLayout pipeline_Layout{};
         VkPipelineDepthStencilStateCreateInfo depth_stencil{};
         VkPipelineRenderingCreateInfo render_info{};
         VkFormat color_attachment_format{};
