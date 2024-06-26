@@ -98,6 +98,7 @@ namespace gage::gfx
         VkPhysicalDeviceVulkan13Features features13 = {};
         features13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
         features13.dynamicRendering = true;
+        features13.synchronization2 = true;
 
         // use vkbootstrap to select a gpu.
         vkb::PhysicalDeviceSelector selector{vkb_inst};
@@ -251,15 +252,13 @@ namespace gage::gfx
 
     void Graphics::draw_test_triangle()
     {
-       
-
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->get());
         VkDeviceSize offsets{0};
         vkCmdBindVertexBuffers(cmd, 0, 1, &vertex_buffer->buffer, &offsets);
         vkCmdBindIndexBuffer(cmd, index_buffer->buffer, 0, VK_INDEX_TYPE_UINT32);
         vkCmdDrawIndexed(cmd, 3, 1, 0, 0, 0);
 
-        vkCmdEndRendering(cmd);
+        
     }
 
     void Graphics::clear()
@@ -279,8 +278,8 @@ namespace gage::gfx
         vk_check(vkBeginCommandBuffer(cmd, &cmd_begin_info));
 
         //make the swapchain image into writeable mode before rendering
-	    transition_image(cmd, swapchain_images[swapchain_image_index], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,  VK_IMAGE_LAYOUT_GENERAL);
-        transition_image(cmd, swapchain_depth_image, VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	    transition_image(cmd, swapchain_images[swapchain_image_index], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,  VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL);
+        transition_image(cmd, swapchain_depth_image, VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR);
 
         VkClearValue color_clear_value{ 
             VkClearColorValue{ 0.5f, 0.0f, 0.0f, 1.0f }
@@ -320,7 +319,8 @@ namespace gage::gfx
 
     void Graphics::end_frame()
     {
-        transition_image(cmd, swapchain_images[swapchain_image_index], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        vkCmdEndRendering(cmd);
+        transition_image(cmd, swapchain_images[swapchain_image_index], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
         vk_check(vkEndCommandBuffer(cmd));
 
         VkSubmitInfo submit = {};
