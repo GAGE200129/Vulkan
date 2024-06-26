@@ -1,40 +1,8 @@
-#include "VertexBuffer.hpp"
-
-#include "Exception.hpp"
-#include "Graphics.hpp"
-
-#include <vk_mem_alloc.h>
-#include <cstring>
+#include "Vertex.hpp"
 
 namespace gage::gfx
 {
-    VertexBuffer::VertexBuffer(Graphics &gfx, std::span<Vertex> vertices) : allocator_ref(gfx.allocator)
-    {
-        VkBufferCreateInfo buffer_info = {};
-        buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        // this is the total size, in bytes, of the buffer we are allocating
-        buffer_info.size = vertices.size() * sizeof(Vertex);
-        // this buffer is going to be used as a Vertex Buffer
-        buffer_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-
-        // let the VMA library know that this data should be writeable by CPU, but also readable by GPU
-        VmaAllocationCreateInfo vmaallocInfo = {};
-        vmaallocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-        vmaallocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-
-        vk_check(vmaCreateBuffer(allocator_ref, &buffer_info, &vmaallocInfo, &buffer, &allocation, &allocation_info));
-
-        void *data;
-        vmaMapMemory(allocator_ref, allocation, &data);
-        std::memcpy(data, vertices.data(), vertices.size() * sizeof(Vertex));
-        vmaUnmapMemory(allocator_ref, allocation);
-    }
-    VertexBuffer::~VertexBuffer()
-    {
-        vmaDestroyBuffer(allocator_ref, buffer, allocation);
-    }
-
-    VertexInputDescription VertexBuffer::get_vertex_description()
+    VertexInputDescription Vertex::get_vertex_description()
     {
         VertexInputDescription description;
 

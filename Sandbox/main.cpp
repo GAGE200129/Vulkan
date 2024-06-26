@@ -3,6 +3,8 @@
 #include <Core/src/log/Log.hpp>
 #include <Core/src/win/Window.hpp>
 #include <Core/src/gfx/Exception.hpp>
+#include <Core/src/gfx/draw/Box.hpp>
+#include <Core/src/gfx/bind/IBindable.hpp>
 
 using namespace gage;
 using namespace std::chrono_literals;
@@ -14,26 +16,35 @@ int main()
         log::init();
         win::init();
 
-        std::unique_ptr<win::Window> window = std::make_unique<win::Window>(640, 480, "Hello world");
-        std::unique_ptr<win::Window> window2 = std::make_unique<win::Window>(640, 480, "Hello world2");
-
-        auto &graphics = window->get_graphics();
-        auto &graphics2 = window2->get_graphics();
-
-        while (!window->is_closing() && !window2->is_closing())
         {
+            win::Window window(640, 480, "Hello world");
+            win::Window window2(640, 480, "Hello world2");
 
-            graphics.clear();
-            graphics.draw_test_triangle();
-            graphics.end_frame();
+            auto &graphics = window.get_graphics();
+            auto &graphics2 = window2.get_graphics();
 
-            graphics2.clear();
-            graphics2.draw_test_triangle();
-            graphics2.end_frame();
-            win::update();
+            gfx::draw::Box box(graphics);
+            gfx::draw::Box box2(graphics2);
+
+            while (!window.is_closing())
+            {
+
+                graphics.clear();
+                box.draw(graphics);
+                graphics.end_frame();
+
+                graphics2.clear();
+                box2.draw(graphics2);
+                graphics2.end_frame();
+                win::update();
+            }
+
+            graphics.wait();
+            graphics2.wait();
+
+            box.destroy(graphics);
+            box2.destroy(graphics2);
         }
-        window.reset();
-        window2.reset();
         win::shutdown();
     }
     catch (gfx::GraphicsException &e)
@@ -44,8 +55,6 @@ int main()
     {
         logger.info("Unknown exception caught.");
     }
-
-    
 
     return 0;
 }

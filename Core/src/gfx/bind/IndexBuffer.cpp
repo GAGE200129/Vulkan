@@ -1,14 +1,17 @@
 #include "IndexBuffer.hpp"
 
-#include "Graphics.hpp"
+#include "../Graphics.hpp"
 
 #include <cstring>
+#include <cassert>
 
-namespace gage::gfx
+namespace gage::gfx::bind
 {
     IndexBuffer::IndexBuffer(Graphics& gfx, std::span<uint32_t> indices) :
-        allocator_ref(gfx.allocator)
+        vertex_count(indices.size())
     {
+        assert(indices.size() != 0);
+
         VkBufferCreateInfo buffer_info = {};
         buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         // this is the total size, in bytes, of the buffer we are allocating
@@ -21,16 +24,26 @@ namespace gage::gfx
         vmaallocInfo.usage = VMA_MEMORY_USAGE_AUTO;
         vmaallocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 
-        vk_check(vmaCreateBuffer(allocator_ref, &buffer_info, &vmaallocInfo, &buffer, &allocation, &allocation_info));
+        vk_check(vmaCreateBuffer(get_allocator(gfx), &buffer_info, &vmaallocInfo, &buffer, &allocation, &allocation_info));
 
         void *data;
-        vmaMapMemory(allocator_ref, allocation, &data);
+        vmaMapMemory(get_allocator(gfx), allocation, &data);
         std::memcpy(data, indices.data(), indices.size() * sizeof(uint32_t));
-        vmaUnmapMemory(allocator_ref, allocation);
+        vmaUnmapMemory(get_allocator(gfx), allocation);
     }   
 
-    IndexBuffer::~IndexBuffer()
+    void IndexBuffer::destroy(Graphics& gfx)
     {
-        vmaDestroyBuffer(allocator_ref, buffer, allocation);
+        vmaDestroyBuffer(get_allocator(gfx), buffer, allocation);
+    }
+
+    void IndexBuffer::bind(Graphics& gfx)
+    {
+        vkCmdBindIndexBuffer(get_cmd(gfx), buffer, 0, VK_INDEX_TYPE_UINT32);
+    }
+
+    uint32_t IndexBuffer::get_vertex_count() const
+    {
+        return vertex_count;
     }
 }

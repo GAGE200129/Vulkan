@@ -12,7 +12,9 @@ namespace gage::gfx
         VkPipeline build(VkDevice device, VkPipelineLayout layout, VkExtent2D draw_extent);
 
         PipelineBuilder& set_vertex_layout(std::span<VkVertexInputBindingDescription> bindings, std::span<VkVertexInputAttributeDescription> attributes);
-        PipelineBuilder& set_shaders(VkShaderModule vertex_shader, VkShaderModule fragment_shader);
+        PipelineBuilder& set_shaders(VkDevice device, std::vector<char> vertex_bin, std::vector<char> fragment_bin);
+        PipelineBuilder& set_vertex_shader(std::string file_path, std::string entry_point);
+        PipelineBuilder& set_fragment_shader(std::string file_path, std::string entry_point);
         PipelineBuilder& set_topology(VkPrimitiveTopology topology);
         PipelineBuilder& set_polygon_mode(VkPolygonMode mode);
         PipelineBuilder& set_cull_mode(VkCullModeFlags cullMode, VkFrontFace frontFace);
@@ -23,7 +25,7 @@ namespace gage::gfx
         PipelineBuilder& disable_depth_test();
         PipelineBuilder& enable_depth_test();
     private:
-        std::vector<VkPipelineShaderStageCreateInfo> shader_stages{};
+        std::vector<std::tuple<std::string, std::string, VkShaderStageFlagBits>> shader_stages{};
 
         VkPipelineVertexInputStateCreateInfo vertex_input_info{};
         VkPipelineInputAssemblyStateCreateInfo input_assembly{};

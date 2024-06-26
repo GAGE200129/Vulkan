@@ -2,6 +2,8 @@
 
 #include "Exception.hpp"
 
+#include <Core/src/utils/FileLoader.hpp>
+
 namespace gage::gfx
 {
     PipelineBuilder::PipelineBuilder()
@@ -19,7 +21,6 @@ namespace gage::gfx
 
         multisampling = {};
         multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-
 
         depth_stencil = {};
         depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -48,7 +49,6 @@ namespace gage::gfx
         scissor.extent.width = draw_extent.width;
         scissor.extent.height = draw_extent.height;
 
-
         VkPipelineViewportStateCreateInfo viewport_state = {};
         viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
         viewport_state.pViewports = &viewport;
@@ -68,13 +68,40 @@ namespace gage::gfx
         // build the actual pipeline
         // we now use all of the info structs we have been writing into into this one
         // to create the pipeline
+
+        std::vector<VkPipelineShaderStageCreateInfo> pipeline_shader_stages{};
+        std::vector<VkShaderModule> shader_modules{};
+
+        for(const auto& stage : shader_stages)
+        {
+            VkShaderModule shader;
+            auto& file_path = std::get<0>(stage);
+            auto& entry_point = std::get<1>(stage);
+            auto& shader_stage = std::get<2>(stage);
+
+            auto binary = utils::file_path_to_binary(std::move(file_path));
+            VkShaderModuleCreateInfo shader_ci = {};
+            shader_ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+            shader_ci.codeSize = binary.size();
+            shader_ci.pCode = (uint32_t *)binary.data();
+            vk_check(vkCreateShaderModule(device, &shader_ci, nullptr, &shader));
+            shader_modules.push_back(shader);
+            VkPipelineShaderStageCreateInfo shader_stage_ci = {};
+            shader_stage_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+
+            shader_stage_ci.module = shader;
+            shader_stage_ci.pName = entry_point.c_str();
+            shader_stage_ci.stage = shader_stage;
+            pipeline_shader_stages.push_back(shader_stage_ci);
+        }
+
+
         VkGraphicsPipelineCreateInfo pipeline_info = {};
         pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
         // connect the renderInfo to the pNext extension mechanism
         pipeline_info.pNext = &render_info;
-
-        pipeline_info.stageCount = (uint32_t)shader_stages.size();
-        pipeline_info.pStages = shader_stages.data();
+        pipeline_info.stageCount = (uint32_t)pipeline_shader_stages.size();
+        pipeline_info.pStages = pipeline_shader_stages.data();
         pipeline_info.pVertexInputState = &vertex_input_info;
         pipeline_info.pInputAssemblyState = &input_assembly;
         pipeline_info.pViewportState = &viewport_state;
@@ -83,30 +110,28 @@ namespace gage::gfx
         pipeline_info.pColorBlendState = &color_blending;
         pipeline_info.pDepthStencilState = &depth_stencil;
         pipeline_info.layout = layout;
-        
+
         VkPipeline pipeline;
         vk_check(vkCreateGraphicsPipelines(device, nullptr, 1, &pipeline_info, nullptr, &pipeline));
 
+        for (const auto &shader : shader_modules)
+        {
+            vkDestroyShaderModule(device, shader, nullptr);
+        }
         return pipeline;
     }
-    PipelineBuilder &PipelineBuilder::set_shaders(VkShaderModule vertex_shader, VkShaderModule fragment_shader)
+
+    PipelineBuilder &PipelineBuilder::set_vertex_shader(std::string file_path, std::string entry_point)
     {
-        shader_stages.clear();
-        VkPipelineShaderStageCreateInfo shader_stage_ci = {};
-        shader_stage_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-
-        shader_stage_ci.module = vertex_shader;
-        shader_stage_ci.pName = "main";
-        shader_stage_ci.stage = VK_SHADER_STAGE_VERTEX_BIT;
-        shader_stages.push_back(shader_stage_ci);
-
-        shader_stage_ci.module = fragment_shader;
-        shader_stage_ci.pName = "main";
-        shader_stage_ci.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-        shader_stages.push_back(shader_stage_ci);
-
+        shader_stages.push_back(std::make_tuple(file_path, entry_point, VK_SHADER_STAGE_VERTEX_BIT));
         return *this;
     }
+    PipelineBuilder &PipelineBuilder::set_fragment_shader(std::string file_path, std::string entry_point)
+    {
+        shader_stages.push_back(std::make_tuple(file_path, entry_point, VK_SHADER_STAGE_FRAGMENT_BIT));
+        return *this;
+    }
+
     PipelineBuilder &PipelineBuilder::set_vertex_layout(std::span<VkVertexInputBindingDescription> bindings, std::span<VkVertexInputAttributeDescription> attributes)
     {
         vertex_input_info.pVertexAttributeDescriptions = attributes.data();
@@ -164,7 +189,7 @@ namespace gage::gfx
     }
 
     PipelineBuilder &PipelineBuilder::set_color_attachment_format(VkFormat format)
-    {   
+    {
         color_attachment_format = format;
         // connect the format to the renderInfo  structure
         render_info.colorAttachmentCount = 1;
@@ -177,7 +202,7 @@ namespace gage::gfx
         return *this;
     }
 
-    PipelineBuilder& PipelineBuilder::disable_depth_test()
+    PipelineBuilder &PipelineBuilder::disable_depth_test()
     {
         depth_stencil.depthTestEnable = VK_FALSE;
         depth_stencil.depthWriteEnable = VK_FALSE;
@@ -192,16 +217,16 @@ namespace gage::gfx
         return *this;
     }
 
-    PipelineBuilder& PipelineBuilder::enable_depth_test()
+    PipelineBuilder &PipelineBuilder::enable_depth_test()
     {
         depth_stencil.depthTestEnable = VK_TRUE;
         depth_stencil.depthWriteEnable = VK_TRUE;
-        depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+        depth_stencil.depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
         depth_stencil.depthBoundsTestEnable = VK_FALSE;
         depth_stencil.stencilTestEnable = VK_FALSE;
         depth_stencil.front = {};
         depth_stencil.back = {};
-        depth_stencil.minDepthBounds = 0.f;
+        depth_stencil.minDepthBounds = 0.0f;
         depth_stencil.maxDepthBounds = 1.f;
         return *this;
     }
