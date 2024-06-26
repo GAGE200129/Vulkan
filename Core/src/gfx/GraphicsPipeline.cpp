@@ -9,7 +9,7 @@
 
 namespace gage::gfx
 {
-    GraphicsPipeline::GraphicsPipeline(VkDevice device, VkFormat color_attachment_format, VkExtent2D draw_extent, std::stack<std::function<void()>>& delete_stack)
+    GraphicsPipeline::GraphicsPipeline(VkDevice device, VkFormat color_attachment_format, VkFormat depth_attachment_format, VkExtent2D draw_extent, std::stack<std::function<void()>>& delete_stack)
     {
         VkShaderModule vertex_shader, fragment_shader;
         try
@@ -33,39 +33,24 @@ namespace gage::gfx
             throw GraphicsException{ "Failed to load shader module !"};
         }
 
-        //Define vertex layout
 
         VkPipelineLayoutCreateInfo pipeline_layout_info = {};
         pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         
-        //Todo descriptor layout
-
 	    vk_check(vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &pipeline_layout));
 
-        PipelineBuilder builder;
-
-
-        //Connect layout
         VertexInputDescription vertex_description = VertexBuffer::get_vertex_description();
-        builder.set_vertex_layout(vertex_description.bindings, vertex_description.attributes);
-        //connecting the vertex and pixel shaders to the pipeline
-        builder.set_shaders(vertex_shader, fragment_shader);
-        //it will draw triangles
-        builder.set_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-        //filled triangles
-        builder.set_polygon_mode(VK_POLYGON_MODE_FILL);
-        //no backface culling
-        builder.set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
-        //no multisampling
-        builder.set_multisampling_none();
-        //no blending
-        builder.set_blending_none();
-        //no depth testing
-        builder.disable_depth_test();
-
-        //connect the image format we will draw into, from draw image
-        builder.set_color_attachment_format(color_attachment_format);
-        builder.set_depth_format(VK_FORMAT_UNDEFINED);
+        PipelineBuilder builder{};
+        builder.set_vertex_layout(vertex_description.bindings, vertex_description.attributes)
+            .set_shaders(vertex_shader, fragment_shader)
+            .set_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+            .set_polygon_mode(VK_POLYGON_MODE_FILL)
+            .set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE)
+            .set_multisampling_none()
+            .set_blending_none()
+            .enable_depth_test()
+            .set_color_attachment_format(color_attachment_format)
+            .set_depth_format(depth_attachment_format);
 
         pipeline = builder.build(device, pipeline_layout, draw_extent);
 

@@ -191,4 +191,18 @@ namespace gage::gfx
 
         return *this;
     }
+
+    PipelineBuilder& PipelineBuilder::enable_depth_test()
+    {
+        depth_stencil.depthTestEnable = VK_TRUE;
+        depth_stencil.depthWriteEnable = VK_TRUE;
+        depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+        depth_stencil.depthBoundsTestEnable = VK_FALSE;
+        depth_stencil.stencilTestEnable = VK_FALSE;
+        depth_stencil.front = {};
+        depth_stencil.back = {};
+        depth_stencil.minDepthBounds = 0.f;
+        depth_stencil.maxDepthBounds = 1.f;
+        return *this;
+    }
 }

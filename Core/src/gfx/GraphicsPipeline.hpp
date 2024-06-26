@@ -10,7 +10,7 @@ namespace gage::gfx
     class GraphicsPipeline
     {
     public:
-        GraphicsPipeline(VkDevice device, VkFormat color_attachment_format, VkExtent2D draw_extent, std::stack<std::function<void()>>& delete_stack);
+        GraphicsPipeline(VkDevice device, VkFormat color_attachment_format, VkFormat depth_attachment_format, VkExtent2D draw_extent, std::stack<std::function<void()>>& delete_stack);
 
         VkPipeline get() const noexcept;
     private:

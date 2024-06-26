@@ -98,19 +98,11 @@ namespace gage::gfx
         VkPhysicalDeviceVulkan13Features features13 = {};
         features13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
         features13.dynamicRendering = true;
-        features13.synchronization2 = true;
-
-        // vulkan 1.2 features
-        VkPhysicalDeviceVulkan12Features features12 = {};
-        features12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
-        features12.bufferDeviceAddress = true;
-        features12.descriptorIndexing = true;
 
         // use vkbootstrap to select a gpu.
         vkb::PhysicalDeviceSelector selector{vkb_inst};
         auto physical_device_result = selector
             .set_minimum_version(1, 3)
-            .set_required_features_12(features12)
             .set_required_features_13(features13)
             .set_surface(surface)
             .select();
@@ -128,10 +120,27 @@ namespace gage::gfx
 
         device = vkb_device.device;
         physical_device = vkb_physical_device.physical_device;
-
         delete_stack.push([this]()
         {
             vkDestroyDevice(device, nullptr);
+        });
+
+        //Create allocator
+        VmaVulkanFunctions vulkanFunctions = {};
+        vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
+        vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
+        
+        VmaAllocatorCreateInfo allocatorCreateInfo = {};
+        //allocatorCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+        allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_3;
+        allocatorCreateInfo.physicalDevice = physical_device;
+        allocatorCreateInfo.device = device;
+        allocatorCreateInfo.instance = instance;
+        allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
+        vmaCreateAllocator(&allocatorCreateInfo, &allocator);
+        delete_stack.push([this]()
+        {
+            vmaDestroyAllocator(allocator);
         });
 
         create_swapchain();
@@ -203,39 +212,28 @@ namespace gage::gfx
         });
 
 
-        graphics_pipeline = std::make_unique<GraphicsPipeline>(device, swapchain_image_format, draw_extent, delete_stack);
+        graphics_pipeline = std::make_unique<GraphicsPipeline>(device, swapchain_image_format, swapchain_depth_format, draw_extent, delete_stack);
 
-        //Create allocator
-        VmaVulkanFunctions vulkanFunctions = {};
-        vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
-        vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
         
-        VmaAllocatorCreateInfo allocatorCreateInfo = {};
-        //allocatorCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-        allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_3;
-        allocatorCreateInfo.physicalDevice = physical_device;
-        allocatorCreateInfo.device = device;
-        allocatorCreateInfo.instance = instance;
-        allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
-        vmaCreateAllocator(&allocatorCreateInfo, &allocator);
-        delete_stack.push([this]()
-        {
-            vmaDestroyAllocator(allocator);
-        });
         std::vector<Vertex> vertices;
+        std::vector<uint32_t> indices = {0, 1, 2};
         //make the array 3 vertices long
         vertices.resize(3);
+
 
         //vertex positions
         vertices[0].position = { 1.f, 1.f, 0.0f };
         vertices[1].position = {-1.f, 1.f, 0.0f };
         vertices[2].position = { 0.f,-1.f, 0.0f };
 
+
         vertex_buffer = std::make_unique<VertexBuffer>(*this, vertices);
+        index_buffer = std::make_unique<IndexBuffer>(*this, indices);
 
         delete_stack.push([this]()
         {
             vertex_buffer.reset();
+            index_buffer.reset();
         });
     }   
 
@@ -253,29 +251,13 @@ namespace gage::gfx
 
     void Graphics::draw_test_triangle()
     {
-        VkClearValue clear_value = { { 0.5f, 0.0f, 0.0f, 1.0f } };
-
-        VkRenderingAttachmentInfo color_attachment = {};
-        color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-        color_attachment.clearValue = clear_value;
-        color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        color_attachment.imageView = swapchain_image_views[swapchain_image_index]; // Link to current swap chain image view
-        color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-
-        VkRenderingInfo render_info = {};
-        render_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-        render_info.renderArea.offset = {0, 0};
-        render_info.renderArea.extent = draw_extent;
-        render_info.colorAttachmentCount = 1;
-        render_info.pColorAttachments = &color_attachment;
-        render_info.layerCount = 1;
-        vkCmdBeginRendering(cmd, &render_info);
+       
 
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->get());
         VkDeviceSize offsets{0};
         vkCmdBindVertexBuffers(cmd, 0, 1, &vertex_buffer->buffer, &offsets);
-        vkCmdDraw(cmd, 3, 1, 0, 0);
+        vkCmdBindIndexBuffer(cmd, index_buffer->buffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdDrawIndexed(cmd, 3, 1, 0, 0, 0);
 
         vkCmdEndRendering(cmd);
     }
@@ -297,37 +279,48 @@ namespace gage::gfx
         vk_check(vkBeginCommandBuffer(cmd, &cmd_begin_info));
 
         //make the swapchain image into writeable mode before rendering
-	    transition_image(cmd, swapchain_images[swapchain_image_index], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+	    transition_image(cmd, swapchain_images[swapchain_image_index], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,  VK_IMAGE_LAYOUT_GENERAL);
+        transition_image(cmd, swapchain_depth_image, VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
+        VkClearValue color_clear_value{ 
+            VkClearColorValue{ 0.5f, 0.0f, 0.0f, 1.0f }
+        };
+
+        VkClearValue depth_clear_value{ 
+            { 0.0f, 0u }
+        };
+
+        VkRenderingAttachmentInfo color_attachment = {};
+        color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        color_attachment.clearValue = color_clear_value;
+        color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        color_attachment.imageView = swapchain_image_views[swapchain_image_index]; // Link to current swap chain image view
+        color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+        VkRenderingAttachmentInfo depth_attachment = {};
+        depth_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        depth_attachment.clearValue = depth_clear_value;
+        depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        depth_attachment.imageView = swapchain_depth_image_view; // Link to current swap chain image view
+        depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+        VkRenderingInfo render_info = {};
+        render_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+        render_info.renderArea.offset = {0, 0};
+        render_info.renderArea.extent = draw_extent;
+        render_info.colorAttachmentCount = 1;
+        render_info.pColorAttachments = &color_attachment;
+        render_info.pDepthAttachment = &depth_attachment;
+        render_info.layerCount = 1;
+        vkCmdBeginRendering(cmd, &render_info);
+        
     }
 
     void Graphics::end_frame()
     {
-
-        VkImageMemoryBarrier image_memory_barrier = {};
-        image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        image_memory_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-        image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL,
-        image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-        image_memory_barrier.image = swapchain_images[swapchain_image_index],
-        image_memory_barrier.subresourceRange = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseMipLevel = 0,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-        };
-        vkCmdPipelineBarrier(
-            cmd,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,  // srcStageMask
-            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, // dstStageMask
-            0,
-            0,
-            nullptr,
-            0,
-            nullptr,
-            1, // imageMemoryBarrierCount
-            &image_memory_barrier // pImageMemoryBarriers
-        );
+        transition_image(cmd, swapchain_images[swapchain_image_index], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
         vk_check(vkEndCommandBuffer(cmd));
 
         VkSubmitInfo submit = {};
@@ -389,7 +382,6 @@ namespace gage::gfx
         auto vkb_swapchain = swapchain_result.value();
 
         swapchain = vkb_swapchain.swapchain;
-        
 
         auto swapchain_images_result = vkb_swapchain.get_images();
 	    auto swapchain_image_views_result = vkb_swapchain.get_image_views();
@@ -398,6 +390,52 @@ namespace gage::gfx
 
         swapchain_images = std::move(swapchain_images_result.value());
         swapchain_image_views = std::move(swapchain_image_views_result.value());
+
+        //Create depth image and view
+        VkImageCreateInfo depth_image_ci = {};
+        depth_image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        depth_image_ci.imageType = VK_IMAGE_TYPE_2D;
+        depth_image_ci.extent.width = draw_extent.width;
+        depth_image_ci.extent.height = draw_extent.height;
+        depth_image_ci.extent.depth = 1;
+        depth_image_ci.mipLevels = 1;
+        depth_image_ci.arrayLayers = 1;
+        depth_image_ci.format = swapchain_depth_format;
+        depth_image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+        depth_image_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        depth_image_ci.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        depth_image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
+
+        VmaAllocationCreateInfo depth_image_alloc_info = {};
+        depth_image_alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
+        depth_image_alloc_info.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+
+        //vk_check(vkCreateImage(device, &depth_image_ci, nullptr, &swapchain_depth_image));
+        vk_check(vmaCreateImage(allocator, &depth_image_ci, &depth_image_alloc_info, &swapchain_depth_image, &swapchain_depth_image_allocation, nullptr));
+        
+        VkImageViewCreateInfo depth_image_view_ci = {};
+        depth_image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        depth_image_view_ci.image = swapchain_depth_image;
+        depth_image_view_ci.format = swapchain_depth_format;
+        depth_image_view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        depth_image_view_ci.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        depth_image_view_ci.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        depth_image_view_ci.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        depth_image_view_ci.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+        depth_image_view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        depth_image_view_ci.subresourceRange.baseMipLevel = 0;
+        depth_image_view_ci.subresourceRange.baseArrayLayer = 0;
+        depth_image_view_ci.subresourceRange.layerCount = 1;
+        depth_image_view_ci.subresourceRange.levelCount = 1;
+
+        vk_check(vkCreateImageView(device, &depth_image_view_ci, nullptr, &swapchain_depth_image_view));
+
+        delete_stack.push([this]()
+        {
+            vmaDestroyImage(allocator, swapchain_depth_image, swapchain_depth_image_allocation);
+            vkDestroyImageView(device, swapchain_depth_image_view, nullptr);
+        });
+        
     }
 
     void Graphics::destroy_swapchain()

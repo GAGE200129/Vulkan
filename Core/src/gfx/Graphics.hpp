@@ -9,7 +9,7 @@
 #include "Exception.hpp"
 #include "GraphicsPipeline.hpp"
 #include "VertexBuffer.hpp"
-
+#include "IndexBuffer.hpp"
 
 namespace vkb
 {
@@ -23,6 +23,7 @@ namespace gage::gfx
     class Graphics
     {
         friend class VertexBuffer;
+        friend class IndexBuffer;
     public:
         Graphics(GLFWwindow *window, std::string app_name);
         Graphics(const Graphics&) = delete;
@@ -51,8 +52,12 @@ namespace gage::gfx
         uint32_t swapchain_image_index{};
         VkSwapchainKHR swapchain{};
         VkFormat swapchain_image_format{VK_FORMAT_B8G8R8A8_SRGB};
+        VkFormat swapchain_depth_format{VK_FORMAT_D32_SFLOAT};
         std::vector<VkImage> swapchain_images{};
 	    std::vector<VkImageView> swapchain_image_views{};
+        VmaAllocation swapchain_depth_image_allocation{};
+        VkImage swapchain_depth_image{};
+        VkImageView swapchain_depth_image_view{};
 
         VkCommandPool cmd_pool {};
         VkCommandBuffer cmd{};
@@ -70,5 +75,6 @@ namespace gage::gfx
         VmaAllocator allocator{};
 
         std::unique_ptr<VertexBuffer> vertex_buffer{};
+        std::unique_ptr<IndexBuffer> index_buffer{};
     };
 }

@@ -21,6 +21,7 @@ namespace gage::gfx
         PipelineBuilder& set_color_attachment_format(VkFormat format);
         PipelineBuilder& set_depth_format(VkFormat format);
         PipelineBuilder& disable_depth_test();
+        PipelineBuilder& enable_depth_test();
     private:
         std::vector<VkPipelineShaderStageCreateInfo> shader_stages{};
 
