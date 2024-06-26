@@ -3,6 +3,8 @@
 #include <vector>
 #include <memory>
 
+#include <glm/mat4x4.hpp>
+
 namespace gage::gfx::bind
 {
     class IBindable;
@@ -28,6 +30,9 @@ namespace gage::gfx::draw
 
         void add_bind(std::unique_ptr<bind::IBindable> bind);
         void add_index_buffer(std::unique_ptr<bind::IndexBuffer> index_buffer);
+
+        virtual glm::mat4 get_world_transform() const = 0;
+        virtual void update(float dt) = 0;
     private:
         std::vector<std::unique_ptr<bind::IBindable>> bindables{};
         const bind::IndexBuffer* index_buffer{};

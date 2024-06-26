@@ -6,32 +6,47 @@
 #include "../bind/TransformPS.hpp"
 #include "../bind/Pipeline.hpp"
 
-
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace gage::gfx::draw
 {
-    Box::Box(Graphics& gfx)
+    Box::Box(Graphics &gfx)
     {
-        std::vector<Vertex> vertices 
-        {
-            {{-1.0f, -1.0f, -1.0f }, {}, {}},
-            {{1.0f, -1.0f, -1.0f }, {}, {}},
-            {{-1.0f, 1.0f, -1.0f }, {}, {}},
-            {{1.0f, 1.0f, -1.0f }, {}, {}},
-            {{-1.0f, -1.0f, 1.0f }, {}, {}},
-            {{1.0f, -1.0f, 1.0f }, {}, {}},
-            {{-1.0f, 1.0f, 1.0f }, {}, {}},
-            {{-1.0f, 1.0f, 1.0f }, {}, {}},
+        std::vector<Vertex> vertices{
+            {{-1.0f, -1.0f, 1.0f}, {}, {}},
+            {{1.0f, -1.0f, 1.0f}, {}, {}},
+            {{-1.0f, 1.0f, 1.0f}, {}, {}},
+            {{1.0f, 1.0f, 1.0f}, {}, {}},
+            {{-1.0f, -1.0f, -1.0f}, {}, {}},
+            {{1.0f, -1.0f, -1.0f}, {}, {}},
+            {{-1.0f, 1.0f, -1.0f}, {}, {}},
+            {{1.0f, 1.0f, -1.0f}, {}, {}},
         };
         std::vector<uint32_t> indices = {
-            0, 2, 1, 2, 3, 1,
-            1, 3, 5, 3, 7, 5,
-            2, 6, 3, 3, 6, 7,
-            4, 5, 7, 4, 7, 6,
-            0, 4, 2, 2, 4, 6,
-            0, 1, 4, 1, 5, 4,
-        };
+            // Top
+            2, 6, 7,
+            2, 3, 7,
 
+            // Bottom
+            0, 4, 5,
+            0, 1, 5,
+
+            // Left
+            0, 2, 6,
+            0, 4, 6,
+
+            // Right
+            1, 3, 7,
+            1, 5, 7,
+
+            // Front
+            0, 2, 3,
+            0, 1, 3,
+
+            // Back
+            4, 6, 7,
+            4, 5, 7
+        };
 
         VertexInputDescription vertex_description = Vertex::get_vertex_description();
         PipelineBuilder builder{};
@@ -49,6 +64,20 @@ namespace gage::gfx::draw
         add_bind(std::make_unique<bind::TransformPS>(gfx, pipeline->get_layout(), *this));
         add_bind(std::move(pipeline));
         add_index_buffer(std::make_unique<bind::IndexBuffer>(gfx, indices));
+    }
 
+    void Box::update(float dt)
+    {
+        static float temp = 0.0f;
+
+        temp += dt;
+        position.z = -10;
+        position.y = glm::sin(glm::radians(temp)) * 5;
+        position.x = glm::cos(glm::radians(temp)) * 5;
+    }
+
+    glm::mat4 Box::get_world_transform() const
+    {
+        return glm::translate(glm::mat4(1.0f), position);
     }
 }

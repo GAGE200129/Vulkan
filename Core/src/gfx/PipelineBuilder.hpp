@@ -1,7 +1,10 @@
 #pragma once
 
 #include <vector>
-#include <vulkan/vulkan.hpp>
+#include <tuple>
+#include <vulkan/vulkan.h>
+#include <span>
+#include <string>
 
 namespace gage::gfx
 {

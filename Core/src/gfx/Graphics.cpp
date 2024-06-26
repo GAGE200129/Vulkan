@@ -3,6 +3,7 @@
 #include <GLFW/glfw3.h>
 #include <string>
 #include <sstream>
+#include <glm/gtc/matrix_transform.hpp>
 #include <VkBootstrap.h>
 #include <Core/src/log/Log.hpp>
 
@@ -398,5 +399,15 @@ namespace gage::gfx
 
             vkDestroyImageView(device, swapchain_image_views[i], nullptr);
         }
+    }
+
+    void Graphics::set_perspective(int width, int height, float fov_vertical, float near, float far)
+    {
+        projection = glm::perspective(glm::radians(fov_vertical), (float)width / (float)height, near, far);
+    }
+
+    const glm::mat4& Graphics::get_projection() const
+    {
+        return projection;
     }
 }

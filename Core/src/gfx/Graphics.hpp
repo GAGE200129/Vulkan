@@ -8,6 +8,8 @@
 
 #include "Exception.hpp"
 
+#include <glm/mat4x4.hpp>
+
 namespace vkb
 {
     template <typename T>
@@ -37,6 +39,10 @@ namespace gage::gfx
         void draw_indexed(uint32_t vertex_count);
         void end_frame();
         const std::string &get_app_name() const noexcept;
+
+        void set_perspective(int width, int height, float fov_vertical, float near, float far);
+
+        const glm::mat4& get_projection() const;
 
     private:
         void create_swapchain();
@@ -74,5 +80,7 @@ namespace gage::gfx
         VkFence render_fence{};
 
         VmaAllocator allocator{};
+
+        glm::mat4 projection{};
     };
 }

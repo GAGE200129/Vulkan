@@ -3,7 +3,7 @@
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
 #include <vector>
-#include <vk_mem_alloc.h>
+#include <vulkan/vulkan.h>
 
 namespace gage::gfx
 {
