@@ -168,7 +168,6 @@ namespace gage::gfx
 		cmd_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		cmd_alloc_info.commandPool = cmd_pool;
 		cmd_alloc_info.commandBufferCount = 1;
-		cmd_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
         vk_check(vkAllocateCommandBuffers(device, &cmd_alloc_info, &cmd));
         delete_stack.push([this]()
@@ -206,6 +205,38 @@ namespace gage::gfx
 
         graphics_pipeline = std::make_unique<GraphicsPipeline>(device, swapchain_image_format, draw_extent, delete_stack);
 
+        //Create allocator
+        VmaVulkanFunctions vulkanFunctions = {};
+        vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
+        vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
+        
+        VmaAllocatorCreateInfo allocatorCreateInfo = {};
+        //allocatorCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+        allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_3;
+        allocatorCreateInfo.physicalDevice = physical_device;
+        allocatorCreateInfo.device = device;
+        allocatorCreateInfo.instance = instance;
+        allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
+        vmaCreateAllocator(&allocatorCreateInfo, &allocator);
+        delete_stack.push([this]()
+        {
+            vmaDestroyAllocator(allocator);
+        });
+        std::vector<Vertex> vertices;
+        //make the array 3 vertices long
+        vertices.resize(3);
+
+        //vertex positions
+        vertices[0].position = { 1.f, 1.f, 0.0f };
+        vertices[1].position = {-1.f, 1.f, 0.0f };
+        vertices[2].position = { 0.f,-1.f, 0.0f };
+
+        vertex_buffer = std::make_unique<VertexBuffer>(*this, vertices);
+
+        delete_stack.push([this]()
+        {
+            vertex_buffer.reset();
+        });
     }   
 
     Graphics::~Graphics()
@@ -242,7 +273,8 @@ namespace gage::gfx
         vkCmdBeginRendering(cmd, &render_info);
 
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->get());
-
+        VkDeviceSize offsets{0};
+        vkCmdBindVertexBuffers(cmd, 0, 1, &vertex_buffer->buffer, &offsets);
         vkCmdDraw(cmd, 3, 1, 0, 0);
 
         vkCmdEndRendering(cmd);
@@ -266,31 +298,36 @@ namespace gage::gfx
 
         //make the swapchain image into writeable mode before rendering
 	    transition_image(cmd, swapchain_images[swapchain_image_index], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
-
-        //make a clear-color from frame number. This will flash with a 120*pi frame period.
-        // VkClearColorValue clear_value;
-        // clear_value = { { r, g, b, 1.0f } };
-
-        // VkImageSubresourceRange clear_range = {};
-        // clear_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        // clear_range.baseMipLevel = 0;
-        // clear_range.levelCount = VK_REMAINING_MIP_LEVELS;
-        // clear_range.baseArrayLayer = 0;
-        // clear_range.layerCount = VK_REMAINING_ARRAY_LAYERS;
-
-        //clear image
-	    //vkCmdClearColorImage(cmd, swapchain_images[swapchain_image_index], VK_IMAGE_LAYOUT_GENERAL, &clear_value, 1, &clear_range);
-
-        
-
-       
     }
 
     void Graphics::end_frame()
     {
-        //make the swapchain image into presentable mode
-	    transition_image(cmd, swapchain_images[swapchain_image_index],VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
+        VkImageMemoryBarrier image_memory_barrier = {};
+        image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        image_memory_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL,
+        image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+        image_memory_barrier.image = swapchain_images[swapchain_image_index],
+        image_memory_barrier.subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        };
+        vkCmdPipelineBarrier(
+            cmd,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,  // srcStageMask
+            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, // dstStageMask
+            0,
+            0,
+            nullptr,
+            0,
+            nullptr,
+            1, // imageMemoryBarrierCount
+            &image_memory_barrier // pImageMemoryBarriers
+        );
         vk_check(vkEndCommandBuffer(cmd));
 
         VkSubmitInfo submit = {};
@@ -342,9 +379,9 @@ namespace gage::gfx
                 .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
             })
             //use vsync present mode
-            .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
+            .set_desired_present_mode(VK_PRESENT_MODE_IMMEDIATE_KHR)
             .set_desired_extent(draw_extent.width, draw_extent.height)
-            .set_desired_min_image_count(vkb::SwapchainBuilder::BufferMode::DOUBLE_BUFFERING)
+            .set_desired_min_image_count(vkb::SwapchainBuilder::BufferMode::SINGLE_BUFFERING)
             .add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
             .build();
         vkb_check(swapchain_result, "Failed to create swapchain: ");

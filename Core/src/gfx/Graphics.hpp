@@ -2,12 +2,14 @@
 
 #include <string>
 #include <vector>
-#include <vulkan/vulkan.h>
+#include <vk_mem_alloc.h>
 #include <functional>
 #include <stack>
 
 #include "Exception.hpp"
 #include "GraphicsPipeline.hpp"
+#include "VertexBuffer.hpp"
+
 
 namespace vkb
 {
@@ -20,6 +22,7 @@ namespace gage::gfx
 {
     class Graphics
     {
+        friend class VertexBuffer;
     public:
         Graphics(GLFWwindow *window, std::string app_name);
         Graphics(const Graphics&) = delete;
@@ -63,5 +66,9 @@ namespace gage::gfx
 	    VkFence render_fence{};
 
         std::unique_ptr<GraphicsPipeline> graphics_pipeline{};
+
+        VmaAllocator allocator{};
+
+        std::unique_ptr<VertexBuffer> vertex_buffer{};
     };
 }

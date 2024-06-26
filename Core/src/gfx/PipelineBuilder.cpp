@@ -6,6 +6,9 @@ namespace gage::gfx
 {
     PipelineBuilder::PipelineBuilder()
     {
+        vertex_input_info = {};
+        vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
         input_assembly = {};
         input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 
@@ -62,10 +65,6 @@ namespace gage::gfx
         color_blending.attachmentCount = 1;
         color_blending.pAttachments = &color_blend_attachment;
 
-        // completely clear VertexInputStateCreateInfo, as we have no need for it
-        VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
-        vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
         // build the actual pipeline
         // we now use all of the info structs we have been writing into into this one
         // to create the pipeline
@@ -84,15 +83,7 @@ namespace gage::gfx
         pipeline_info.pColorBlendState = &color_blending;
         pipeline_info.pDepthStencilState = &depth_stencil;
         pipeline_info.layout = layout;
-
-        //VkDynamicState dyn_states[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
-
-        //VkPipelineDynamicStateCreateInfo dynamic_state_info = {};
-        //dynamic_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-
-        //dynamic_state_info.dynamicStateCount = 2;
-        //dynamic_state_info.pDynamicStates = dyn_states;
-        //pipeline_info.pDynamicState = &dynamic_state_info;
+        
         VkPipeline pipeline;
         vk_check(vkCreateGraphicsPipelines(device, nullptr, 1, &pipeline_info, nullptr, &pipeline));
 
@@ -114,6 +105,14 @@ namespace gage::gfx
         shader_stage_ci.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
         shader_stages.push_back(shader_stage_ci);
 
+        return *this;
+    }
+    PipelineBuilder &PipelineBuilder::set_vertex_layout(std::span<VkVertexInputBindingDescription> bindings, std::span<VkVertexInputAttributeDescription> attributes)
+    {
+        vertex_input_info.pVertexAttributeDescriptions = attributes.data();
+        vertex_input_info.vertexAttributeDescriptionCount = attributes.size();
+        vertex_input_info.pVertexBindingDescriptions = bindings.data();
+        vertex_input_info.vertexBindingDescriptionCount = bindings.size();
         return *this;
     }
 

@@ -5,7 +5,7 @@
 #include <Core/src/utils/Exception.hpp>
 #include "Exception.hpp"
 #include "PipelineBuilder.hpp"
-
+#include "VertexBuffer.hpp"
 
 namespace gage::gfx
 {
@@ -33,13 +33,21 @@ namespace gage::gfx
             throw GraphicsException{ "Failed to load shader module !"};
         }
 
+        //Define vertex layout
+
         VkPipelineLayoutCreateInfo pipeline_layout_info = {};
         pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        
         //Todo descriptor layout
 
 	    vk_check(vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &pipeline_layout));
 
         PipelineBuilder builder;
+
+
+        //Connect layout
+        VertexInputDescription vertex_description = VertexBuffer::get_vertex_description();
+        builder.set_vertex_layout(vertex_description.bindings, vertex_description.attributes);
         //connecting the vertex and pixel shaders to the pipeline
         builder.set_shaders(vertex_shader, fragment_shader);
         //it will draw triangles

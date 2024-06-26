@@ -11,6 +11,7 @@ namespace gage::gfx
         PipelineBuilder();
         VkPipeline build(VkDevice device, VkPipelineLayout layout, VkExtent2D draw_extent);
 
+        PipelineBuilder& set_vertex_layout(std::span<VkVertexInputBindingDescription> bindings, std::span<VkVertexInputAttributeDescription> attributes);
         PipelineBuilder& set_shaders(VkShaderModule vertex_shader, VkShaderModule fragment_shader);
         PipelineBuilder& set_topology(VkPrimitiveTopology topology);
         PipelineBuilder& set_polygon_mode(VkPolygonMode mode);
@@ -23,6 +24,7 @@ namespace gage::gfx
     private:
         std::vector<VkPipelineShaderStageCreateInfo> shader_stages{};
 
+        VkPipelineVertexInputStateCreateInfo vertex_input_info{};
         VkPipelineInputAssemblyStateCreateInfo input_assembly{};
         VkPipelineRasterizationStateCreateInfo rasterizer{};
         VkPipelineColorBlendAttachmentState color_blend_attachment{};
