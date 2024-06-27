@@ -30,7 +30,7 @@ int main()
 
             
 
-            for (int i = 0; i < 1000; i++)
+            for (int i = 0; i < 100; i++)
             {
                 boxes.push_back(std::make_unique<gfx::draw::Box>(graphics));
             }
@@ -50,7 +50,7 @@ int main()
                 // graphics2.end_frame();
                 win::update();
 
-                //std::this_thread::sleep_for(16ms);
+                std::this_thread::sleep_for(16ms);
             }
 
             graphics.wait();

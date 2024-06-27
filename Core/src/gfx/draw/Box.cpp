@@ -21,7 +21,7 @@ namespace gage::gfx::draw
 
         std::uniform_real_distribution<float> rotation_dist(0, 10);
         std::uniform_real_distribution<float> rotation_dist2(0, 360);
-        std::uniform_real_distribution<float> radius_dist(0, 100);
+        std::uniform_real_distribution<float> radius_dist(0, 50);
 
         pitch = rotation_dist2(e);
         yaw = rotation_dist2(e);
@@ -84,40 +84,54 @@ namespace gage::gfx::draw
             attributes.push_back(normal_attribute);
             attributes.push_back(uv_attribute);
 
-            std::vector<Vertex> vertices{
-                {{-1.0f, -1.0f, 1.0f}, {}, {}},
-                {{1.0f, -1.0f, 1.0f}, {}, {}},
-                {{-1.0f, 1.0f, 1.0f}, {}, {}},
-                {{1.0f, 1.0f, 1.0f}, {}, {}},
-                {{-1.0f, -1.0f, -1.0f}, {}, {}},
-                {{1.0f, -1.0f, -1.0f}, {}, {}},
-                {{-1.0f, 1.0f, -1.0f}, {}, {}},
-                {{1.0f, 1.0f, -1.0f}, {}, {}},
+            // std::vector<Vertex> vertices{
+            //     {{-1.0f, -1.0f, 1.0f}, {}, {}},
+            //     {{1.0f, -1.0f, 1.0f}, {}, {}},
+            //     {{-1.0f, 1.0f, 1.0f}, {}, {}},
+            //     {{1.0f, 1.0f, 1.0f}, {}, {}},
+            //     {{-1.0f, -1.0f, -1.0f}, {}, {}},
+            //     {{1.0f, -1.0f, -1.0f}, {}, {}},
+            //     {{-1.0f, 1.0f, -1.0f}, {}, {}},
+            //     {{1.0f, 1.0f, -1.0f}, {}, {}},
+            // };
+            // std::vector<uint32_t> indices = {
+            //     // Top
+            //     2, 6, 7,
+            //     2, 3, 7,
+
+            //     // Bottom
+            //     0, 4, 5,
+            //     0, 1, 5,
+
+            //     // Left
+            //     0, 2, 6,
+            //     0, 4, 6,
+
+            //     // Right
+            //     1, 3, 7,
+            //     1, 5, 7,
+
+            //     // Front
+            //     0, 2, 3,
+            //     0, 1, 3,
+
+            //     // Back
+            //     4, 6, 7,
+            //     4, 5, 7};
+
+            std::vector<Vertex> vertices = 
+            {
+               {{-1.0f, -1.0f, 0.0f}, {}, {0.0f, 0.0f}},
+               {{-1.0f, 1.0f, 0.0f}, {}, {0.0f, 1.0f}},
+               {{1.0f, 1.0f, 0.0f}, {}, {1.0f, 1.0f}},
+               {{1.0f, -1.0f, 0.0f}, {}, {1.0f, 0.0f}},
             };
-            std::vector<uint32_t> indices = {
-                // Top
-                2, 6, 7,
-                2, 3, 7,
 
-                // Bottom
-                0, 4, 5,
-                0, 1, 5,
-
-                // Left
-                0, 2, 6,
-                0, 4, 6,
-
-                // Right
-                1, 3, 7,
-                1, 5, 7,
-
-                // Front
-                0, 2, 3,
+            std::vector<uint32_t> indices = 
+            {
                 0, 1, 3,
-
-                // Back
-                4, 6, 7,
-                4, 5, 7};
+                3, 1, 2
+            };
 
             VkDescriptorSetLayoutBinding texture_descriptor_bindings[1]{};
             texture_descriptor_bindings[0].binding = 0;
