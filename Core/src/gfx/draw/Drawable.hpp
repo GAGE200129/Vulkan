@@ -33,7 +33,9 @@ namespace gage::gfx::draw
 
         virtual glm::mat4 get_world_transform() const = 0;
         virtual void update(float dt) = 0;
-    private:
+    protected:
+        virtual std::vector<std::unique_ptr<bind::IBindable>>& get_static_bind() = 0;
+    protected:
         std::vector<std::unique_ptr<bind::IBindable>> bindables{};
         const bind::IndexBuffer* index_buffer{};
     };

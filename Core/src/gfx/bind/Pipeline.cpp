@@ -1,9 +1,7 @@
 #include "Pipeline.hpp"
 
-#include <Core/src/utils/FileLoader.hpp>
-
 #include "../Exception.hpp"
-#include "../Vertex.hpp"
+
 
 
 namespace gage::gfx::bind

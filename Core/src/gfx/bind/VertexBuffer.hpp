@@ -3,14 +3,13 @@
 
 #include <span>
 #include "IBindable.hpp"
-#include "../Vertex.hpp"
 
 namespace gage::gfx::bind
 {
     class VertexBuffer : public IBindable
     {
     public:
-        VertexBuffer(Graphics& gfx, uint32_t binding, std::span<Vertex> vertices);
+        VertexBuffer(Graphics& gfx, uint32_t binding, uint32_t size_in_bytes, void* vertices);
         void bind(Graphics& gfx) override;
         void destroy(Graphics& gfx) override;
     private:

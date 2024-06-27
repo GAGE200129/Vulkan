@@ -4,10 +4,11 @@
 #include <glm/mat4x4.hpp>
 
 #include "../draw/Drawable.hpp"
+#include <iostream>
 
 namespace gage::gfx::bind
 {
-    TransformPS::TransformPS(Graphics &, const VkPipelineLayout& layout,const draw::Drawable &parent) : 
+    TransformPS::TransformPS(Graphics &, VkPipelineLayout layout,const draw::Drawable &parent) : 
         parent(parent),
         layout(layout)
     {

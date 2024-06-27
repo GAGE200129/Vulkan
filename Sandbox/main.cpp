@@ -20,38 +20,38 @@ int main()
 
         {
             win::Window window(640, 480, "Hello world");
-            win::Window window2(640, 480, "Hello world2");
+            //win::Window window2(640, 480, "Hello world2");
 
             auto &graphics = window.get_graphics();
-            auto &graphics2 = window2.get_graphics();
+            //auto &graphics2 = window2.get_graphics();
 
             graphics.set_perspective(640, 480, 70.0f, 0.1f, 1000.0f);
-            graphics2.set_perspective(640, 480, 70.0f, 0.1f, 1000.0f);
+            //graphics2.set_perspective(640, 480, 70.0f, 0.1f, 1000.0f);
 
             gfx::draw::Box box(graphics);
-            gfx::draw::Box box2(graphics2);
+            gfx::draw::Box box2(graphics);
 
             while (!window.is_closing())
             {
-                box2.update(0.56f);
+                box2.update(0.16f);
+                box.update(0.56f);
 
                 graphics.clear();
                 box.draw(graphics);
+                box2.draw(graphics);
                 graphics.end_frame();
 
-                graphics2.clear();
-                box2.draw(graphics2);
-                graphics2.end_frame();
+                //graphics2.clear();
+                //graphics2.end_frame();
                 win::update();
 
-                std::this_thread::sleep_for(10ms);
+                //std::this_thread::sleep_for(500ms);
             }
 
             graphics.wait();
-            graphics2.wait();
 
             box.destroy(graphics);
-            box2.destroy(graphics2);
+            box2.destroy(graphics);
         }
         win::shutdown();
     }

@@ -1,12 +1,12 @@
 #pragma once
 
-#include "Drawable.hpp"
+#include "DrawableBase.hpp"
 
 #include <glm/vec3.hpp>
 
 namespace gage::gfx::draw
 {
-    class Box : public Drawable
+    class Box : public DrawableBase<Box>
     {
     public: 
         Box(Graphics& gfx);
@@ -14,6 +14,7 @@ namespace gage::gfx::draw
 
         glm::mat4 get_world_transform() const override;
     private:
+        float time{};
         glm::vec3 position{};
     };
 }

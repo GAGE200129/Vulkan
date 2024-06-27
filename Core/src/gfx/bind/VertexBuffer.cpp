@@ -8,13 +8,13 @@
 
 namespace gage::gfx::bind
 {
-    VertexBuffer::VertexBuffer(Graphics &gfx, uint32_t binding, std::span<Vertex> vertices) :
+    VertexBuffer::VertexBuffer(Graphics &gfx, uint32_t binding, uint32_t size_in_bytes, void* vertices) :
         binding(binding)
     {
         VkBufferCreateInfo buffer_info = {};
         buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         // this is the total size, in bytes, of the buffer we are allocating
-        buffer_info.size = vertices.size() * sizeof(Vertex);
+        buffer_info.size = size_in_bytes;
         // this buffer is going to be used as a Vertex Buffer
         buffer_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 
@@ -27,7 +27,7 @@ namespace gage::gfx::bind
 
         void *data;
         vmaMapMemory(get_allocator(gfx), allocation, &data);
-        std::memcpy(data, vertices.data(), vertices.size() * sizeof(Vertex));
+        std::memcpy(data, vertices, size_in_bytes);
         vmaUnmapMemory(get_allocator(gfx), allocation);
     }
     void VertexBuffer::destroy(Graphics& gfx)
