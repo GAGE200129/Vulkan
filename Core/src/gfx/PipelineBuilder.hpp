@@ -5,6 +5,7 @@
 #include <vulkan/vulkan.h>
 #include <span>
 #include <string>
+#include <unordered_map>
 
 namespace gage::gfx
 {
@@ -12,8 +13,11 @@ namespace gage::gfx
     {
     public:
         PipelineBuilder();
+        VkPipelineLayout build_layout(VkDevice device, std::unordered_map<std::string, VkDescriptorSetLayout>& out_layouts);
         VkPipeline build(VkDevice device, VkPipelineLayout layout, VkExtent2D draw_extent);
 
+        PipelineBuilder& add_descriptor_set_bindings(std::string name, std::span<VkDescriptorSetLayoutBinding> bindings);
+        PipelineBuilder& set_push_constants(std::span<VkPushConstantRange> ps);
         PipelineBuilder& set_vertex_layout(std::span<VkVertexInputBindingDescription> bindings, std::span<VkVertexInputAttributeDescription> attributes);
         PipelineBuilder& set_shaders(VkDevice device, std::vector<char> vertex_bin, std::vector<char> fragment_bin);
         PipelineBuilder& set_vertex_shader(std::string file_path, std::string entry_point);
@@ -29,6 +33,9 @@ namespace gage::gfx
         PipelineBuilder& enable_depth_test();
     private:
         std::vector<std::tuple<std::string, std::string, VkShaderStageFlagBits>> shader_stages{};
+        std::unordered_map<std::string, std::vector<VkDescriptorSetLayoutBinding>> layout_bindings{};
+        std::vector<VkPushConstantRange> push_constants{};
+       
 
         VkPipelineVertexInputStateCreateInfo vertex_input_info{};
         VkPipelineInputAssemblyStateCreateInfo input_assembly{};

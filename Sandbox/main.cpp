@@ -5,6 +5,7 @@
 #include <Core/src/gfx/Exception.hpp>
 #include <Core/src/gfx/draw/Box.hpp>
 #include <Core/src/gfx/bind/IBindable.hpp>
+#include <Core/src/utils/FileLoader.hpp>
 
 #include <thread>
 
@@ -27,7 +28,9 @@ int main()
 
             std::vector<std::unique_ptr<gfx::draw::Box>> boxes;
 
-            for (int i = 0; i < 100; i++)
+            
+
+            for (int i = 0; i < 1000; i++)
             {
                 boxes.push_back(std::make_unique<gfx::draw::Box>(graphics));
             }
@@ -47,7 +50,7 @@ int main()
                 // graphics2.end_frame();
                 win::update();
 
-                std::this_thread::sleep_for(16ms);
+                //std::this_thread::sleep_for(16ms);
             }
 
             graphics.wait();

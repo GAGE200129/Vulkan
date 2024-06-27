@@ -29,6 +29,8 @@ namespace gage::gfx
         render_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
 
         shader_stages.clear();
+        layout_bindings.clear();
+        push_constants.clear();
     }
     VkPipeline PipelineBuilder::build(VkDevice device, VkPipelineLayout layout, VkExtent2D draw_extent)
     {
@@ -72,12 +74,12 @@ namespace gage::gfx
         std::vector<VkPipelineShaderStageCreateInfo> pipeline_shader_stages{};
         std::vector<VkShaderModule> shader_modules{};
 
-        for(const auto& stage : shader_stages)
+        for (const auto &stage : shader_stages)
         {
             VkShaderModule shader;
-            auto& file_path = std::get<0>(stage);
-            auto& entry_point = std::get<1>(stage);
-            auto& shader_stage = std::get<2>(stage);
+            auto &file_path = std::get<0>(stage);
+            auto &entry_point = std::get<1>(stage);
+            auto &shader_stage = std::get<2>(stage);
 
             auto binary = utils::file_path_to_binary(std::move(file_path));
             VkShaderModuleCreateInfo shader_ci = {};
@@ -94,7 +96,6 @@ namespace gage::gfx
             shader_stage_ci.stage = shader_stage;
             pipeline_shader_stages.push_back(shader_stage_ci);
         }
-
 
         VkGraphicsPipelineCreateInfo pipeline_info = {};
         pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -119,6 +120,55 @@ namespace gage::gfx
             vkDestroyShaderModule(device, shader, nullptr);
         }
         return pipeline;
+    }
+
+    VkPipelineLayout PipelineBuilder::build_layout(VkDevice device, std::unordered_map<std::string, VkDescriptorSetLayout>& out_layouts)
+    {
+        out_layouts.clear();
+        std::vector<VkDescriptorSetLayout> layout_vec{};
+        for (const auto &[name, binding_vec] : layout_bindings)
+        {
+            VkDescriptorSetLayoutCreateInfo layout_ci{};
+            layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            layout_ci.bindingCount = binding_vec.size();
+            layout_ci.pBindings = binding_vec.data();
+            layout_ci.flags = 0;
+            VkDescriptorSetLayout set_layout{};
+            vk_check(vkCreateDescriptorSetLayout(device, &layout_ci, nullptr, &set_layout));
+            out_layouts[name] = set_layout;
+            layout_vec.push_back(set_layout);
+        }
+
+
+        VkPipelineLayoutCreateInfo pipeline_layout_info = {};
+        pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipeline_layout_info.pushConstantRangeCount = push_constants.size();
+        pipeline_layout_info.pPushConstantRanges = push_constants.data();
+        pipeline_layout_info.pSetLayouts = layout_vec.data();
+        pipeline_layout_info.setLayoutCount = layout_vec.size();
+        VkPipelineLayout layout{};
+        vk_check(vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &layout));
+        return layout;
+    }
+
+    PipelineBuilder& PipelineBuilder::set_push_constants(std::span<VkPushConstantRange> ps)
+    {
+        for(const auto& push_constant : ps)
+        {
+            push_constants.push_back(push_constant);
+        }
+        return *this;
+    }
+
+    PipelineBuilder &PipelineBuilder::add_descriptor_set_bindings(std::string name, std::span<VkDescriptorSetLayoutBinding> bindings)
+    {
+        std::vector<VkDescriptorSetLayoutBinding> binding_vec;
+        for (const auto &binding : bindings)
+        {
+            binding_vec.push_back(binding);
+        }
+        layout_bindings[name] = std::move(binding_vec);
+        return *this;
     }
 
     PipelineBuilder &PipelineBuilder::set_vertex_shader(std::string file_path, std::string entry_point)

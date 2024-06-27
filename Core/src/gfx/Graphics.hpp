@@ -69,7 +69,10 @@ namespace gage::gfx
         VkImage swapchain_depth_image{};
         VkImageView swapchain_depth_image_view{};
 
+        VkDescriptorPool desc_pool{};
+
         VkCommandPool cmd_pool{};
+        VkCommandBuffer transfer_cmd{}; //Uses trasnfer queue
         
 
         VkQueue graphics_queue{};

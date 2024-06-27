@@ -12,10 +12,13 @@ namespace gage::gfx::bind
         Pipeline(Graphics& gfx, PipelineBuilder& builder);
         void bind(Graphics& gfx);
         void destroy(Graphics& gfx);
+        
+        VkDescriptorSetLayout get_desc_set_layout(std::string name);
 
         const VkPipelineLayout& get_layout() const;
     private:
-        VkPipelineLayout pipeline_layout;
-        VkPipeline pipeline;
+        VkPipelineLayout pipeline_layout{};
+        VkPipeline pipeline{};
+        std::unordered_map<std::string, VkDescriptorSetLayout> layouts{};
     };
 }

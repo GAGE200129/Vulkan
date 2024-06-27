@@ -148,14 +148,30 @@ namespace gage::gfx
         delete_stack.push([this]()
                           { this->destroy_swapchain(); });
 
+        //Create descriptor pool
+        VkDescriptorPoolSize pool_sizes[] = {
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1024},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1024},
+        };
+
+        VkDescriptorPoolCreateInfo desc_pool_ci{};
+        desc_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        desc_pool_ci.maxSets = 4;
+        desc_pool_ci.pPoolSizes = pool_sizes;
+        desc_pool_ci.poolSizeCount = sizeof(pool_sizes) / sizeof(VkDescriptorPoolSize);
+        desc_pool_ci.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+        vkCreateDescriptorPool(device, &desc_pool_ci,nullptr, &desc_pool);
+         delete_stack.push([this](){ vkDestroyDescriptorPool(device, desc_pool, nullptr); });
+
         // use vkbootstrap to get a Graphics queue
         auto graphics_queue_result = vkb_device.get_queue(vkb::QueueType::graphics);
         auto graphics_queue_family_result = vkb_device.get_queue_index(vkb::QueueType::graphics);
-        vkb_check(vkb_device_result);
+        vkb_check(graphics_queue_result);
         vkb_check(graphics_queue_family_result);
 
         graphics_queue = graphics_queue_result.value();
         graphics_queue_family = graphics_queue_family_result.value();
+
 
         // Create command pool
         VkCommandPoolCreateInfo command_pool_info = {};
@@ -164,10 +180,17 @@ namespace gage::gfx
         command_pool_info.queueFamilyIndex = graphics_queue_family;
 
         vk_check(vkCreateCommandPool(device, &command_pool_info, nullptr, &cmd_pool));
-        delete_stack.push([this]()
-                          { vkDestroyCommandPool(device, cmd_pool, nullptr); });
+        delete_stack.push([this]() { vkDestroyCommandPool(device, cmd_pool, nullptr); });
+        //Create transfer cmd
+        VkCommandBufferAllocateInfo transfer_cmd_alloc_info = {};
+        transfer_cmd_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        transfer_cmd_alloc_info.commandPool = cmd_pool;
+        transfer_cmd_alloc_info.commandBufferCount = 1;
 
-       
+        vk_check(vkAllocateCommandBuffers(device, &transfer_cmd_alloc_info, &transfer_cmd));
+        delete_stack.push([this]() { vkFreeCommandBuffers(device, cmd_pool, 1, &transfer_cmd); });
+
+
 
         // Create sync structures
         for (int i = 0; i < FRAMES_IN_FLIGHT; i++)
@@ -333,7 +356,7 @@ namespace gage::gfx
 
         vk_check(vkQueuePresentKHR(graphics_queue, &presentInfo));
 
-        frame_index += 1;
+        frame_index++;
         frame_index = frame_index % FRAMES_IN_FLIGHT;
     }
 

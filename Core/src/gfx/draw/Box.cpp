@@ -4,6 +4,9 @@
 #include "../bind/IndexBuffer.hpp"
 #include "../bind/TransformPS.hpp"
 #include "../bind/Pipeline.hpp"
+#include "../bind/Texture.hpp"
+#include "../bind/Sampler.hpp"
+#include "../bind/DescriptorSet.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <random>
@@ -116,8 +119,22 @@ namespace gage::gfx::draw
                 4, 6, 7,
                 4, 5, 7};
 
+            VkDescriptorSetLayoutBinding texture_descriptor_bindings[1]{};
+            texture_descriptor_bindings[0].binding = 0;
+            texture_descriptor_bindings[0].descriptorCount = 1;
+            texture_descriptor_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            texture_descriptor_bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+            VkPushConstantRange push_constants[1]{};
+            push_constants[0].offset = 0;
+            push_constants[0].size = sizeof(float) * 16;
+            push_constants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+
             PipelineBuilder builder{};
             builder.set_vertex_layout(bindings, attributes)
+                .set_push_constants(push_constants)
+                .add_descriptor_set_bindings("Material", texture_descriptor_bindings)
                 .set_vertex_shader("Core/shaders/compiled/colored_triangle.vert.spv", "main")
                 .set_fragment_shader("Core/shaders/compiled/colored_triangle.frag.spv", "main")
                 .set_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
@@ -126,12 +143,26 @@ namespace gage::gfx::draw
                 .set_multisampling_none()
                 .set_blending_none()
                 .enable_depth_test();
-            add_static_bind(std::make_unique<bind::VertexBuffer>(gfx, 0, vertices.size() * sizeof(Vertex), vertices.data()));
+            
 
             auto pipeline = std::make_unique<bind::Pipeline>(gfx, builder);
             pipeline_layout = pipeline->get_layout();
+            
+
+            auto image = utils::file_path_to_image("res/textures/x.jpg", 4);
+            auto texture = std::make_unique<bind::Texture>(gfx, image);
+            auto sampler = std::make_unique<bind::Sampler>(gfx);
+            
+
+            auto descriptor_set = std::make_unique<bind::DescriptorSet>(gfx, pipeline_layout, pipeline->get_desc_set_layout("Material"));
+            descriptor_set->add_combined_image_sampler(gfx, 0, texture->get_image_view(), sampler->get_sampler());
+
+            add_static_bind(std::move(descriptor_set));
+            add_static_bind(std::move(texture));
+            add_static_bind(std::move(sampler));
             add_static_bind(std::move(pipeline));
             add_static_index_buffer(std::make_unique<bind::IndexBuffer>(gfx, indices));
+            add_static_bind(std::make_unique<bind::VertexBuffer>(gfx, 0, vertices.size() * sizeof(Vertex), vertices.data()));
         }
         else
         {
