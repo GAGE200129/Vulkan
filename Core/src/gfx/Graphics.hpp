@@ -70,14 +70,20 @@ namespace gage::gfx
         VkImageView swapchain_depth_image_view{};
 
         VkCommandPool cmd_pool{};
-        VkCommandBuffer cmd{};
+        
 
         VkQueue graphics_queue{};
         uint32_t graphics_queue_family{};
-
-        VkSemaphore present_semaphore{};
-        VkSemaphore render_semaphore{};
-        VkFence render_fence{};
+        
+        static constexpr int FRAMES_IN_FLIGHT = 2;
+        struct FrameData
+        {
+            VkSemaphore present_semaphore{};
+            VkSemaphore render_semaphore{};
+            VkFence render_fence{};
+            VkCommandBuffer cmd{};
+        } frame_datas[FRAMES_IN_FLIGHT] {};
+        uint32_t frame_index{};
 
         VmaAllocator allocator{};
 

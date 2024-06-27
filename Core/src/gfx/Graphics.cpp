@@ -3,6 +3,7 @@
 #include <GLFW/glfw3.h>
 #include <string>
 #include <sstream>
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/gtc/matrix_transform.hpp>
 #include <VkBootstrap.h>
 #include <Core/src/log/Log.hpp>
@@ -166,38 +167,50 @@ namespace gage::gfx
         delete_stack.push([this]()
                           { vkDestroyCommandPool(device, cmd_pool, nullptr); });
 
-        // Allocate command buffer
-        VkCommandBufferAllocateInfo cmd_alloc_info = {};
-        cmd_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        cmd_alloc_info.commandPool = cmd_pool;
-        cmd_alloc_info.commandBufferCount = 1;
-
-        vk_check(vkAllocateCommandBuffers(device, &cmd_alloc_info, &cmd));
-        delete_stack.push([this]()
-                          { vkFreeCommandBuffers(device, cmd_pool, 1, &cmd); });
+       
 
         // Create sync structures
-        VkFenceCreateInfo fenceCreateInfo = {};
-        fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        // we want to create the fence with the Create Signaled flag, so we can wait on it before using it on a GPU command (for the first frame)
-        fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+        for (int i = 0; i < FRAMES_IN_FLIGHT; i++)
+        {
+            FrameData& data = frame_datas[i];
+            VkFence& render_fence = data.render_fence;
+            VkSemaphore& present_semaphore = data.present_semaphore;
+            VkSemaphore& render_semaphore = data.render_semaphore;
+            VkCommandBuffer& cmd = data.cmd;
 
-        vk_check(vkCreateFence(device, &fenceCreateInfo, nullptr, &render_fence));
-        delete_stack.push([this]()
-                          { vkDestroyFence(device, render_fence, nullptr); });
+            VkFenceCreateInfo fenceCreateInfo = {};
+            fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+            // we want to create the fence with the Create Signaled flag, so we can wait on it before using it on a GPU command (for the first frame)
+            fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-        // for the semaphores we don't need any flags
-        VkSemaphoreCreateInfo semaphoreCreateInfo = {};
-        semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-        semaphoreCreateInfo.flags = 0;
+            vk_check(vkCreateFence(device, &fenceCreateInfo, nullptr, &render_fence));
+            delete_stack.push([this, render_fence]()
+                              { vkDestroyFence(device, render_fence, nullptr); });
 
-        vk_check(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &present_semaphore));
-        vk_check(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &render_semaphore));
+            // for the semaphores we don't need any flags
+            VkSemaphoreCreateInfo semaphoreCreateInfo = {};
+            semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+            semaphoreCreateInfo.flags = 0;
 
-        delete_stack.push([this]()
-                          {
-            vkDestroySemaphore(device, present_semaphore, nullptr);
-            vkDestroySemaphore(device, render_semaphore, nullptr); });
+            vk_check(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &present_semaphore));
+            vk_check(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &render_semaphore));
+
+             // Allocate command buffer
+            VkCommandBufferAllocateInfo cmd_alloc_info = {};
+            cmd_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            cmd_alloc_info.commandPool = cmd_pool;
+            cmd_alloc_info.commandBufferCount = 1;
+
+            vk_check(vkAllocateCommandBuffers(device, &cmd_alloc_info, &cmd));
+            delete_stack.push([this, cmd]()
+                            { vkFreeCommandBuffers(device, cmd_pool, 1, &cmd); });
+
+            delete_stack.push([this, present_semaphore, render_semaphore]()
+            {
+                vkDestroySemaphore(device, present_semaphore, nullptr);
+                vkDestroySemaphore(device, render_semaphore, nullptr); 
+            });
+        }
     }
 
     Graphics::~Graphics()
@@ -218,10 +231,15 @@ namespace gage::gfx
     // }
     void Graphics::draw_indexed(uint32_t vertex_count)
     {
-        vkCmdDrawIndexed(cmd, vertex_count, 1, 0, 0, 0);
+        vkCmdDrawIndexed(frame_datas[frame_index].cmd, vertex_count, 1, 0, 0, 0);
     }
     void Graphics::clear()
     {
+        VkSemaphore& present_semaphore = frame_datas[frame_index].present_semaphore;
+        //VkSemaphore& render_semaphore = frame_datas[frame_index].render_semaphore;
+        VkFence& render_fence = frame_datas[frame_index].render_fence;
+        VkCommandBuffer& cmd = frame_datas[frame_index].cmd;
+
         // wait until the GPU has finished rendering the last frame. Timeout of 1 second
         vk_check(vkWaitForFences(device, 1, &render_fence, true, 1000000000));
         vk_check(vkResetFences(device, 1, &render_fence));
@@ -241,10 +259,10 @@ namespace gage::gfx
         transition_image(cmd, swapchain_depth_image, VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR);
 
         VkClearValue color_clear_value{
-            VkClearColorValue{0.5f, 0.0f, 0.0f, 1.0f}};
+            VkClearColorValue{0.0f, 0.0f, 0.0f, 1.0f}};
 
         VkClearValue depth_clear_value{
-            {0.0f, 0u}};
+            {1.0f, 0u}};
 
         VkRenderingAttachmentInfo color_attachment = {};
         color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -275,6 +293,11 @@ namespace gage::gfx
 
     void Graphics::end_frame()
     {
+        VkSemaphore& present_semaphore = frame_datas[frame_index].present_semaphore;
+        VkSemaphore& render_semaphore = frame_datas[frame_index].render_semaphore;
+        VkFence& render_fence = frame_datas[frame_index].render_fence;
+        VkCommandBuffer& cmd = frame_datas[frame_index].cmd;
+
         vkCmdEndRendering(cmd);
         transition_image(cmd, swapchain_images[swapchain_image_index], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
         vk_check(vkEndCommandBuffer(cmd));
@@ -309,6 +332,9 @@ namespace gage::gfx
         presentInfo.pImageIndices = &swapchain_image_index;
 
         vk_check(vkQueuePresentKHR(graphics_queue, &presentInfo));
+
+        frame_index += 1;
+        frame_index = frame_index % FRAMES_IN_FLIGHT;
     }
 
     const std::string &Graphics::get_app_name() const noexcept
@@ -403,10 +429,11 @@ namespace gage::gfx
 
     void Graphics::set_perspective(int width, int height, float fov_vertical, float near, float far)
     {
-        projection = glm::perspective(glm::radians(fov_vertical), (float)width / (float)height, near, far);
+        projection = glm::perspectiveFovRH_ZO(glm::radians(fov_vertical), (float)width, (float)height, near, far);
+        projection[1][1] *= -1;
     }
 
-    const glm::mat4& Graphics::get_projection() const
+    const glm::mat4 &Graphics::get_projection() const
     {
         return projection;
     }

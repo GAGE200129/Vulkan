@@ -19,39 +19,43 @@ int main()
         win::init();
 
         {
-            win::Window window(640, 480, "Hello world");
-            //win::Window window2(640, 480, "Hello world2");
+            win::Window window(1600, 900, "Hello world");
 
             auto &graphics = window.get_graphics();
-            //auto &graphics2 = window2.get_graphics();
 
-            graphics.set_perspective(640, 480, 70.0f, 0.1f, 1000.0f);
-            //graphics2.set_perspective(640, 480, 70.0f, 0.1f, 1000.0f);
+            graphics.set_perspective(1600, 900, 70.0f, 0.1f, 1000.0f);
 
-            gfx::draw::Box box(graphics);
-            gfx::draw::Box box2(graphics);
+            std::vector<std::unique_ptr<gfx::draw::Box>> boxes;
+
+            for (int i = 0; i < 100; i++)
+            {
+                boxes.push_back(std::make_unique<gfx::draw::Box>(graphics));
+            }
 
             while (!window.is_closing())
             {
-                box2.update(0.16f);
-                box.update(0.56f);
 
                 graphics.clear();
-                box.draw(graphics);
-                box2.draw(graphics);
+                for (auto &box : boxes)
+                {
+                    box->update(0.016f);
+                    box->draw(graphics);
+                }
                 graphics.end_frame();
 
-                //graphics2.clear();
-                //graphics2.end_frame();
+                // graphics2.clear();
+                // graphics2.end_frame();
                 win::update();
 
-                //std::this_thread::sleep_for(500ms);
+                std::this_thread::sleep_for(16ms);
             }
 
             graphics.wait();
 
-            box.destroy(graphics);
-            box2.destroy(graphics);
+            for (auto &box : boxes)
+            {
+                box->destroy(graphics);
+            }
         }
         win::shutdown();
     }

@@ -14,7 +14,11 @@ namespace gage::gfx::draw
 
         glm::mat4 get_world_transform() const override;
     private:
-        float time{};
-        glm::vec3 position{};
+        float pitch_speed{}, yaw_speed{}, roll_speed{};
+        float pitch{}, yaw{}, roll{};
+
+        float pitch_orbit_speed{}, yaw_orbit_speed{}, roll_orbit_speed{};
+        float pitch_orbit{}, yaw_orbit{}, roll_orbit{};
+        float radius{};
     };
 }

@@ -6,13 +6,37 @@
 #include "../bind/Pipeline.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
-
+#include <random>
 
 
 namespace gage::gfx::draw
 {
     Box::Box(Graphics &gfx)
     {
+        std::random_device rd;
+        std::mt19937 e(rd());
+
+        std::uniform_real_distribution<float> rotation_dist(0, 10);
+        std::uniform_real_distribution<float> rotation_dist2(0, 360);
+        std::uniform_real_distribution<float> radius_dist(0, 100);
+
+        pitch = rotation_dist2(e);
+        yaw = rotation_dist2(e);
+        roll = rotation_dist2(e);
+
+        pitch_orbit = rotation_dist2(e);
+        yaw_orbit = rotation_dist2(e);
+        roll_orbit = rotation_dist2(e);
+        
+        this->pitch_speed = rotation_dist(e);
+        this->yaw_speed = rotation_dist(e);
+        this->roll_speed = rotation_dist(e);
+        this->radius = radius_dist(e);
+
+        this->pitch_orbit_speed = rotation_dist(e);
+        this->yaw_orbit_speed = rotation_dist(e);
+        this->roll_orbit_speed = rotation_dist(e);
+
         VkPipelineLayout pipeline_layout{};
         if (!is_static_initialized())
         {
@@ -26,11 +50,11 @@ namespace gage::gfx::draw
             std::vector<VkVertexInputAttributeDescription> attributes;
 
             // we will have just 1 vertex buffer binding, with a per-vertex rate
-            VkVertexInputBindingDescription mainBinding = {};
-            mainBinding.binding = 0;
-            mainBinding.stride = sizeof(Vertex);
-            mainBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-            bindings.push_back(mainBinding);
+            VkVertexInputBindingDescription main_binding = {};
+            main_binding.binding = 0;
+            main_binding.stride = sizeof(Vertex);
+            main_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+            bindings.push_back(main_binding);
 
             // Position will be stored at Location 0
             VkVertexInputAttributeDescription position_attribute = {};
@@ -119,14 +143,27 @@ namespace gage::gfx::draw
 
     void Box::update(float dt)
     {
-        time += dt;
-        position.z = -10;
-        position.y = glm::sin(glm::radians(time)) * 5;
-        position.x = glm::cos(glm::radians(time)) * 5;
+        pitch += pitch_speed * dt;
+        yaw += yaw_speed * dt;
+        roll += roll_speed * dt;
+
+        pitch_orbit += pitch_orbit_speed * dt;
+        yaw_orbit += yaw_orbit_speed * dt;
+        roll_orbit += roll_orbit_speed * dt;
     }
 
     glm::mat4 Box::get_world_transform() const
     {
-        return glm::translate(glm::mat4(1.0f), position);
+        glm::mat4x4 final_transform = glm::mat4x4(1.0f);
+        final_transform = glm::translate(final_transform, {0, 0, -100});
+        final_transform = glm::rotate(final_transform, glm::radians(pitch_orbit), {1.0f, 0.0f, 0.0f});
+        final_transform = glm::rotate(final_transform, glm::radians(yaw_orbit), {0.0f, 1.0f, 0.0f});
+        final_transform = glm::rotate(final_transform, glm::radians(roll_orbit), {0.0f, 0.0f, 1.0f});
+
+        final_transform = glm::translate(final_transform, {radius, 0, 0});
+        final_transform = glm::rotate(final_transform, glm::radians(pitch), {1.0f, 0.0f, 0.0f});
+        final_transform = glm::rotate(final_transform, glm::radians(yaw), {0.0f, 1.0f, 0.0f});
+        final_transform = glm::rotate(final_transform, glm::radians(roll), {0.0f, 0.0f, 1.0f});
+        return final_transform;
     }
 }

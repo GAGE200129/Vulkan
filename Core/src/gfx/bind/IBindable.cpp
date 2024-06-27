@@ -13,7 +13,7 @@ namespace gage::gfx::bind
 
     VkCommandBuffer IBindable::get_cmd(Graphics& gfx)
     {
-        return gfx.cmd;
+        return gfx.frame_datas[gfx.frame_index].cmd;
     }
 
     VkExtent2D IBindable::get_draw_extent(Graphics& gfx)
