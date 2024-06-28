@@ -64,6 +64,8 @@ namespace gage::gfx
         draw_extent.width = width;
         draw_extent.height = height;
 
+        register_window_callbacks(window);
+
         vkb::InstanceBuilder builder;
         // make the vulkan instance, with basic debug features
         auto vkb_instance_result = builder.set_app_name(app_name.c_str())
@@ -108,6 +110,7 @@ namespace gage::gfx
         auto physical_device_result = selector
                                           .set_minimum_version(1, 3)
                                           .set_required_features_13(features13)
+                                          .add_required_extension("VK_EXT_extended_dynamic_state3")
                                           .set_surface(surface)
                                           .select();
 
@@ -258,6 +261,19 @@ namespace gage::gfx
     }
     void Graphics::clear()
     {
+
+        //Check for swapchain recreation
+        if(swapchain_resize_requested)
+        {
+            vkDeviceWaitIdle(device);
+            destroy_swapchain();
+            create_swapchain();
+            swapchain_resize_requested = false;
+        }
+
+        if(draw_extent.width == 0 || draw_extent.height == 0)
+            return;
+
         VkSemaphore& present_semaphore = frame_datas[frame_index].present_semaphore;
         //VkSemaphore& render_semaphore = frame_datas[frame_index].render_semaphore;
         VkFence& render_fence = frame_datas[frame_index].render_fence;
@@ -266,7 +282,12 @@ namespace gage::gfx
         // wait until the GPU has finished rendering the last frame. Timeout of 1 second
         vk_check(vkWaitForFences(device, 1, &render_fence, true, 1000000000));
         vk_check(vkResetFences(device, 1, &render_fence));
-        vk_check(vkAcquireNextImageKHR(device, swapchain, 1000000000, present_semaphore, nullptr, &swapchain_image_index));
+        VkResult swapchain_image_index_result = vkAcquireNextImageKHR(device, swapchain, 1000000000, present_semaphore, nullptr, &swapchain_image_index);
+        if(swapchain_image_index_result != VK_SUCCESS && swapchain_image_index_result != VK_SUBOPTIMAL_KHR)
+        {
+            logger.fatal("Failed to acquire next image: ").vk_result(swapchain_image_index_result);
+            throw GraphicsException{};
+        }
 
         // reset the command buffer
         vk_check(vkResetCommandBuffer(cmd, 0));
@@ -354,7 +375,13 @@ namespace gage::gfx
 
         presentInfo.pImageIndices = &swapchain_image_index;
 
-        vk_check(vkQueuePresentKHR(graphics_queue, &presentInfo));
+        VkResult queue_present_result  = vkQueuePresentKHR(graphics_queue, &presentInfo);
+
+        if(queue_present_result != VK_SUCCESS && queue_present_result != VK_SUBOPTIMAL_KHR)
+        {
+            logger.fatal("Failed to present swapchain image: ").vk_result(queue_present_result);
+            throw GraphicsException{};
+        }
 
         frame_index++;
         frame_index = frame_index % FRAMES_IN_FLIGHT;
@@ -431,11 +458,6 @@ namespace gage::gfx
         depth_image_view_ci.subresourceRange.levelCount = 1;
 
         vk_check(vkCreateImageView(device, &depth_image_view_ci, nullptr, &swapchain_depth_image_view));
-
-        delete_stack.push([this]()
-                          {
-            vmaDestroyImage(allocator, swapchain_depth_image, swapchain_depth_image_allocation);
-            vkDestroyImageView(device, swapchain_depth_image_view, nullptr); });
     }
 
     void Graphics::destroy_swapchain()
@@ -445,9 +467,10 @@ namespace gage::gfx
         // destroy swapchain resources
         for (size_t i = 0; i < swapchain_image_views.size(); i++)
         {
-
             vkDestroyImageView(device, swapchain_image_views[i], nullptr);
         }
+        vmaDestroyImage(allocator, swapchain_depth_image, swapchain_depth_image_allocation);
+        vkDestroyImageView(device, swapchain_depth_image_view, nullptr);
     }
 
     void Graphics::set_perspective(int width, int height, float fov_vertical, float near, float far)
@@ -456,8 +479,36 @@ namespace gage::gfx
         projection[1][1] *= -1;
     }
 
+    void Graphics::set_view(const glm::mat4x4& view)
+    {
+        this->view = view;
+    }
+
     const glm::mat4 &Graphics::get_projection() const
     {
         return projection;
+    }
+    const glm::mat4 &Graphics::get_view() const
+    {
+        return view;
+    }
+
+    void Graphics::register_window_callbacks(GLFWwindow* window)
+    {
+        glfwSetWindowUserPointer(window, this);
+        auto window_resize_fn = [](GLFWwindow* window, int width, int height)
+        {
+            Graphics* gfx = (Graphics*)glfwGetWindowUserPointer(window);
+            assert(gfx);
+
+            gfx->draw_extent.width = width;
+            gfx->draw_extent.height = height;
+
+            gfx->swapchain_resize_requested = true;
+        };
+
+        glfwSetFramebufferSizeCallback(window, window_resize_fn);
+
+
     }
 }

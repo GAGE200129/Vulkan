@@ -2,12 +2,15 @@
 
 #include <Core/src/log/Log.hpp>
 #include <Core/src/win/Window.hpp>
+#include <Core/src/win/ImguiWindow.hpp>
 #include <Core/src/gfx/Exception.hpp>
 #include <Core/src/gfx/draw/Box.hpp>
 #include <Core/src/gfx/bind/IBindable.hpp>
 #include <Core/src/utils/FileLoader.hpp>
 
 #include <thread>
+
+#include <Core/ThirdParty/imgui/imgui.h>
 
 using namespace gage;
 using namespace std::chrono_literals;
@@ -20,15 +23,20 @@ int main()
         win::init();
 
         {
-            win::Window window(1600, 900, "Hello world");
+            int resolutions[] = {
+                1600, 900
+            };
+
+            
+
+            win::Window window(resolutions[0], resolutions[1], "Hello world");
+            win::ImguiWindow imgui_window;
 
             auto &graphics = window.get_graphics();
 
-            graphics.set_perspective(1600, 900, 70.0f, 0.1f, 1000.0f);
+            graphics.set_perspective(resolutions[0], resolutions[1], 70.0f, 0.1f, 1000.0f);
 
             std::vector<std::unique_ptr<gfx::draw::Box>> boxes;
-
-            
 
             for (int i = 0; i < 100; i++)
             {
@@ -46,8 +54,37 @@ int main()
                 }
                 graphics.end_frame();
 
-                // graphics2.clear();
-                // graphics2.end_frame();
+                imgui_window.clear();
+                ImGui::ShowDemoWindow();
+                
+                if(ImGui::Begin("Window system"))
+                {
+                    const char* window_modes[] =
+                    {
+                        "Windowed",
+                        "Fullscreen borderless",
+                        "Fullscreen exclusive"
+                    };
+                    static int selected_window_mode = 0;
+                    if (ImGui::BeginListBox("mode"))
+                    {
+                        for (int n = 0; n < IM_ARRAYSIZE(window_modes); ++n) {
+                            const bool is_selected = (selected_window_mode == n);
+                            if (ImGui::Selectable(window_modes[n], is_selected)) { selected_window_mode = n; }
+                            if (is_selected) { ImGui::SetItemDefaultFocus(); }
+                        }
+                        ImGui::EndListBox();
+                    }
+                    ImGui::InputInt2("Resoltuion", resolutions);
+
+                    if(ImGui::Button("Apply"))
+                    {
+                        window.resize((win::WindowMode)selected_window_mode, resolutions[0], resolutions[1]);
+                        graphics.set_perspective(resolutions[0], resolutions[1], 70.0f, 0.1f, 1000.0f);
+                    }
+                }
+                ImGui::End();
+                imgui_window.end_frame();
                 win::update();
 
                 std::this_thread::sleep_for(16ms);

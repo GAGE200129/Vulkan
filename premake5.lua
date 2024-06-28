@@ -27,7 +27,7 @@ project "Core"
       "%{prj.location}/shaders/**.vert",
       "%{prj.location}/shaders/**.frag",
    }
-   links { "glfw", "vulkan", "fmt", "luajit-5.1", "bfd"}
+   links { "glfw", "vulkan", "fmt", "luajit-5.1", "bfd", "GL"}
    includedirs { 
       "%{prj.location}/src",
       "%{prj.location}/ThirdParty",

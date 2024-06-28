@@ -23,10 +23,12 @@ namespace gage::log
     {
         if(sink_) 
         {
+#ifndef NDEBUG
             if(level_ <= Level::Error)
             {
                 trace_.emplace();
             }
+#endif
             sink_->submit(*this);
         }
     }

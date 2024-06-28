@@ -41,13 +41,17 @@ namespace gage::gfx
         const std::string &get_app_name() const noexcept;
 
         void set_perspective(int width, int height, float fov_vertical, float near, float far);
+        void set_view(const glm::mat4x4& view);
 
         const glm::mat4& get_projection() const;
+        const glm::mat4& get_view() const;
 
+        //void set_exclusive_mode(bool enabled);
     private:
         void create_swapchain();
         void destroy_swapchain();
 
+        void register_window_callbacks(GLFWwindow* window);
     private:
         std::string app_name{};
         std::stack<std::function<void()>> delete_stack{};
@@ -59,6 +63,7 @@ namespace gage::gfx
 
         VkExtent2D draw_extent{};
 
+        bool swapchain_resize_requested{};
         uint32_t swapchain_image_index{};
         VkSwapchainKHR swapchain{};
         VkFormat swapchain_image_format{VK_FORMAT_B8G8R8A8_SRGB};
@@ -91,5 +96,6 @@ namespace gage::gfx
         VmaAllocator allocator{};
 
         glm::mat4 projection{};
+        glm::mat4 view{};
     };
 }

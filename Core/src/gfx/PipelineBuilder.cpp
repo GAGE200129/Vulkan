@@ -37,26 +37,7 @@ namespace gage::gfx
         // make viewport state from our stored viewport and scissor.
         // at the moment we wont support multiple viewports or scissors
 
-        VkViewport viewport = {};
-        viewport.x = 0;
-        viewport.y = 0;
-        viewport.width = draw_extent.width;
-        viewport.height = draw_extent.height;
-        viewport.minDepth = 0.f;
-        viewport.maxDepth = 1.f;
-
-        VkRect2D scissor = {};
-        scissor.offset.x = 0;
-        scissor.offset.y = 0;
-        scissor.extent.width = draw_extent.width;
-        scissor.extent.height = draw_extent.height;
-
-        VkPipelineViewportStateCreateInfo viewport_state = {};
-        viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-        viewport_state.pViewports = &viewport;
-        viewport_state.pScissors = &scissor;
-        viewport_state.viewportCount = 1;
-        viewport_state.scissorCount = 1;
+        
         // setup dummy color blending. We arent using transparent objects yet
         // the blending is just "no blend", but we do write to the color attachment
         VkPipelineColorBlendStateCreateInfo color_blending = {};
@@ -97,20 +78,32 @@ namespace gage::gfx
             pipeline_shader_stages.push_back(shader_stage_ci);
         }
 
+        const VkDynamicState dynamic_states[] = 
+        {
+            VK_DYNAMIC_STATE_VIEWPORT_WITH_COUNT,
+            VK_DYNAMIC_STATE_SCISSOR_WITH_COUNT,
+        };
+
+        VkPipelineDynamicStateCreateInfo dynamic_state_ci{};
+        dynamic_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dynamic_state_ci.dynamicStateCount = sizeof(dynamic_states) / sizeof(dynamic_states[0]);
+        dynamic_state_ci.pDynamicStates = dynamic_states;
+
         VkGraphicsPipelineCreateInfo pipeline_info = {};
         pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        // connect the renderInfo to the pNext extension mechanism
         pipeline_info.pNext = &render_info;
         pipeline_info.stageCount = (uint32_t)pipeline_shader_stages.size();
         pipeline_info.pStages = pipeline_shader_stages.data();
         pipeline_info.pVertexInputState = &vertex_input_info;
         pipeline_info.pInputAssemblyState = &input_assembly;
-        pipeline_info.pViewportState = &viewport_state;
+        //pipeline_info.pViewportState = &viewport_state;
         pipeline_info.pRasterizationState = &rasterizer;
         pipeline_info.pMultisampleState = &multisampling;
         pipeline_info.pColorBlendState = &color_blending;
+        pipeline_info.pDynamicState = &dynamic_state_ci;
         pipeline_info.pDepthStencilState = &depth_stencil;
         pipeline_info.layout = layout;
+       
 
         VkPipeline pipeline;
         vk_check(vkCreateGraphicsPipelines(device, nullptr, 1, &pipeline_info, nullptr, &pipeline));

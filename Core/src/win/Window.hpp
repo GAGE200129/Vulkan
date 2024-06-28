@@ -12,7 +12,12 @@ namespace gage::gfx
 struct GLFWwindow;
 namespace gage::win
 {
-    
+    enum class WindowMode
+    {
+        Windowed = 0,
+        FullscreenBorderless,
+        FullscreenExclusive
+    };
     class Window
     {
     public:
@@ -21,10 +26,12 @@ namespace gage::win
 
         bool is_closing() const;
 
+        void resize(WindowMode mode, int width, int height);
+
         gfx::Graphics& get_graphics();
     private:
-        GLFWwindow* p_window;
-        std::unique_ptr<gfx::Graphics> p_graphics;
+        GLFWwindow* p_window{};
+        std::unique_ptr<gfx::Graphics> p_graphics{};
     };
 
     void init();

@@ -1,8 +1,1 @@
 
-[submodule "libs/EnTT"]
-	path = libs/EnTT
-	url = https://github.com/skypjack/entt
-[submodule "libs/imgui-docking"]
-	path = libs/imgui-docking
-	url = https://github.com/ocornut/imgui.git
-	branch = docking
