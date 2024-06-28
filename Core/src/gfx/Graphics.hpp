@@ -58,9 +58,6 @@ namespace gage::gfx
         VkBuffer get_global_uniform_buffer() const;
         uint32_t get_global_uniform_buffer_size() const;
 
-        VkExternalMemoryHandleTypeFlagBits get_external_memory_type() const;
-        VkExternalMemoryImageCreateInfo get_external_image_memory_ci() const;
-        VkExternalMemoryBufferCreateInfo get_external_buffer_memory_ci() const;
 
         std::tuple<uint32_t, uint32_t> get_color_image() const;
         std::tuple<uint32_t, uint32_t> get_depth_image() const;
@@ -74,6 +71,17 @@ namespace gage::gfx
     private:
         std::string app_name{};
         std::stack<std::function<void()>> delete_stack{};
+
+        static constexpr const char* ENABLED_INSTANCE_EXTENSIONS[] = 
+        {
+            "VK_KHR_external_memory_capabilities"
+        };
+        static constexpr const char* ENABLED_DEVICE_EXTENSIONS[] = 
+        {
+            "VK_EXT_extended_dynamic_state3",
+            "VK_KHR_external_memory",
+            "VK_KHR_external_memory_fd"
+        };
         VkInstance instance{};
         VkDebugUtilsMessengerEXT debug_messenger{};
         VkSurfaceKHR surface{};
@@ -87,18 +95,20 @@ namespace gage::gfx
         bool swapchain_resize_requested{};
         uint32_t swapchain_image_index{};
         VkSwapchainKHR swapchain{};
-        VkFormat swapchain_image_format{VK_FORMAT_B8G8R8A8_SRGB};
+        VkFormat swapchain_image_format{VK_FORMAT_B8G8R8A8_UNORM};
         VkColorSpaceKHR swapchain_image_color_space{VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
         VkFormat swapchain_depth_format{VK_FORMAT_D32_SFLOAT};
         VkPresentModeKHR swapchain_present_mode{VK_PRESENT_MODE_IMMEDIATE_KHR};
         std::vector<VkImage> swapchain_images{};
         std::vector<VkImageView> swapchain_image_views{};
 
-        VmaAllocation swapchain_depth_image_allocation{};
+        VkDeviceMemory swapchain_depth_image_memory{};
+        VkDeviceSize swapchain_depth_image_memory_size{};
         VkImage swapchain_depth_image{};
         VkImageView swapchain_depth_image_view{};
 
-        VmaAllocation swapchain_color_image_allocation{};
+        VkDeviceMemory swapchain_color_image_memory{};
+        VkDeviceSize swapchain_color_image_memory_size{};
         VkImage swapchain_color_image{};
         VkImageView swapchain_color_image_view{};
 
@@ -123,10 +133,5 @@ namespace gage::gfx
         uint32_t frame_index{};
 
         VmaAllocator allocator{};
-
-        VkExternalMemoryHandleTypeFlagBits external_memory_type{VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT};
-        VkExternalMemoryImageCreateInfo external_image_memory_ci{VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO, nullptr, external_memory_type};
-        VkExternalMemoryBufferCreateInfo external_buffer_memory_ci{VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO, nullptr, external_memory_type};
-
     };
 }

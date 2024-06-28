@@ -8,8 +8,6 @@ namespace gage::gfx::bind
 {
     Texture::Texture(Graphics &gfx, const utils::Image &in_image)
     {
-        auto external_image_memory_ci = gfx.get_external_image_memory_ci();
-        auto external_buffer_memory_ci = gfx.get_external_buffer_memory_ci();
         VkImageCreateInfo img_ci = {};
         img_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         img_ci.imageType = VK_IMAGE_TYPE_2D;
@@ -23,7 +21,6 @@ namespace gage::gfx::bind
         img_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         img_ci.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         img_ci.samples = VK_SAMPLE_COUNT_1_BIT;
-        img_ci.pNext = &external_image_memory_ci;
 
         VmaAllocationCreateInfo alloc_ci = {};
         alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
@@ -36,7 +33,6 @@ namespace gage::gfx::bind
         staging_buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         staging_buffer_info.size = in_image.data.size();
         staging_buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        staging_buffer_info.pNext = &external_buffer_memory_ci;
         VmaAllocationCreateInfo staging_alloc_info = {};
         staging_alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
         staging_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;

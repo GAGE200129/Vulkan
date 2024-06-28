@@ -7,6 +7,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <VkBootstrap.h>
 #include <Core/src/log/Log.hpp>
+#include <Core/src/utils/VulkanHelper.hpp>
 
 #include "Exception.hpp"
 #include "Image.hpp"
@@ -74,7 +75,7 @@ namespace gage::gfx
                                        .request_validation_layers(true)
                                        .set_debug_callback(debugCallback)
                                        .set_debug_callback_user_data_pointer(this)
-                                       .enable_extension("VK_KHR_external_memory_capabilities")
+                                       .enable_extensions(sizeof(ENABLED_INSTANCE_EXTENSIONS) / sizeof(ENABLED_INSTANCE_EXTENSIONS[0]), ENABLED_INSTANCE_EXTENSIONS)
                                        .require_api_version(1, 3, 0)
                                        .build();
 
@@ -113,9 +114,7 @@ namespace gage::gfx
         auto physical_device_result = selector
                                           .set_minimum_version(1, 3)
                                           .set_required_features_13(features13)
-                                          .add_required_extension("VK_EXT_extended_dynamic_state3")
-                                          .add_required_extension("VK_KHR_external_memory")
-                                          .add_required_extension("VK_KHR_external_memory_fd")
+                                          .add_required_extensions(sizeof(ENABLED_DEVICE_EXTENSIONS) / sizeof(ENABLED_DEVICE_EXTENSIONS[0]), ENABLED_DEVICE_EXTENSIONS)
                                           .set_surface(surface)
                                           .select();
 
@@ -140,15 +139,7 @@ namespace gage::gfx
         vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
         vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
 
-        VkPhysicalDeviceMemoryProperties physical_device_properties{};
-        vkGetPhysicalDeviceMemoryProperties(physical_device, &physical_device_properties);
-        std::vector<VkExternalMemoryHandleTypeFlagsKHR> external_memory_types(physical_device_properties.memoryTypeCount);
-
-        for (uint32_t i = 0; i < physical_device_properties.memoryTypeCount; i++)
-        {
-            external_memory_types[i] = external_memory_type;
-        }
-
+       
         VmaAllocatorCreateInfo allocatorCreateInfo = {};
         // allocatorCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
         allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_3;
@@ -156,7 +147,7 @@ namespace gage::gfx
         allocatorCreateInfo.device = device;
         allocatorCreateInfo.instance = instance;
         allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
-        allocatorCreateInfo.pTypeExternalMemoryHandleTypes = external_memory_types.data();
+
         vmaCreateAllocator(&allocatorCreateInfo, &allocator);
         delete_stack.push([this]()
                           { vmaDestroyAllocator(allocator); });
@@ -471,9 +462,17 @@ namespace gage::gfx
 
         swapchain_images = std::move(swapchain_images_result.value());
         swapchain_image_views = std::move(swapchain_image_views_result.value());
-        {
 
-            // Create depth image and view
+        VkExternalMemoryImageCreateInfo external_image{};
+        external_image.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO;
+        external_image.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
+
+        VkExportMemoryAllocateInfo export_memory{};
+        export_memory.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO;
+        export_memory.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
+
+        // Create depth image and view
+        {
             VkImageCreateInfo depth_image_ci = {};
             depth_image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
             depth_image_ci.imageType = VK_IMAGE_TYPE_2D;
@@ -487,14 +486,22 @@ namespace gage::gfx
             depth_image_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             depth_image_ci.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
             depth_image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
-            depth_image_ci.pNext = &external_image_memory_ci;
+            depth_image_ci.pNext = &external_image;
 
-            VmaAllocationCreateInfo depth_image_alloc_info = {};
-            depth_image_alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
-            depth_image_alloc_info.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+            vk_check(vkCreateImage(device, &depth_image_ci, nullptr, &swapchain_depth_image));
 
-            // vk_check(vkCreateImage(device, &depth_image_ci, nullptr, &swapchain_depth_image));
-            vk_check(vmaCreateImage(allocator, &depth_image_ci, &depth_image_alloc_info, &swapchain_depth_image, &swapchain_depth_image_allocation, nullptr));
+            VkMemoryRequirements mem_reqs{};
+            vkGetImageMemoryRequirements(device, swapchain_depth_image, &mem_reqs);
+            swapchain_depth_image_memory_size = mem_reqs.size;
+
+            VkMemoryAllocateInfo mem_alloc_info{};
+            mem_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            mem_alloc_info.allocationSize = mem_reqs.size;
+            mem_alloc_info.memoryTypeIndex = utils::find_memory_type(physical_device, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            mem_alloc_info.pNext = &export_memory;
+            
+            vk_check(vkAllocateMemory(device, &mem_alloc_info, nullptr, &swapchain_depth_image_memory));
+            vk_check(vkBindImageMemory(device, swapchain_depth_image, swapchain_depth_image_memory, 0));
 
             VkImageViewCreateInfo depth_image_view_ci = {};
             depth_image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -513,9 +520,8 @@ namespace gage::gfx
 
             vk_check(vkCreateImageView(device, &depth_image_view_ci, nullptr, &swapchain_depth_image_view));
         }
+        // Create color image and view
         {
-
-            // Create color image and view
             VkImageCreateInfo color_image_ci = {};
             color_image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
             color_image_ci.imageType = VK_IMAGE_TYPE_2D;
@@ -529,14 +535,22 @@ namespace gage::gfx
             color_image_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             color_image_ci.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
             color_image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
-            color_image_ci.pNext = &external_image_memory_ci;
+            color_image_ci.pNext = &external_image;
 
-            VmaAllocationCreateInfo color_image_alloc_info = {};
-            color_image_alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
-            color_image_alloc_info.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+            vk_check(vkCreateImage(device, &color_image_ci, nullptr, &swapchain_color_image));
 
-            // vk_check(vkCreateImage(device, &depth_image_ci, nullptr, &swapchain_depth_image));
-            vk_check(vmaCreateImage(allocator, &color_image_ci, &color_image_alloc_info, &swapchain_color_image, &swapchain_color_image_allocation, nullptr));
+            VkMemoryRequirements mem_reqs{};
+            vkGetImageMemoryRequirements(device, swapchain_color_image, &mem_reqs);
+            swapchain_color_image_memory_size = mem_reqs.size;
+
+            VkMemoryAllocateInfo mem_alloc_info{};
+            mem_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            mem_alloc_info.allocationSize = mem_reqs.size;
+            mem_alloc_info.memoryTypeIndex = utils::find_memory_type(physical_device, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            mem_alloc_info.pNext = &export_memory;
+            
+            vk_check(vkAllocateMemory(device, &mem_alloc_info, nullptr, &swapchain_color_image_memory));
+            vk_check(vkBindImageMemory(device, swapchain_color_image, swapchain_color_image_memory, 0));
 
             VkImageViewCreateInfo color_image_view_ci = {};
             color_image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -566,9 +580,13 @@ namespace gage::gfx
         {
             vkDestroyImageView(device, swapchain_image_views[i], nullptr);
         }
-        vmaDestroyImage(allocator, swapchain_depth_image, swapchain_depth_image_allocation);
+
+        vkDestroyImage(device, swapchain_depth_image, nullptr);
+        vkFreeMemory(device, swapchain_depth_image_memory, nullptr);
         vkDestroyImageView(device, swapchain_depth_image_view, nullptr);
-        vmaDestroyImage(allocator, swapchain_color_image, swapchain_color_image_allocation);
+
+        vkDestroyImage(device, swapchain_color_image, nullptr);
+        vkFreeMemory(device, swapchain_color_image_memory, nullptr);
         vkDestroyImageView(device, swapchain_color_image_view, nullptr);
     }
 
@@ -620,47 +638,29 @@ namespace gage::gfx
                           (unsigned int)std::floor(draw_extent.height * draw_extent_scale)};
     }
 
-    VkExternalMemoryImageCreateInfo Graphics::get_external_image_memory_ci() const
-    {
-        return external_image_memory_ci;
-    }
-    VkExternalMemoryBufferCreateInfo Graphics::get_external_buffer_memory_ci() const
-    {
-        return external_buffer_memory_ci;
-    }
-
-    VkExternalMemoryHandleTypeFlagBits Graphics::get_external_memory_type() const
-    {
-        return external_memory_type;
-    }
 
     std::tuple<uint32_t, uint32_t> Graphics::get_color_image() const
     {
-        VmaAllocationInfo alloc_info{};
-        vmaGetAllocationInfo(allocator, swapchain_color_image_allocation, &alloc_info);
         VkMemoryGetFdInfoKHR get_handle_info{};
         get_handle_info.sType = VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR;
-        get_handle_info.memory = alloc_info.deviceMemory;
-        get_handle_info.handleType = external_memory_type;
+        get_handle_info.memory = swapchain_color_image_memory;
+        get_handle_info.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
         
-
         int fd;
         auto vkGetMemoryFdKHR = PFN_vkGetMemoryFdKHR(vkGetDeviceProcAddr(device, "vkGetMemoryFdKHR"));
         vkGetMemoryFdKHR(device, &get_handle_info, &fd);
-        return std::make_tuple<uint32_t, uint32_t>(fd, alloc_info.size);
+        return std::make_tuple<uint32_t, uint32_t>(fd, swapchain_color_image_memory_size);
     }
     std::tuple<uint32_t, uint32_t> Graphics::get_depth_image() const
     {
-        VmaAllocationInfo alloc_info{};
-        vmaGetAllocationInfo(allocator, swapchain_depth_image_allocation, &alloc_info);
         VkMemoryGetFdInfoKHR get_handle_info{};
         get_handle_info.sType = VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR;
-        get_handle_info.memory = alloc_info.deviceMemory;
-        get_handle_info.handleType = external_memory_type;
+        get_handle_info.memory = swapchain_depth_image_memory;
+        get_handle_info.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
 
         int fd;
         auto vkGetMemoryFdKHR = PFN_vkGetMemoryFdKHR(vkGetDeviceProcAddr(device, "vkGetMemoryFdKHR"));
         vkGetMemoryFdKHR(device, &get_handle_info, &fd);
-        return std::make_tuple<uint32_t, uint32_t>(fd, alloc_info.size);
+        return std::make_tuple<uint32_t, uint32_t>(fd, swapchain_depth_image_memory_size);
     }
 }

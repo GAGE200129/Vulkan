@@ -44,9 +44,12 @@ namespace gage::win
         ImGui::StyleColorsDark();
         ImGui_ImplOpenGL3_Init();
         ImGui_ImplGlfw_InitForOpenGL(p_window, true);
+        create_viewport(gfx);
+        
     }
     ImguiWindow::~ImguiWindow()
     {
+        destroy_viewport();
 
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();
@@ -74,31 +77,10 @@ namespace gage::win
 
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(p_window);
-
-        glDeleteTextures(1, &gfx_color_texture);
-        glDeleteMemoryObjectsEXT(1, &gfx_color_texture_mem);
-
-        glDeleteTextures(1, &gfx_depth_texture);
-        glDeleteMemoryObjectsEXT(1, &gfx_depth_texture_mem);
     }
 
     void ImguiWindow::draw(utils::Camera &camera, Window &window)
     {
-
-        const auto [color_fd, color_size] = window.get_graphics().get_color_image();
-        const auto [depth_fd, depth_size] = window.get_graphics().get_depth_image();
-        VkExtent2D extent = window.get_graphics().get_scaled_draw_extent();
-
-        glCreateMemoryObjectsEXT(1, &gfx_color_texture_mem);
-        glImportMemoryFdEXT(gfx_color_texture_mem, color_size, GL_HANDLE_TYPE_OPAQUE_FD_EXT, color_fd);
-        glCreateTextures(GL_TEXTURE_2D, 1, &gfx_color_texture);
-        glTextureStorageMem2DEXT(gfx_color_texture, 1, GL_SRGB8, extent.width, extent.height, gfx_color_texture_mem, 0);
-
-        glCreateMemoryObjectsEXT(1, &gfx_depth_texture_mem);
-        glImportMemoryFdEXT(gfx_depth_texture_mem, depth_size, GL_HANDLE_TYPE_OPAQUE_FD_EXT, depth_fd);
-        glCreateTextures(GL_TEXTURE_2D, 1, &gfx_depth_texture);
-        glTextureStorageMem2DEXT(gfx_depth_texture, 1, GL_DEPTH_COMPONENT32, extent.width, extent.height, gfx_depth_texture_mem, 0);
-
         static int resolutions[] = {1600, 900};
         ImGui::ShowDemoWindow();
 
@@ -136,6 +118,12 @@ namespace gage::win
                 window.resize((win::WindowMode)selected_window_mode, resolutions[0], resolutions[1], (float)resolution_scale / 100.0f);
                 window.get_graphics().set_perspective(resolutions[0], resolutions[1], 70.0f, 0.1f, 1000.0f);
             }
+
+            if (ImGui::Button("Reload viewport"))
+            {
+                destroy_viewport();
+                create_viewport(window.get_graphics());
+            }
         }
         ImGui::End();
 
@@ -145,8 +133,6 @@ namespace gage::win
             ImGui::DragFloat3("rotation", &camera.get_rotation().x, 0.1f);
         }
         ImGui::End();
-
-
 
         if (ImGui::Begin("Viewport-Color"))
         {
@@ -158,5 +144,37 @@ namespace gage::win
             ImGui::Image((ImTextureID)gfx_depth_texture, ImGui::GetContentRegionMax());
         }
         ImGui::End();
+    }
+
+    void ImguiWindow::create_viewport(gfx::Graphics &gfx)
+    {
+        const auto [color_fd, color_size] = gfx.get_color_image();
+        const auto [depth_fd, depth_size] = gfx.get_depth_image();
+        VkExtent2D extent = gfx.get_scaled_draw_extent();
+
+        glCreateMemoryObjectsEXT(1, &gfx_color_texture_mem);
+        glImportMemoryFdEXT(gfx_color_texture_mem, color_size, GL_HANDLE_TYPE_OPAQUE_FD_EXT, color_fd);
+        glCreateTextures(GL_TEXTURE_2D, 1, &gfx_color_texture);
+        glTextureStorageMem2DEXT(gfx_color_texture, 1, GL_RGBA8, extent.width, extent.height, gfx_color_texture_mem, 0);
+
+        glCreateMemoryObjectsEXT(1, &gfx_depth_texture_mem);
+        glImportMemoryFdEXT(gfx_depth_texture_mem, depth_size, GL_HANDLE_TYPE_OPAQUE_FD_EXT, depth_fd);
+        glCreateTextures(GL_TEXTURE_2D, 1, &gfx_depth_texture);
+
+        GLint swizzle[4] = {
+            GL_RED,
+            GL_RED,
+            GL_RED,
+            GL_ONE};
+        glTextureParameteriv(gfx_depth_texture, GL_TEXTURE_SWIZZLE_RGBA, swizzle);
+        glTextureStorageMem2DEXT(gfx_depth_texture, 1, GL_DEPTH_COMPONENT32, extent.width, extent.height, gfx_depth_texture_mem, 0);
+    }
+    void ImguiWindow::destroy_viewport()
+    {
+        glDeleteTextures(1, &gfx_color_texture);
+        glDeleteMemoryObjectsEXT(1, &gfx_color_texture_mem);
+
+        glDeleteTextures(1, &gfx_depth_texture);
+        glDeleteMemoryObjectsEXT(1, &gfx_depth_texture_mem);
     }
 }

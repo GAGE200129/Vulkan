@@ -10,12 +10,10 @@ namespace gage::gfx::data
     GUBO::GUBO(Graphics& gfx, VmaAllocator allocator)
     {
         //Create uniform buffer
-        auto external_memory_ci = gfx.get_external_buffer_memory_ci();
         VkBufferCreateInfo buffer_ci = {};
         buffer_ci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         buffer_ci.size = sizeof(Data);
         buffer_ci.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-        buffer_ci.pNext = &external_memory_ci;
         
         VmaAllocationCreateInfo alloc_ci = {};
         alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;

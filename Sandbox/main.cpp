@@ -33,15 +33,16 @@ int main()
 
             std::vector<std::unique_ptr<gfx::draw::Box>> boxes;
 
-            for (int i = 0; i < 300; i++)
+            for (int i = 0; i < 100; i++)
             {
                 boxes.push_back(std::make_unique<gfx::draw::Box>(graphics));
             }
 
-            //uint32_t color_texure = graphics.get_color_image(); 
 
             while (!window.is_closing())
             {
+                static constexpr int64_t NS_PER_FRAME = 16666.66666;
+                auto start = std::chrono::high_resolution_clock::now();
                 graphics.set_view(camera.get_view());
                 graphics.clear();
                 for (auto &box : boxes)
@@ -55,6 +56,12 @@ int main()
                 imgui_window.draw(camera, window);
                 imgui_window.end_frame();
                 win::update();
+                auto finish = std::chrono::high_resolution_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(start - finish).count();
+
+                int64_t delay = duration + NS_PER_FRAME;
+                if(delay > 0)
+                    std::this_thread::sleep_for(std::chrono::nanoseconds(delay));
             }
 
             graphics.wait();
