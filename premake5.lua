@@ -22,8 +22,10 @@ project "Core"
    files {
       "%{prj.location}/src/**.hpp",
       "%{prj.location}/src/**.cpp",
+      "%{prj.location}/src/**.c",
       "%{prj.location}/ThirdParty/**.hpp",
       "%{prj.location}/ThirdParty/**.cpp",
+      "%{prj.location}/ThirdParty/**.c",
       "%{prj.location}/shaders/**.vert",
       "%{prj.location}/shaders/**.frag",
    }

@@ -28,7 +28,7 @@ namespace gage::gfx::bind
 
     VkExtent2D IBindable::get_draw_extent(Graphics &gfx)
     {
-        return gfx.draw_extent;
+        return gfx.get_scaled_draw_extent();
     }
 
     VkFormat IBindable::get_swapchain_image_format(Graphics &gfx)

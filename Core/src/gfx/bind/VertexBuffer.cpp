@@ -11,10 +11,12 @@ namespace gage::gfx::bind
     VertexBuffer::VertexBuffer(Graphics &gfx, uint32_t binding, uint32_t size_in_bytes, void* vertices) :
         binding(binding)
     {
+        auto external_memory_ci = gfx.get_external_buffer_memory_ci();
         VkBufferCreateInfo staging_buffer_info = {};
         staging_buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         staging_buffer_info.size = size_in_bytes;
         staging_buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        staging_buffer_info.pNext = &external_memory_ci;
         VmaAllocationCreateInfo staging_alloc_info = {};
         staging_alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
         staging_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
@@ -30,13 +32,14 @@ namespace gage::gfx::bind
 
 
         //Create this vertex buffer
-
+       
         VkBufferCreateInfo buffer_info = {};
         buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         // this is the total size, in bytes, of the buffer we are allocating
         buffer_info.size = size_in_bytes;
         // this buffer is going to be used as a Vertex Buffer
         buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        buffer_info.pNext = &external_memory_ci;
 
         // let the VMA library know that this data should be writeable by CPU, but also readable by GPU
         VmaAllocationCreateInfo alloc_info = {};

@@ -12,12 +12,14 @@ namespace gage::gfx::bind
     {
         assert(indices.size() != 0);
 
+        auto external_memory_ci = gfx.get_external_buffer_memory_ci();
         VkBufferCreateInfo buffer_info = {};
         buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         // this is the total size, in bytes, of the buffer we are allocating
         buffer_info.size = indices.size() * sizeof(uint32_t);
         // this buffer is going to be used as a Vertex Buffer
         buffer_info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+        buffer_info.pNext = &external_memory_ci;
 
         // let the VMA library know that this data should be writeable by CPU, but also readable by GPU
         VmaAllocationCreateInfo vmaallocInfo = {};

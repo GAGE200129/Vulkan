@@ -84,60 +84,75 @@ namespace gage::gfx::draw
             attributes.push_back(normal_attribute);
             attributes.push_back(uv_attribute);
 
-            // std::vector<Vertex> vertices{
-            //     {{-1.0f, -1.0f, 1.0f}, {}, {}},
-            //     {{1.0f, -1.0f, 1.0f}, {}, {}},
-            //     {{-1.0f, 1.0f, 1.0f}, {}, {}},
-            //     {{1.0f, 1.0f, 1.0f}, {}, {}},
-            //     {{-1.0f, -1.0f, -1.0f}, {}, {}},
-            //     {{1.0f, -1.0f, -1.0f}, {}, {}},
-            //     {{-1.0f, 1.0f, -1.0f}, {}, {}},
-            //     {{1.0f, 1.0f, -1.0f}, {}, {}},
-            // };
-            // std::vector<uint32_t> indices = {
-            //     // Top
-            //     2, 6, 7,
-            //     2, 3, 7,
 
-            //     // Bottom
-            //     0, 4, 5,
-            //     0, 1, 5,
-
-            //     // Left
-            //     0, 2, 6,
-            //     0, 4, 6,
-
-            //     // Right
-            //     1, 3, 7,
-            //     1, 5, 7,
-
-            //     // Front
-            //     0, 2, 3,
-            //     0, 1, 3,
-
-            //     // Back
-            //     4, 6, 7,
-            //     4, 5, 7};
-
-            std::vector<Vertex> vertices = 
-            {
-               {{-1.0f, -1.0f, 0.0f}, {}, {0.0f, 0.0f}},
-               {{-1.0f, 1.0f, 0.0f}, {}, {0.0f, 1.0f}},
-               {{1.0f, 1.0f, 0.0f}, {}, {1.0f, 1.0f}},
-               {{1.0f, -1.0f, 0.0f}, {}, {1.0f, 0.0f}},
+            std::vector<Vertex> vertices{
+                {{-1.0f,-1.0f,-1.0f}, {}, {0.000059f, 0.000004f}}, // triangle 1 : begin
+                {{-1.0f,-1.0f, 1.0f}, {}, {0.000103f, 0.336048f}},
+                {{-1.0f, 1.0f, 1.0f}, {}, {0.335973f, 0.335903f}}, // triangle 1 : end
+                {{1.0f, 1.0f,-1.0f,}, {}, {1.000023f, 0.000013f}},// triangle 2 : begin
+                {{-1.0f,-1.0f,-1.0f}, {}, {0.667979f, 0.335851f}},
+                {{-1.0f, 1.0f,-1.0f}, {}, {0.999958f, 0.336064f}}, // triangle 2 : end
+                {{1.0f,-1.0f, 1.0f},  {}, {0.667979f, 0.335851f}},
+                {{-1.0f,-1.0f,-1.0f}, {}, {0.336024f, 0.671877f}},
+                {{1.0f,-1.0f,-1.0f},  {}, {0.667969f, 0.671889f}},
+                {{1.0f, 1.0f,-1.0f},  {}, {1.000023f, 0.000013f}},
+                {{1.0f,-1.0f,-1.0f},  {}, {0.668104f, 0.000013f}},
+                {{-1.0f,-1.0f,-1.0f}, {}, {0.667979f, 0.335851f}},
+                {{-1.0f,-1.0f,-1.0f}, {}, {0.000059f, 0.000004f}},
+                {{-1.0f, 1.0f, 1.0f}, {}, {0.335973f, 0.335903f}},
+                {{-1.0f, 1.0f,-1.0f}, {}, {0.336098f, 0.000071f}},
+                {{1.0f,-1.0f, 1.0f},  {}, {0.667979f, 0.335851f}},
+                {{-1.0f,-1.0f, 1.0f}, {}, {0.335973f, 0.335903f}},
+                {{-1.0f,-1.0f,-1.0f}, {}, {0.336024f, 0.671877f}},
+                {{-1.0f, 1.0f, 1.0f}, {}, {1.000004f, 0.671847f}},
+                {{-1.0f,-1.0f, 1.0f}, {}, {0.999958f, 0.336064f}},
+                {{1.0f,-1.0f, 1.0f},  {}, {0.667979f, 0.335851f}},
+                {{1.0f, 1.0f, 1.0f},  {}, {0.668104f, 0.000013f}},
+                {{1.0f,-1.0f,-1.0f},  {}, {0.335973f, 0.335903f}},
+                {{1.0f, 1.0f,-1.0f},  {}, {0.667979f, 0.335851f}},
+                {{1.0f,-1.0f,-1.0f},  {}, {0.335973f, 0.335903f}},
+                {{1.0f, 1.0f, 1.0f},  {}, {0.668104f, 0.000013f}},
+                {{1.0f,-1.0f, 1.0f},  {}, {0.336098f, 0.000071f}},
+                {{1.0f, 1.0f, 1.0f},  {}, {0.000103f, 0.336048f}},
+                {{1.0f, 1.0f,-1.0f},  {}, {0.000004f, 0.671870f}},
+                {{-1.0f, 1.0f,-1.0f}, {}, {0.336024f, 0.671877f}},
+                {{1.0f, 1.0f, 1.0f},  {}, {0.000103f, 0.336048f}},
+                {{-1.0f, 1.0f,-1.0f}, {}, {0.336024f, 0.671877f}},
+                {{-1.0f, 1.0f, 1.0f}, {}, {0.335973f, 0.335903f}},
+                {{1.0f, 1.0f, 1.0f},  {}, {0.667969f, 0.671889f}},
+                {{-1.0f, 1.0f, 1.0f}, {}, {1.000004f, 0.671847f}},
+                {{1.0f,-1.0f, 1.0},   {}, {0.667979f, 0.335851f}},
             };
 
-            std::vector<uint32_t> indices = 
+            
+            std::vector<uint32_t> indices;
+            for(uint32_t i = 0; i < vertices.size(); i++)
             {
-                0, 1, 3,
-                3, 1, 2
-            };
+                indices.push_back(i);
+            }
 
-            VkDescriptorSetLayoutBinding texture_descriptor_bindings[1]{};
-            texture_descriptor_bindings[0].binding = 0;
-            texture_descriptor_bindings[0].descriptorCount = 1;
-            texture_descriptor_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            texture_descriptor_bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+            for(uint32_t i = 0; i < vertices.size(); i += 3)
+            {
+                glm::vec3 v1 = vertices[i + 1].position - vertices[i].position;
+                glm::vec3 v2 = vertices[i + 2].position - vertices[i].position;
+
+                glm::vec3 n = glm::normalize(glm::cross(v1, v2));
+
+                vertices[i].normal = n;
+                vertices[i + 1].normal = n;
+                vertices[i + 2].normal = n;
+            }
+
+            VkDescriptorSetLayoutBinding descriptor_bindings[2]{};
+            descriptor_bindings[0].binding = 0;
+            descriptor_bindings[0].descriptorCount = 1;
+            descriptor_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptor_bindings[0].stageFlags = VK_SHADER_STAGE_ALL;
+
+            descriptor_bindings[1].binding = 1;
+            descriptor_bindings[1].descriptorCount = 1;
+            descriptor_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptor_bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
             VkPushConstantRange push_constants[1]{};
             push_constants[0].offset = 0;
@@ -148,7 +163,7 @@ namespace gage::gfx::draw
             PipelineBuilder builder{};
             builder.set_vertex_layout(bindings, attributes)
                 .set_push_constants(push_constants)
-                .add_descriptor_set_bindings("Material", texture_descriptor_bindings)
+                .add_descriptor_set_bindings("Material", descriptor_bindings)
                 .set_vertex_shader("Core/shaders/compiled/colored_triangle.vert.spv", "main")
                 .set_fragment_shader("Core/shaders/compiled/colored_triangle.frag.spv", "main")
                 .set_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
@@ -169,7 +184,8 @@ namespace gage::gfx::draw
             
 
             auto descriptor_set = std::make_unique<bind::DescriptorSet>(gfx, pipeline_layout, pipeline->get_desc_set_layout("Material"));
-            descriptor_set->add_combined_image_sampler(gfx, 0, texture->get_image_view(), sampler->get_sampler());
+            descriptor_set->add_buffer(gfx, 0, gfx.get_global_uniform_buffer(), gfx.get_global_uniform_buffer_size(), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+            descriptor_set->add_combined_image_sampler(gfx, 1, texture->get_image_view(), sampler->get_sampler());
 
             add_static_bind(std::move(descriptor_set));
             add_static_bind(std::move(texture));

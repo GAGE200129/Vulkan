@@ -16,7 +16,6 @@ namespace gage::gfx::bind
     }
     void TransformPS::bind(Graphics &gfx)
     {
-        glm::mat4x4 mvp = gfx.get_projection() * gfx.get_view() * parent.get_world_transform();
-        vkCmdPushConstants(get_cmd(gfx), layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4x4), glm::value_ptr(mvp));
+        vkCmdPushConstants(get_cmd(gfx), layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4x4), glm::value_ptr(parent.get_world_transform()));
     }
 }

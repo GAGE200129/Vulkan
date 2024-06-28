@@ -12,6 +12,7 @@ namespace gage::gfx::bind
         DescriptorSet(Graphics& gfx, VkPipelineLayout pipeline_layout, VkDescriptorSetLayout layouts);
 
         void add_combined_image_sampler(Graphics& gfx, uint32_t binding, VkImageView image, VkSampler sampler);
+        void add_buffer(Graphics& gfx, uint32_t binding, VkBuffer buffer, uint32_t size, VkDescriptorType type);
 
         void bind(Graphics& gfx) override;
         void destroy(Graphics& gfx) override;

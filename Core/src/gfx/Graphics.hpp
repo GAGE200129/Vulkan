@@ -8,6 +8,8 @@
 
 #include "Exception.hpp"
 
+
+
 #include <glm/mat4x4.hpp>
 
 namespace vkb
@@ -19,6 +21,11 @@ namespace vkb
 namespace gage::gfx::bind
 {
     class IBindable;
+}
+
+namespace gage::gfx::data
+{
+    class GUBO;
 }
 
 struct GLFWwindow;
@@ -40,18 +47,30 @@ namespace gage::gfx
         void end_frame();
         const std::string &get_app_name() const noexcept;
 
+
+        void set_resize(int width, int height);
         void set_perspective(int width, int height, float fov_vertical, float near, float far);
         void set_view(const glm::mat4x4& view);
+        void set_resolution_scale(float scale);
 
         const glm::mat4& get_projection() const;
         const glm::mat4& get_view() const;
+        VkBuffer get_global_uniform_buffer() const;
+        uint32_t get_global_uniform_buffer_size() const;
+
+        VkExternalMemoryHandleTypeFlagBits get_external_memory_type() const;
+        VkExternalMemoryImageCreateInfo get_external_image_memory_ci() const;
+        VkExternalMemoryBufferCreateInfo get_external_buffer_memory_ci() const;
+
+        std::tuple<uint32_t, uint32_t> get_color_image() const;
+        std::tuple<uint32_t, uint32_t> get_depth_image() const;
 
         //void set_exclusive_mode(bool enabled);
+        VkExtent2D get_scaled_draw_extent();
     private:
         void create_swapchain();
         void destroy_swapchain();
 
-        void register_window_callbacks(GLFWwindow* window);
     private:
         std::string app_name{};
         std::stack<std::function<void()>> delete_stack{};
@@ -62,19 +81,29 @@ namespace gage::gfx
         VkPhysicalDevice physical_device{};
 
         VkExtent2D draw_extent{};
+        VkExtent2D draw_extent_temp{};
+        float draw_extent_scale{1.0f};
 
         bool swapchain_resize_requested{};
         uint32_t swapchain_image_index{};
         VkSwapchainKHR swapchain{};
         VkFormat swapchain_image_format{VK_FORMAT_B8G8R8A8_SRGB};
+        VkColorSpaceKHR swapchain_image_color_space{VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
         VkFormat swapchain_depth_format{VK_FORMAT_D32_SFLOAT};
+        VkPresentModeKHR swapchain_present_mode{VK_PRESENT_MODE_IMMEDIATE_KHR};
         std::vector<VkImage> swapchain_images{};
         std::vector<VkImageView> swapchain_image_views{};
+
         VmaAllocation swapchain_depth_image_allocation{};
         VkImage swapchain_depth_image{};
         VkImageView swapchain_depth_image_view{};
 
+        VmaAllocation swapchain_color_image_allocation{};
+        VkImage swapchain_color_image{};
+        VkImageView swapchain_color_image_view{};
+
         VkDescriptorPool desc_pool{};
+        std::unique_ptr<data::GUBO> global_uniform_buffer{};
 
         VkCommandPool cmd_pool{};
         VkCommandBuffer transfer_cmd{}; //Uses trasnfer queue
@@ -95,7 +124,9 @@ namespace gage::gfx
 
         VmaAllocator allocator{};
 
-        glm::mat4 projection{};
-        glm::mat4 view{};
+        VkExternalMemoryHandleTypeFlagBits external_memory_type{VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT};
+        VkExternalMemoryImageCreateInfo external_image_memory_ci{VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO, nullptr, external_memory_type};
+        VkExternalMemoryBufferCreateInfo external_buffer_memory_ci{VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO, nullptr, external_memory_type};
+
     };
 }

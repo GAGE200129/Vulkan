@@ -7,27 +7,23 @@ layout(location = 2) in vec2 in_uvs;
 
 layout(location = 0) out vec3 fs_normal;
 layout(location = 1) out vec2 fs_uvs;
-layout(location = 2) out vec3 fs_color;
+
+
+layout(binding = 0) uniform UniformBuffer
+{
+    mat4x4 projection;
+    mat4x4 view;
+    vec3 light_position;
+} ubo;
 
 layout(push_constant, std140) uniform PushConstant {
-    mat4x4 mvp;
-};
-
-const vec3 colors[] = 
-{
-	vec3(1, 0, 0),
-	vec3(0, 1, 0),
-	vec3(0, 0, 1),
-	vec3(1, 1, 0),
-	vec3(0, 1, 1),
-	vec3(1, 0, 1),
+    mat4x4 model_transform;
 };
 
 void main() 
 {
 	//output the position of each vertex
-	gl_Position = mvp * vec4(in_pos, 1.0f);
+	gl_Position = ubo.projection * ubo.view * model_transform * vec4(in_pos, 1.0f);
 	fs_normal = in_normal;
 	fs_uvs = in_uvs;
-	fs_color = colors[gl_VertexIndex % 6];
 }

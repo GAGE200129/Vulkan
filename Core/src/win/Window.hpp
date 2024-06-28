@@ -26,7 +26,7 @@ namespace gage::win
 
         bool is_closing() const;
 
-        void resize(WindowMode mode, int width, int height);
+        void resize(WindowMode mode, int width, int height, float scale);
 
         gfx::Graphics& get_graphics();
     private:
