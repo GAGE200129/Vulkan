@@ -7,6 +7,7 @@
 #include <Core/src/gfx/draw/Box.hpp>
 #include <Core/src/gfx/bind/IBindable.hpp>
 #include <Core/src/utils/FileLoader.hpp>
+#include <Core/src/utils/Camera.hpp>
 
 #include <thread>
 
@@ -27,10 +28,9 @@ int main()
                 1600, 900
             };
 
-            
-
             win::Window window(resolutions[0], resolutions[1], "Hello world");
-            win::ImguiWindow imgui_window;
+            win::ImguiWindow imgui_window{};
+            utils::Camera camera{};
 
             auto &graphics = window.get_graphics();
 
@@ -38,14 +38,14 @@ int main()
 
             std::vector<std::unique_ptr<gfx::draw::Box>> boxes;
 
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 300; i++)
             {
                 boxes.push_back(std::make_unique<gfx::draw::Box>(graphics));
             }
 
             while (!window.is_closing())
             {
-
+                graphics.set_view(camera.get_view());
                 graphics.clear();
                 for (auto &box : boxes)
                 {
@@ -84,10 +84,17 @@ int main()
                     }
                 }
                 ImGui::End();
+
+                if(ImGui::Begin("Camera"))
+                {
+                    ImGui::DragFloat3("position", &camera.get_position().x, 0.1f);
+                    ImGui::DragFloat3("rotation", &camera.get_rotation().x, 0.1f);
+                }
+                ImGui::End();
                 imgui_window.end_frame();
                 win::update();
 
-                std::this_thread::sleep_for(16ms);
+                std::this_thread::sleep_for(11.11111ms);
             }
 
             graphics.wait();
