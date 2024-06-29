@@ -2,7 +2,10 @@
 
 #include "DrawableBase.hpp"
 
+#include "../bind/UniformBuffer.hpp"
+
 #include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 
 namespace gage::gfx::draw
 {
@@ -14,6 +17,12 @@ namespace gage::gfx::draw
 
         glm::mat4 get_world_transform() const override;
     private:
+        bind::UniformBuffer* p_uniform_buffer{};
+        struct Material
+        {
+            glm::vec4 color{};
+        } material{};
+        
         float pitch_speed{}, yaw_speed{}, roll_speed{};
         float pitch{}, yaw{}, roll{};
 

@@ -117,7 +117,6 @@ namespace gage::win
             if (ImGui::Button("Apply"))
             {
                 window.resize((win::WindowMode)selected_window_mode, resolutions[0], resolutions[1], (float)resolution_scale / 100.0f);
-                window.get_graphics().set_perspective(resolutions[0], resolutions[1], 70.0f, 0.1f, 1000.0f);
             }
 
             if (ImGui::Button("Reload viewport"))

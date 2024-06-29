@@ -22,14 +22,11 @@ int main()
     {
         log::init();
         win::init();
-
         {
             win::Window window(800, 600, "Hello world");
             utils::Camera camera{};
             auto &graphics = window.get_graphics();
             win::ImguiWindow imgui_window{graphics};
-
-            graphics.set_perspective(800, 600, 70.0f, 0.1f, 1000.0f);
 
             std::vector<std::unique_ptr<gfx::draw::Box>> boxes;
 
@@ -41,7 +38,8 @@ int main()
 
             while (!window.is_closing())
             {
-                static constexpr int64_t NS_PER_FRAME = 16666.66666;
+                
+                static constexpr int64_t NS_PER_FRAME = (1.0 / 30.0) * 1000000000;
                 auto start = std::chrono::high_resolution_clock::now();
                 graphics.set_view(camera.get_view());
                 graphics.clear();

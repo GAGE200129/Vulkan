@@ -2,6 +2,7 @@
 
 #include "../Graphics.hpp"
 #include "../bind/IndexBuffer.hpp"
+#include "../bind/UniformBuffer.hpp"
 
 #include <cassert>
 
@@ -48,4 +49,5 @@ namespace gage::gfx::draw
         this->index_buffer = index_buffer.get();
         bindables.push_back(std::move(index_buffer));
     }
+
 }

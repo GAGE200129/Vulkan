@@ -49,7 +49,6 @@ namespace gage::gfx
 
 
         void set_resize(int width, int height);
-        void set_perspective(int width, int height, float fov_vertical, float near, float far);
         void set_view(const glm::mat4x4& view);
         void set_resolution_scale(float scale);
 
@@ -67,7 +66,7 @@ namespace gage::gfx
     private:
         void create_swapchain();
         void destroy_swapchain();
-
+        void update_projection_matrix();
     private:
         std::string app_name{};
         std::stack<std::function<void()>> delete_stack{};
@@ -87,6 +86,10 @@ namespace gage::gfx
         VkSurfaceKHR surface{};
         VkDevice device{};
         VkPhysicalDevice physical_device{};
+
+        float field_of_view{90.0f};
+        float near{0.1f};
+        float far{1000.0f};
 
         VkExtent2D draw_extent{};
         VkExtent2D draw_extent_temp{};

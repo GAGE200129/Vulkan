@@ -3,6 +3,7 @@
 #include "../bind/IBindable.hpp"
 #include "../bind/VertexBuffer.hpp"
 #include "../bind/IndexBuffer.hpp"
+#include "../bind/DescriptorSet.hpp"
 #include "../bind/Pipeline.hpp"
 #include "Drawable.hpp"
 
@@ -37,12 +38,12 @@ namespace gage::gfx::draw
             return static_bindables;
         }
 
-        const bind::IndexBuffer* search_static_index_buffer()
+        template<typename A>
+        A* search_static()
         {
-            assert(this->index_buffer == nullptr);
             for(const auto& bind : static_bindables)
             {
-                if(const auto p = dynamic_cast<const bind::IndexBuffer*>(bind.get()))
+                if(auto p = dynamic_cast<A*>(bind.get()))
                 {
                     return p;
                 }
@@ -50,18 +51,7 @@ namespace gage::gfx::draw
 
             return nullptr;
         }
-        const bind::Pipeline* search_static_pipeline()
-        {
-            for(const auto& bind : static_bindables)
-            {
-                if(const auto p = dynamic_cast<const bind::Pipeline*>(bind.get()))
-                {
-                    return p;
-                }
-            }
-
-            return nullptr;
-        }
+        
     private:
         static std::vector<std::unique_ptr<bind::IBindable>> static_bindables;
     };

@@ -14,7 +14,7 @@ namespace gage::gfx::bind
         vk_check(vkAllocateDescriptorSets(get_device(gfx), &alloc_info, &descriptor_set));
     }
 
-    void DescriptorSet::add_combined_image_sampler(Graphics &gfx, uint32_t binding, VkImageView image, VkSampler sampler)
+    void DescriptorSet::set_combined_image_sampler(Graphics &gfx, uint32_t binding, VkImageView image, VkSampler sampler)
     {
         VkDescriptorImageInfo image_info{};
         image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -34,7 +34,7 @@ namespace gage::gfx::bind
         vkUpdateDescriptorSets(get_device(gfx), 1, &descriptor_write, 0, nullptr);
     }
 
-    void DescriptorSet::add_buffer(Graphics &gfx, uint32_t binding, VkBuffer buffer, uint32_t size, VkDescriptorType type)
+    void DescriptorSet::set_buffer(Graphics &gfx, uint32_t binding, VkBuffer buffer, uint32_t size, VkDescriptorType type)
     {
         // Bind uniform buffer to binding 0 of uniform buffer
         VkDescriptorBufferInfo buffer_desc_info{};

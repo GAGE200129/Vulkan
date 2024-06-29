@@ -7,6 +7,7 @@
 #include "../bind/Texture.hpp"
 #include "../bind/Sampler.hpp"
 #include "../bind/DescriptorSet.hpp"
+#include "../bind/UniformBuffer.hpp"
 #include "../data/GUBO.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -23,6 +24,7 @@ namespace gage::gfx::draw
         std::uniform_real_distribution<float> rotation_dist(0, 10);
         std::uniform_real_distribution<float> rotation_dist2(0, 360);
         std::uniform_real_distribution<float> radius_dist(0, 50);
+        std::uniform_real_distribution<float> color_dist(0, 1);
 
         pitch = rotation_dist2(e);
         yaw = rotation_dist2(e);
@@ -41,7 +43,11 @@ namespace gage::gfx::draw
         this->yaw_orbit_speed = rotation_dist(e);
         this->roll_orbit_speed = rotation_dist(e);
 
-        VkPipelineLayout pipeline_layout{};
+        material.color = glm::vec4{color_dist(e), color_dist(e), color_dist(e), 1.0f};
+
+        bind::Pipeline* p_pipeline{};
+        bind::Texture* p_texture{};
+        bind::Sampler* p_sampler{};
         if (!is_static_initialized())
         {
             struct Vertex 
@@ -144,7 +150,7 @@ namespace gage::gfx::draw
                 vertices[i + 2].normal = n;
             }
 
-            VkDescriptorSetLayoutBinding descriptor_bindings[2]{};
+            VkDescriptorSetLayoutBinding descriptor_bindings[3]{};
             descriptor_bindings[0].binding = 0;
             descriptor_bindings[0].descriptorCount = 1;
             descriptor_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -154,6 +160,11 @@ namespace gage::gfx::draw
             descriptor_bindings[1].descriptorCount = 1;
             descriptor_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             descriptor_bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+            descriptor_bindings[2].binding = 2;
+            descriptor_bindings[2].descriptorCount = 1;
+            descriptor_bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptor_bindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
             VkPushConstantRange push_constants[1]{};
             push_constants[0].offset = 0;
@@ -175,17 +186,14 @@ namespace gage::gfx::draw
             pipeline->enable_depth_test();
             pipeline->build(gfx);
             
-            pipeline_layout = pipeline->get_layout();
+            p_pipeline = pipeline.get();
             auto image = utils::file_path_to_image("res/textures/x.jpg", 4);
             auto texture = std::make_unique<bind::Texture>(gfx, image);
             auto sampler = std::make_unique<bind::Sampler>(gfx);
-            
 
-            auto descriptor_set = std::make_unique<bind::DescriptorSet>(gfx, pipeline->get_layout(), pipeline->get_desc_set_layout());
-            descriptor_set->add_buffer(gfx, 0, gfx.get_global_uniform_buffer().get(), gfx.get_global_uniform_buffer().get_size(), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-            descriptor_set->add_combined_image_sampler(gfx, 1, texture->get_image_view(), sampler->get_sampler());
+            p_texture = texture.get();
+            p_sampler = sampler.get();
 
-            add_static_bind(std::move(descriptor_set));
             add_static_bind(std::move(texture));
             add_static_bind(std::move(sampler));
             add_static_bind(std::move(pipeline));
@@ -194,14 +202,28 @@ namespace gage::gfx::draw
         }
         else
         {
-            this->index_buffer = search_static_index_buffer();
-            pipeline_layout = search_static_pipeline()->get_layout();
+            this->index_buffer = search_static<bind::IndexBuffer>();
+            p_pipeline = search_static<bind::Pipeline>();
+            p_texture = search_static<bind::Texture>();
+            p_sampler = search_static<bind::Sampler>();
         }
-        add_bind(std::make_unique<bind::TransformPS>(gfx, pipeline_layout, *this));
+        auto descriptor_set = std::make_unique<bind::DescriptorSet>(gfx, p_pipeline->get_layout(), p_pipeline->get_desc_set_layout());
+        descriptor_set->set_buffer(gfx, 0, gfx.get_global_uniform_buffer().get(), gfx.get_global_uniform_buffer().get_size(), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+        descriptor_set->set_combined_image_sampler(gfx, 1, p_texture->get_image_view(), p_sampler->get_sampler());
+
+        auto ubo = std::make_unique<bind::UniformBuffer>(gfx, sizeof(Material));
+        p_uniform_buffer = ubo.get();
+        descriptor_set->set_buffer(gfx, 2, ubo->get(), ubo->get_size(), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+
+        add_bind(std::make_unique<bind::TransformPS>(gfx, p_pipeline->get_layout(), *this));
+        add_bind(std::move(ubo));
+        add_bind(std::move(descriptor_set));
     }
 
     void Box::update(float dt)
     {
+        p_uniform_buffer->update(&material);
+
         pitch += pitch_speed * dt;
         yaw += yaw_speed * dt;
         roll += roll_speed * dt;

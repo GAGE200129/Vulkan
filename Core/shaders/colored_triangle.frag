@@ -21,7 +21,10 @@ layout(binding = 0) uniform UniformBuffer
     float att_exponent;
 } ubo;
 layout(binding = 1) uniform sampler2D u_texture;
-
+layout(binding = 2) uniform Material
+{
+    vec4 color;
+} material;
 
 void main() 
 {
@@ -32,5 +35,5 @@ void main()
     const float att = 1.0 / (ubo.att_constant + ubo.att_linear * dist_to_light + ubo.att_exponent * (dist_to_light * dist_to_light));
     const vec4 diffuse = ubo.diffuse_color * ubo.diffuse_intensity * att * max(0.0, dot(dir_light_vec, fs_normal));
 
-	outFragColor = clamp(ubo.ambient + diffuse * texture(u_texture, fs_uvs), 0.0, 1.0);
+	outFragColor = clamp(ubo.ambient + diffuse * material.color, 0.0, 1.0);
 }

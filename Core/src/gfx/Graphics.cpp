@@ -67,6 +67,7 @@ namespace gage::gfx
         draw_extent.height = height;
         draw_extent_temp.width = width;
         draw_extent_temp.height = height;
+        
 
         vkb::InstanceBuilder builder;
         // make the vulkan instance, with basic debug features
@@ -138,7 +139,6 @@ namespace gage::gfx
         vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
         vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
 
-       
         VmaAllocatorCreateInfo allocatorCreateInfo = {};
         // allocatorCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
         allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_3;
@@ -176,6 +176,8 @@ namespace gage::gfx
         global_uniform_buffer = std::make_unique<data::GUBO>(allocator);
         delete_stack.push([this]()
                           { global_uniform_buffer->destroy(allocator); });
+        //Create projection matrix
+        update_projection_matrix();
 
         // use vkbootstrap to get a Graphics queue
         auto graphics_queue_result = vkb_device.get_queue(vkb::QueueType::graphics);
@@ -278,6 +280,7 @@ namespace gage::gfx
         {
             vkDeviceWaitIdle(device);
             draw_extent = draw_extent_temp;
+            update_projection_matrix();
             destroy_swapchain();
             create_swapchain();
             swapchain_resize_requested = false;
@@ -498,7 +501,7 @@ namespace gage::gfx
             mem_alloc_info.allocationSize = mem_reqs.size;
             mem_alloc_info.memoryTypeIndex = utils::find_memory_type(physical_device, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
             mem_alloc_info.pNext = &export_memory;
-            
+
             vk_check(vkAllocateMemory(device, &mem_alloc_info, nullptr, &swapchain_depth_image_memory));
             vk_check(vkBindImageMemory(device, swapchain_depth_image, swapchain_depth_image_memory, 0));
 
@@ -547,7 +550,7 @@ namespace gage::gfx
             mem_alloc_info.allocationSize = mem_reqs.size;
             mem_alloc_info.memoryTypeIndex = utils::find_memory_type(physical_device, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
             mem_alloc_info.pNext = &export_memory;
-            
+
             vk_check(vkAllocateMemory(device, &mem_alloc_info, nullptr, &swapchain_color_image_memory));
             vk_check(vkBindImageMemory(device, swapchain_color_image, swapchain_color_image_memory, 0));
 
@@ -589,12 +592,6 @@ namespace gage::gfx
         vkDestroyImageView(device, swapchain_color_image_view, nullptr);
     }
 
-    void Graphics::set_perspective(int width, int height, float fov_vertical, float near, float far)
-    {
-        global_uniform_buffer->data.projection = glm::perspectiveFovRH_ZO(glm::radians(fov_vertical), (float)width, (float)height, near, far);
-        global_uniform_buffer->data.projection[1][1] *= -1;
-    }
-
     void Graphics::set_view(const glm::mat4x4 &view)
     {
         global_uniform_buffer->data.view = view;
@@ -615,14 +612,20 @@ namespace gage::gfx
         return global_uniform_buffer->data.view;
     }
 
-    const data::GUBO& Graphics::get_global_uniform_buffer() const
+    const data::GUBO &Graphics::get_global_uniform_buffer() const
     {
         return *global_uniform_buffer;
     }
 
-    data::GUBO& Graphics::get_global_uniform_buffer()
+    data::GUBO &Graphics::get_global_uniform_buffer()
     {
         return *global_uniform_buffer;
+    }
+
+    void Graphics::update_projection_matrix()
+    {
+        global_uniform_buffer->data.projection = glm::perspectiveFovRH_ZO(glm::radians(field_of_view), (float)draw_extent.width, (float)draw_extent.height, near, far);
+        global_uniform_buffer->data.projection[1][1] *= -1;
     }
 
     void Graphics::set_resize(int width, int height)
@@ -638,14 +641,13 @@ namespace gage::gfx
                           (unsigned int)std::floor(draw_extent.height * draw_extent_scale)};
     }
 
-
     std::tuple<uint32_t, uint32_t> Graphics::get_color_image() const
     {
         VkMemoryGetFdInfoKHR get_handle_info{};
         get_handle_info.sType = VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR;
         get_handle_info.memory = swapchain_color_image_memory;
         get_handle_info.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
-        
+
         int fd;
         auto vkGetMemoryFdKHR = PFN_vkGetMemoryFdKHR(vkGetDeviceProcAddr(device, "vkGetMemoryFdKHR"));
         vkGetMemoryFdKHR(device, &get_handle_info, &fd);

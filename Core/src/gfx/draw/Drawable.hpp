@@ -9,6 +9,7 @@ namespace gage::gfx::bind
 {
     class IBindable;
     class IndexBuffer;
+    class UniformBuffer;
 }
 
 namespace gage::gfx
