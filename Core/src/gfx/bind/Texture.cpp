@@ -1,6 +1,6 @@
 #include "Texture.hpp"
 
-#include "../Image.hpp"
+#include <Core/src/utils/VulkanHelper.hpp>
 
 #include <cstring>
 

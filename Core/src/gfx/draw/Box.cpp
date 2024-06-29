@@ -160,30 +160,27 @@ namespace gage::gfx::draw
             push_constants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 
-            PipelineBuilder builder{};
-            builder.set_vertex_layout(bindings, attributes)
-                .set_push_constants(push_constants)
-                .add_descriptor_set_bindings("Material", descriptor_bindings)
-                .set_vertex_shader("Core/shaders/compiled/colored_triangle.vert.spv", "main")
-                .set_fragment_shader("Core/shaders/compiled/colored_triangle.frag.spv", "main")
-                .set_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
-                .set_polygon_mode(VK_POLYGON_MODE_FILL)
-                .set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE)
-                .set_multisampling_none()
-                .set_blending_none()
-                .enable_depth_test();
+            auto pipeline = std::make_unique<bind::Pipeline>();
+            pipeline->set_vertex_layout(bindings, attributes);
+            pipeline->set_push_constants(push_constants);
+            pipeline->set_descriptor_set_bindings(descriptor_bindings);
+            pipeline->set_vertex_shader("Core/shaders/compiled/colored_triangle.vert.spv", "main");
+            pipeline->set_fragment_shader("Core/shaders/compiled/colored_triangle.frag.spv", "main");
+            pipeline->set_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+            pipeline->set_polygon_mode(VK_POLYGON_MODE_FILL);
+            pipeline->set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
+            pipeline->set_multisampling_none();
+            pipeline->set_blending_none();
+            pipeline->enable_depth_test();
+            pipeline->build(gfx);
             
-
-            auto pipeline = std::make_unique<bind::Pipeline>(gfx, builder);
             pipeline_layout = pipeline->get_layout();
-            
-
             auto image = utils::file_path_to_image("res/textures/x.jpg", 4);
             auto texture = std::make_unique<bind::Texture>(gfx, image);
             auto sampler = std::make_unique<bind::Sampler>(gfx);
             
 
-            auto descriptor_set = std::make_unique<bind::DescriptorSet>(gfx, pipeline_layout, pipeline->get_desc_set_layout("Material"));
+            auto descriptor_set = std::make_unique<bind::DescriptorSet>(gfx, pipeline->get_layout(), pipeline->get_desc_set_layout());
             descriptor_set->add_buffer(gfx, 0, gfx.get_global_uniform_buffer(), gfx.get_global_uniform_buffer_size(), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
             descriptor_set->add_combined_image_sampler(gfx, 1, texture->get_image_view(), sampler->get_sampler());
 
