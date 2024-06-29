@@ -8,6 +8,7 @@
 #include <Core/src/log/Log.hpp>
 #include <Core/src/gfx/Graphics.hpp>
 #include <Core/src/utils/Camera.hpp>
+#include <Core/src/gfx/data/GUBO.hpp>
 
 #include <glad/glad.h>
 #define GLFW_INCLUDE_NONE
@@ -144,6 +145,16 @@ namespace gage::win
             ImGui::Image((ImTextureID)gfx_depth_texture, ImGui::GetContentRegionMax());
         }
         ImGui::End();
+
+        if (ImGui::Begin("Lightning"))
+        {
+            gfx::data::GUBO& ubo = window.get_graphics().get_global_uniform_buffer();
+            ImGui::DragFloat3("Position", &ubo.data.point_light_position.x, 0.1f);
+            ImGui::ColorPicker3("diffuse color", &ubo.data.diffuse_color.x);
+            ImGui::DragFloat("diffuse intensity", &ubo.data.diffuse_intensity, 0.01f);
+            ImGui::DragFloat3("Attenuation", &ubo.data.att_constant, 0.0001f);
+        }
+        ImGui::End();
     }
 
     void ImguiWindow::create_viewport(gfx::Graphics &gfx)
@@ -155,6 +166,14 @@ namespace gage::win
         glCreateMemoryObjectsEXT(1, &gfx_color_texture_mem);
         glImportMemoryFdEXT(gfx_color_texture_mem, color_size, GL_HANDLE_TYPE_OPAQUE_FD_EXT, color_fd);
         glCreateTextures(GL_TEXTURE_2D, 1, &gfx_color_texture);
+
+        GLint color_swizzle[4] = { //Vulkan using BGRA8 not RGBA8
+            GL_BLUE,
+            GL_GREEN,
+            GL_RED,
+            GL_ALPHA
+        };
+        glTextureParameteriv(gfx_color_texture, GL_TEXTURE_SWIZZLE_RGBA, color_swizzle);
         glTextureStorageMem2DEXT(gfx_color_texture, 1, GL_RGBA8, extent.width, extent.height, gfx_color_texture_mem, 0);
 
         glCreateMemoryObjectsEXT(1, &gfx_depth_texture_mem);

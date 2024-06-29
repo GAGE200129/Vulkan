@@ -173,7 +173,7 @@ namespace gage::gfx
                           { vkDestroyDescriptorPool(device, desc_pool, nullptr); });
 
         // Create global descriptor set
-        global_uniform_buffer = std::make_unique<data::GUBO>(*this, allocator);
+        global_uniform_buffer = std::make_unique<data::GUBO>(allocator);
         delete_stack.push([this]()
                           { global_uniform_buffer->destroy(allocator); });
 
@@ -615,13 +615,14 @@ namespace gage::gfx
         return global_uniform_buffer->data.view;
     }
 
-    VkBuffer Graphics::get_global_uniform_buffer() const
+    const data::GUBO& Graphics::get_global_uniform_buffer() const
     {
-        return global_uniform_buffer->buffer;
+        return *global_uniform_buffer;
     }
-    uint32_t Graphics::get_global_uniform_buffer_size() const
+
+    data::GUBO& Graphics::get_global_uniform_buffer()
     {
-        return sizeof(data::GUBO::Data);
+        return *global_uniform_buffer;
     }
 
     void Graphics::set_resize(int width, int height)

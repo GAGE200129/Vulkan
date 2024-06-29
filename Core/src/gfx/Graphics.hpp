@@ -55,8 +55,8 @@ namespace gage::gfx
 
         const glm::mat4& get_projection() const;
         const glm::mat4& get_view() const;
-        VkBuffer get_global_uniform_buffer() const;
-        uint32_t get_global_uniform_buffer_size() const;
+        const data::GUBO& get_global_uniform_buffer() const;
+        data::GUBO& get_global_uniform_buffer();
 
 
         std::tuple<uint32_t, uint32_t> get_color_image() const;

@@ -7,6 +7,7 @@
 #include "../bind/Texture.hpp"
 #include "../bind/Sampler.hpp"
 #include "../bind/DescriptorSet.hpp"
+#include "../data/GUBO.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <random>
@@ -181,7 +182,7 @@ namespace gage::gfx::draw
             
 
             auto descriptor_set = std::make_unique<bind::DescriptorSet>(gfx, pipeline->get_layout(), pipeline->get_desc_set_layout());
-            descriptor_set->add_buffer(gfx, 0, gfx.get_global_uniform_buffer(), gfx.get_global_uniform_buffer_size(), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+            descriptor_set->add_buffer(gfx, 0, gfx.get_global_uniform_buffer().get(), gfx.get_global_uniform_buffer().get_size(), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
             descriptor_set->add_combined_image_sampler(gfx, 1, texture->get_image_view(), sampler->get_sampler());
 
             add_static_bind(std::move(descriptor_set));
