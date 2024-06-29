@@ -21,6 +21,8 @@ namespace gage::gfx::draw
         struct Material
         {
             glm::vec4 color{};
+            float specular_intensity{};
+            float specular_power{}; float _padding[2]{};
         } material{};
         
         float pitch_speed{}, yaw_speed{}, roll_speed{};

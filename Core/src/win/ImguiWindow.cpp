@@ -7,7 +7,7 @@
 #include <imgui/imgui_impl_glfw.h>
 #include <Core/src/log/Log.hpp>
 #include <Core/src/gfx/Graphics.hpp>
-#include <Core/src/utils/Camera.hpp>
+#include <Core/src/gfx/data/Camera.hpp>
 #include <Core/src/gfx/data/GUBO.hpp>
 
 #include <glad/glad.h>
@@ -80,7 +80,7 @@ namespace gage::win
         glfwSwapBuffers(p_window);
     }
 
-    void ImguiWindow::draw(utils::Camera &camera, Window &window)
+    void ImguiWindow::draw(gfx::data::Camera &camera, Window &window)
     {
         static int resolutions[] = {1600, 900};
         ImGui::ShowDemoWindow();

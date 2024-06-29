@@ -25,6 +25,8 @@ namespace gage::gfx::draw
         std::uniform_real_distribution<float> rotation_dist2(0, 360);
         std::uniform_real_distribution<float> radius_dist(0, 50);
         std::uniform_real_distribution<float> color_dist(0, 1);
+        std::uniform_real_distribution<float> specular_intensity_dist(0, 1);
+        std::uniform_real_distribution<float> specular_power_dist(0, 100);
 
         pitch = rotation_dist2(e);
         yaw = rotation_dist2(e);
@@ -44,6 +46,8 @@ namespace gage::gfx::draw
         this->roll_orbit_speed = rotation_dist(e);
 
         material.color = glm::vec4{color_dist(e), color_dist(e), color_dist(e), 1.0f};
+        material.specular_intensity = specular_intensity_dist(e);
+        material.specular_power = specular_power_dist(e);
 
         bind::Pipeline* p_pipeline{};
         bind::Texture* p_texture{};

@@ -5,11 +5,11 @@
 namespace gage::gfx
 {
     class Graphics;
-}
-
-namespace gage::utils
-{
-    class Camera;
+    
+    namespace data
+    {
+         class Camera;
+    }
 }
 
 struct GLFWwindow;
@@ -22,7 +22,7 @@ namespace gage::win
         ImguiWindow(gfx::Graphics &gfx);
         ~ImguiWindow();
 
-        void draw(utils::Camera &camera, Window &window);
+        void draw(gfx::data::Camera &camera, Window &window);
 
         void clear();
         void end_frame();

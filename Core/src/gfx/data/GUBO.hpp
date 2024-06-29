@@ -20,7 +20,8 @@ namespace gage::gfx::data
         {
             glm::mat4x4 projection{};
             glm::mat4x4 view{};
-            glm::vec3 point_light_position{}; float _padding{};
+            glm::vec3 camera_position; float _padding{};
+            glm::vec3 point_light_position{}; float _padding2{};
             glm::vec4 ambient{0.15f, 0.15f, 0.15f, 1.0f};
             glm::vec4 diffuse_color{1.0f,1.0f, 1.0f, 1.0f};
             float diffuse_intensity{1.0f};

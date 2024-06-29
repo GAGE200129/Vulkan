@@ -26,6 +26,7 @@ namespace gage::gfx::bind
 namespace gage::gfx::data
 {
     class GUBO;
+    class Camera;
 }
 
 struct GLFWwindow;
@@ -41,7 +42,7 @@ namespace gage::gfx
         ~Graphics();
 
         void wait();
-        void clear();
+        void clear(const data::Camera& camera);
         // void draw_test_triangle();
         void draw_indexed(uint32_t vertex_count);
         void end_frame();
@@ -49,7 +50,6 @@ namespace gage::gfx
 
 
         void set_resize(int width, int height);
-        void set_view(const glm::mat4x4& view);
         void set_resolution_scale(float scale);
 
         const glm::mat4& get_projection() const;
@@ -66,7 +66,6 @@ namespace gage::gfx
     private:
         void create_swapchain();
         void destroy_swapchain();
-        void update_projection_matrix();
     private:
         std::string app_name{};
         std::stack<std::function<void()>> delete_stack{};
@@ -87,9 +86,6 @@ namespace gage::gfx
         VkDevice device{};
         VkPhysicalDevice physical_device{};
 
-        float field_of_view{90.0f};
-        float near{0.1f};
-        float far{1000.0f};
 
         VkExtent2D draw_extent{};
         VkExtent2D draw_extent_temp{};

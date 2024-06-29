@@ -7,7 +7,7 @@
 #include <Core/src/gfx/draw/Box.hpp>
 #include <Core/src/gfx/bind/IBindable.hpp>
 #include <Core/src/utils/FileLoader.hpp>
-#include <Core/src/utils/Camera.hpp>
+#include <Core/src/gfx/data/Camera.hpp>
 
 #include <thread>
 
@@ -24,7 +24,6 @@ int main()
         win::init();
         {
             win::Window window(800, 600, "Hello world");
-            utils::Camera camera{};
             auto &graphics = window.get_graphics();
             win::ImguiWindow imgui_window{graphics};
 
@@ -35,14 +34,13 @@ int main()
                 boxes.push_back(std::make_unique<gfx::draw::Box>(graphics));
             }
 
-
+            gfx::data::Camera camera{};
             while (!window.is_closing())
             {
                 
                 static constexpr int64_t NS_PER_FRAME = (1.0 / 30.0) * 1000000000;
                 auto start = std::chrono::high_resolution_clock::now();
-                graphics.set_view(camera.get_view());
-                graphics.clear();
+                graphics.clear(camera);
                 for (auto &box : boxes)
                 {
                     box->update(0.016f);

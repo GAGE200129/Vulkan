@@ -12,6 +12,7 @@
 #include "Exception.hpp"
 
 #include "data/GUBO.hpp"
+#include "data/Camera.hpp"
 
 using namespace std::string_literals;
 
@@ -176,8 +177,6 @@ namespace gage::gfx
         global_uniform_buffer = std::make_unique<data::GUBO>(allocator);
         delete_stack.push([this]()
                           { global_uniform_buffer->destroy(allocator); });
-        //Create projection matrix
-        update_projection_matrix();
 
         // use vkbootstrap to get a Graphics queue
         auto graphics_queue_result = vkb_device.get_queue(vkb::QueueType::graphics);
@@ -270,9 +269,15 @@ namespace gage::gfx
     {
         vkCmdDrawIndexed(frame_datas[frame_index].cmd, vertex_count, 1, 0, 0, 0);
     }
-    void Graphics::clear()
+    void Graphics::clear(const data::Camera& camera)
     {
         // Update global uniform
+        data::GUBO::Data& data = global_uniform_buffer->data;
+        data.camera_position = camera.get_position();
+        data.projection = glm::perspectiveFovRH_ZO(glm::radians(camera.get_field_of_view()), 
+            (float)draw_extent.width, (float)draw_extent.height, camera.get_near(), camera.get_far());
+        data.projection[1][1] *= -1;
+        data.view = camera.get_view();
         global_uniform_buffer->update();
 
         // Check for swapchain recreation
@@ -280,7 +285,6 @@ namespace gage::gfx
         {
             vkDeviceWaitIdle(device);
             draw_extent = draw_extent_temp;
-            update_projection_matrix();
             destroy_swapchain();
             create_swapchain();
             swapchain_resize_requested = false;
@@ -592,10 +596,6 @@ namespace gage::gfx
         vkDestroyImageView(device, swapchain_color_image_view, nullptr);
     }
 
-    void Graphics::set_view(const glm::mat4x4 &view)
-    {
-        global_uniform_buffer->data.view = view;
-    }
 
     void Graphics::set_resolution_scale(float scale)
     {
@@ -622,11 +622,7 @@ namespace gage::gfx
         return *global_uniform_buffer;
     }
 
-    void Graphics::update_projection_matrix()
-    {
-        global_uniform_buffer->data.projection = glm::perspectiveFovRH_ZO(glm::radians(field_of_view), (float)draw_extent.width, (float)draw_extent.height, near, far);
-        global_uniform_buffer->data.projection[1][1] *= -1;
-    }
+
 
     void Graphics::set_resize(int width, int height)
     {
