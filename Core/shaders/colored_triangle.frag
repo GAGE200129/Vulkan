@@ -42,7 +42,7 @@ void main()
     vec3 reflect_dir = reflect(-dir_light_vec, fs_normal);
 
     float spec = pow(max(dot(view_dir, reflect_dir), 0.0), material.specular_power);
-    vec4 specular = material.specular_intensity * spec * ubo.diffuse_color;  
+    vec4 specular = att * material.specular_intensity * spec * ubo.diffuse_color;  
     specular.a = 0;
 
 	outFragColor = clamp(ubo.ambient + diffuse * material.color + specular, 0.0, 1.0);
