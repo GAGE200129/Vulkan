@@ -3,7 +3,7 @@
 #include "Exception.hpp"
 
 #include <fstream>
-#include <stb/stb_image.h>
+#include <stb_image.h>
 #include <cstring>
 #include <cassert>
 

@@ -5,7 +5,6 @@
 #include "../bind/TransformPS.hpp"
 #include "../bind/Pipeline.hpp"
 #include "../bind/Texture.hpp"
-#include "../bind/Sampler.hpp"
 #include "../bind/DescriptorSet.hpp"
 #include "../bind/UniformBuffer.hpp"
 #include "../data/GUBO.hpp"
@@ -51,7 +50,6 @@ namespace gage::gfx::draw
 
         bind::Pipeline* p_pipeline{};
         bind::Texture* p_texture{};
-        bind::Sampler* p_sampler{};
         if (!is_static_initialized())
         {
             struct Vertex 
@@ -193,13 +191,10 @@ namespace gage::gfx::draw
             p_pipeline = pipeline.get();
             auto image = utils::file_path_to_image("res/textures/x.jpg", 4);
             auto texture = std::make_unique<bind::Texture>(gfx, image);
-            auto sampler = std::make_unique<bind::Sampler>(gfx);
 
             p_texture = texture.get();
-            p_sampler = sampler.get();
 
             add_static_bind(std::move(texture));
-            add_static_bind(std::move(sampler));
             add_static_bind(std::move(pipeline));
             add_static_index_buffer(std::make_unique<bind::IndexBuffer>(gfx, indices));
             add_static_bind(std::make_unique<bind::VertexBuffer>(gfx, 0, vertices.size() * sizeof(Vertex), vertices.data()));
@@ -209,15 +204,14 @@ namespace gage::gfx::draw
             this->index_buffer = search_static<bind::IndexBuffer>();
             p_pipeline = search_static<bind::Pipeline>();
             p_texture = search_static<bind::Texture>();
-            p_sampler = search_static<bind::Sampler>();
         }
+        auto ubo = std::make_unique<bind::UniformBuffer>(gfx, sizeof(Material));
+        ubo->update(&material);
         auto descriptor_set = std::make_unique<bind::DescriptorSet>(gfx, p_pipeline->get_layout(), p_pipeline->get_desc_set_layout());
         descriptor_set->set_buffer(gfx, 0, gfx.get_global_uniform_buffer().get(), gfx.get_global_uniform_buffer().get_size(), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-        descriptor_set->set_combined_image_sampler(gfx, 1, p_texture->get_image_view(), p_sampler->get_sampler());
-
-        auto ubo = std::make_unique<bind::UniformBuffer>(gfx, sizeof(Material));
-        p_uniform_buffer = ubo.get();
+        descriptor_set->set_texture(gfx, 1, *p_texture);
         descriptor_set->set_buffer(gfx, 2, ubo->get(), ubo->get_size(), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+
 
         add_bind(std::make_unique<bind::TransformPS>(gfx, p_pipeline->get_layout(), *this));
         add_bind(std::move(ubo));
@@ -226,8 +220,6 @@ namespace gage::gfx::draw
 
     void Box::update(float dt)
     {
-        p_uniform_buffer->update(&material);
-
         pitch += pitch_speed * dt;
         yaw += yaw_speed * dt;
         roll += roll_speed * dt;

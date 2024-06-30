@@ -17,7 +17,6 @@ namespace gage::gfx::draw
 
         glm::mat4 get_world_transform() const override;
     private:
-        bind::UniformBuffer* p_uniform_buffer{};
         struct Material
         {
             glm::vec4 color{};

@@ -134,6 +134,27 @@ namespace gage::gfx::bind
         view_info.subresourceRange.layerCount = 1;
 
         vk_check(vkCreateImageView(get_device(gfx), &view_info, nullptr, &image_view));
+
+        //Sampler
+        VkSamplerCreateInfo sampler_info{};
+        sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        sampler_info.magFilter = VK_FILTER_NEAREST;
+        sampler_info.minFilter = VK_FILTER_NEAREST;
+        sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler_info.anisotropyEnable = VK_FALSE;
+        sampler_info.maxAnisotropy = 0;
+        sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        sampler_info.unnormalizedCoordinates = VK_FALSE;
+        sampler_info.compareEnable = VK_FALSE;
+        sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+        sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        sampler_info.mipLodBias = 0.0f;
+        sampler_info.minLod = 0.0f;
+        sampler_info.maxLod = 0.0f;
+
+        vk_check(vkCreateSampler(get_device(gfx), &sampler_info, nullptr, &sampler));
     }
 
     void Texture::bind(Graphics &)
@@ -141,6 +162,7 @@ namespace gage::gfx::bind
     }
     void Texture::destroy(Graphics &gfx)
     {
+        vkDestroySampler(get_device(gfx), sampler, nullptr);
         vmaDestroyImage(get_allocator(gfx), image, allocation);
         vkDestroyImageView(get_device(gfx), image_view, nullptr);
     }
@@ -153,5 +175,9 @@ namespace gage::gfx::bind
     VkImageView Texture::get_image_view() const
     {
         return image_view;
+    }
+    VkSampler Texture::get_sampler() const
+    {
+        return sampler;
     }
 }

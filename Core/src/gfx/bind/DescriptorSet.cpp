@@ -1,4 +1,5 @@
 #include "DescriptorSet.hpp"
+#include "Texture.hpp"
 
 #include <cstring>
 
@@ -14,12 +15,12 @@ namespace gage::gfx::bind
         vk_check(vkAllocateDescriptorSets(get_device(gfx), &alloc_info, &descriptor_set));
     }
 
-    void DescriptorSet::set_combined_image_sampler(Graphics &gfx, uint32_t binding, VkImageView image, VkSampler sampler)
+    void DescriptorSet::set_texture(Graphics &gfx, uint32_t binding, const Texture& texture)
     {
         VkDescriptorImageInfo image_info{};
         image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        image_info.imageView = image;
-        image_info.sampler = sampler;
+        image_info.imageView = texture.get_image_view();
+        image_info.sampler = texture.get_sampler();
 
         VkWriteDescriptorSet descriptor_write{};
         descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

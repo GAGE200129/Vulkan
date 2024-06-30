@@ -17,11 +17,13 @@ namespace gage::gfx::bind
 
         VkImage get_image() const;
         VkImageView get_image_view() const;
+        VkSampler get_sampler() const;
     private:
         VkFormat image_format{VK_FORMAT_R8G8B8A8_UNORM};
         VkImage image{};
         VkImageView image_view{};
         VmaAllocation allocation{};
-        
+        VkSampler sampler{};
+
     };
 }

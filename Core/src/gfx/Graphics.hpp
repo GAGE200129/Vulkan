@@ -25,6 +25,7 @@ namespace gage::gfx::bind
 
 namespace gage::gfx::data
 {
+    class IData;
     class GUBO;
     class Camera;
 }
