@@ -13,6 +13,7 @@
 
 #include "data/GUBO.hpp"
 #include "data/Camera.hpp"
+#include "data/Swapchain.hpp"
 
 using namespace std::string_literals;
 
@@ -152,10 +153,9 @@ namespace gage::gfx
         delete_stack.push([this]()
                           { vmaDestroyAllocator(allocator); });
 
-        create_swapchain();
+        swapchain = std::make_unique<data::Swapchain>(*this);
+        delete_stack.push([this](){ swapchain.reset(); });
 
-        delete_stack.push([this]()
-                          { this->destroy_swapchain(); });
 
         // Create descriptor pool
         VkDescriptorPoolSize pool_sizes[] = {
@@ -285,8 +285,8 @@ namespace gage::gfx
         {
             vkDeviceWaitIdle(device);
             draw_extent = draw_extent_temp;
-            destroy_swapchain();
-            create_swapchain();
+            swapchain.release();
+            swapchain = std::make_unique<data::Swapchain>(*this);
             swapchain_resize_requested = false;
         }
 
@@ -302,7 +302,7 @@ namespace gage::gfx
         vk_check(vkWaitForFences(device, 1, &render_fence, true, 1000000000));
         vk_check(vkResetFences(device, 1, &render_fence));
         
-        if (VkResult result = vkAcquireNextImageKHR(device, swapchain, 1000000000, present_semaphore, nullptr, &swapchain_image_index);
+        if (VkResult result = vkAcquireNextImageKHR(device, swapchain->get(), 1000000000, present_semaphore, nullptr, &swapchain_image_index);
             result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
         {
             logger.fatal("Failed to acquire next image: ").vk_result(result);
@@ -319,8 +319,8 @@ namespace gage::gfx
         vk_check(vkBeginCommandBuffer(cmd, &cmd_begin_info));
 
         // make the swapchain image into writeable mode before rendering
-        utils::transition_image(cmd, swapchain_color_image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR);
-        utils::transition_image(cmd, swapchain_depth_image, VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR);
+        utils::transition_image(cmd, swapchain->get_color_image_handle(), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR);
+        utils::transition_image(cmd, swapchain->get_depth_image_handle(), VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR);
 
         VkClearValue color_clear_value{
             VkClearColorValue{0.1f, 0.1f, 0.1f, 1.0f}};
@@ -332,7 +332,7 @@ namespace gage::gfx
         color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
         color_attachment.clearValue = color_clear_value;
         color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        color_attachment.imageView = swapchain_color_image_view; // Link to current swap chain color image view
+        color_attachment.imageView = swapchain->get_color_image_view(); // Link to current swap chain color image view
         color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
@@ -340,7 +340,7 @@ namespace gage::gfx
         depth_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
         depth_attachment.clearValue = depth_clear_value;
         depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        depth_attachment.imageView = swapchain_depth_image_view; // Link to current swap chain depth image view
+        depth_attachment.imageView = swapchain->get_depth_image_view(); // Link to current swap chain depth image view
         depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
@@ -365,8 +365,8 @@ namespace gage::gfx
         vkCmdEndRendering(cmd);
 
         // Blit swapchain color image to swapchain image
-        utils::transition_image(cmd, swapchain_color_image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-        utils::transition_image(cmd, swapchain_images[swapchain_image_index], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        utils::transition_image(cmd, swapchain->get_color_image_handle(), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        utils::transition_image(cmd, swapchain->at(swapchain_image_index), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
         VkImageBlit region{};
         region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -390,10 +390,10 @@ namespace gage::gfx
         region.dstOffsets[1].y = draw_extent.height;
         region.dstOffsets[1].z = 1;
 
-        vkCmdBlitImage(cmd, swapchain_color_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                       swapchain_images[swapchain_image_index], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        vkCmdBlitImage(cmd, swapchain->get_color_image_handle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                       swapchain->at(swapchain_image_index), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                        1, &region, VK_FILTER_NEAREST);
-        utils::transition_image(cmd, swapchain_images[swapchain_image_index], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        utils::transition_image(cmd, swapchain->at(swapchain_image_index), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
         vk_check(vkEndCommandBuffer(cmd));
 
         VkSubmitInfo submit = {};
@@ -412,6 +412,8 @@ namespace gage::gfx
         submit.pCommandBuffers = &cmd;
 
         vk_check(vkQueueSubmit(graphics_queue, 1, &submit, render_fence));
+
+        VkSwapchainKHR swapchain = this->swapchain->get();
         VkPresentInfoKHR presentInfo = {};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
         presentInfo.pSwapchains = &swapchain;
@@ -436,162 +438,6 @@ namespace gage::gfx
     {
         return app_name;
     }
-
-    void Graphics::create_swapchain()
-    {
-        vkb::SwapchainBuilder swapchainBuilder{physical_device, device, surface};
-        auto swapchain_result = swapchainBuilder
-                                    //.use_default_format_selection()
-                                    .set_desired_format(VkSurfaceFormatKHR{
-                                        .format = swapchain_image_format,
-                                        .colorSpace = swapchain_image_color_space})
-                                    // use vsync present mode
-                                    .set_desired_present_mode(swapchain_present_mode)
-                                    .set_desired_extent(draw_extent.width, draw_extent.height)
-                                    .set_desired_min_image_count(vkb::SwapchainBuilder::BufferMode::SINGLE_BUFFERING)
-                                    .add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
-                                    .build();
-        vkb_check(swapchain_result, "Failed to create swapchain: ");
-
-        auto vkb_swapchain = swapchain_result.value();
-
-        swapchain = vkb_swapchain.swapchain;
-
-        auto swapchain_images_result = vkb_swapchain.get_images();
-        auto swapchain_image_views_result = vkb_swapchain.get_image_views();
-        vkb_check(swapchain_images_result, "Failed to allocate swapchain images: ");
-        vkb_check(swapchain_image_views_result, "Failed to allocate swapchain image views: ");
-
-        swapchain_images = std::move(swapchain_images_result.value());
-        swapchain_image_views = std::move(swapchain_image_views_result.value());
-
-        VkExternalMemoryImageCreateInfo external_image{};
-        external_image.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO;
-        external_image.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
-
-        VkExportMemoryAllocateInfo export_memory{};
-        export_memory.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO;
-        export_memory.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
-
-        // Create depth image and view
-        {
-            VkImageCreateInfo depth_image_ci = {};
-            depth_image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-            depth_image_ci.imageType = VK_IMAGE_TYPE_2D;
-            depth_image_ci.extent.width = get_scaled_draw_extent().width;
-            depth_image_ci.extent.height = get_scaled_draw_extent().height;
-            depth_image_ci.extent.depth = 1;
-            depth_image_ci.mipLevels = 1;
-            depth_image_ci.arrayLayers = 1;
-            depth_image_ci.format = swapchain_depth_format;
-            depth_image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
-            depth_image_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            depth_image_ci.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-            depth_image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
-            depth_image_ci.pNext = &external_image;
-
-            vk_check(vkCreateImage(device, &depth_image_ci, nullptr, &swapchain_depth_image));
-
-            VkMemoryRequirements mem_reqs{};
-            vkGetImageMemoryRequirements(device, swapchain_depth_image, &mem_reqs);
-            swapchain_depth_image_memory_size = mem_reqs.size;
-
-            VkMemoryAllocateInfo mem_alloc_info{};
-            mem_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            mem_alloc_info.allocationSize = mem_reqs.size;
-            mem_alloc_info.memoryTypeIndex = utils::find_memory_type(physical_device, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-            mem_alloc_info.pNext = &export_memory;
-
-            vk_check(vkAllocateMemory(device, &mem_alloc_info, nullptr, &swapchain_depth_image_memory));
-            vk_check(vkBindImageMemory(device, swapchain_depth_image, swapchain_depth_image_memory, 0));
-
-            VkImageViewCreateInfo depth_image_view_ci = {};
-            depth_image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            depth_image_view_ci.image = swapchain_depth_image;
-            depth_image_view_ci.format = swapchain_depth_format;
-            depth_image_view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            depth_image_view_ci.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-            depth_image_view_ci.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-            depth_image_view_ci.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-            depth_image_view_ci.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-            depth_image_view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-            depth_image_view_ci.subresourceRange.baseMipLevel = 0;
-            depth_image_view_ci.subresourceRange.baseArrayLayer = 0;
-            depth_image_view_ci.subresourceRange.layerCount = 1;
-            depth_image_view_ci.subresourceRange.levelCount = 1;
-
-            vk_check(vkCreateImageView(device, &depth_image_view_ci, nullptr, &swapchain_depth_image_view));
-        }
-        // Create color image and view
-        {
-            VkImageCreateInfo color_image_ci = {};
-            color_image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-            color_image_ci.imageType = VK_IMAGE_TYPE_2D;
-            color_image_ci.extent.width = get_scaled_draw_extent().width;
-            color_image_ci.extent.height = get_scaled_draw_extent().height;
-            color_image_ci.extent.depth = 1;
-            color_image_ci.mipLevels = 1;
-            color_image_ci.arrayLayers = 1;
-            color_image_ci.format = swapchain_image_format;
-            color_image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
-            color_image_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            color_image_ci.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-            color_image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
-            color_image_ci.pNext = &external_image;
-
-            vk_check(vkCreateImage(device, &color_image_ci, nullptr, &swapchain_color_image));
-
-            VkMemoryRequirements mem_reqs{};
-            vkGetImageMemoryRequirements(device, swapchain_color_image, &mem_reqs);
-            swapchain_color_image_memory_size = mem_reqs.size;
-
-            VkMemoryAllocateInfo mem_alloc_info{};
-            mem_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            mem_alloc_info.allocationSize = mem_reqs.size;
-            mem_alloc_info.memoryTypeIndex = utils::find_memory_type(physical_device, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-            mem_alloc_info.pNext = &export_memory;
-
-            vk_check(vkAllocateMemory(device, &mem_alloc_info, nullptr, &swapchain_color_image_memory));
-            vk_check(vkBindImageMemory(device, swapchain_color_image, swapchain_color_image_memory, 0));
-
-            VkImageViewCreateInfo color_image_view_ci = {};
-            color_image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            color_image_view_ci.image = swapchain_color_image;
-            color_image_view_ci.format = swapchain_image_format;
-            color_image_view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            color_image_view_ci.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-            color_image_view_ci.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-            color_image_view_ci.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-            color_image_view_ci.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-            color_image_view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            color_image_view_ci.subresourceRange.baseMipLevel = 0;
-            color_image_view_ci.subresourceRange.baseArrayLayer = 0;
-            color_image_view_ci.subresourceRange.layerCount = 1;
-            color_image_view_ci.subresourceRange.levelCount = 1;
-
-            vk_check(vkCreateImageView(device, &color_image_view_ci, nullptr, &swapchain_color_image_view));
-        }
-    }
-
-    void Graphics::destroy_swapchain()
-    {
-        vkDestroySwapchainKHR(device, swapchain, nullptr);
-
-        // destroy swapchain resources
-        for (size_t i = 0; i < swapchain_image_views.size(); i++)
-        {
-            vkDestroyImageView(device, swapchain_image_views[i], nullptr);
-        }
-
-        vkDestroyImage(device, swapchain_depth_image, nullptr);
-        vkFreeMemory(device, swapchain_depth_image_memory, nullptr);
-        vkDestroyImageView(device, swapchain_depth_image_view, nullptr);
-
-        vkDestroyImage(device, swapchain_color_image, nullptr);
-        vkFreeMemory(device, swapchain_color_image_memory, nullptr);
-        vkDestroyImageView(device, swapchain_color_image_view, nullptr);
-    }
-
 
     void Graphics::set_resolution_scale(float scale)
     {
@@ -618,6 +464,11 @@ namespace gage::gfx
         return *global_uniform_buffer;
     }
 
+    const data::Swapchain& Graphics::get_swapchain() const
+    {
+        return *swapchain.get();
+    }
+
 
 
     void Graphics::set_resize(int width, int height)
@@ -633,28 +484,5 @@ namespace gage::gfx
                           (unsigned int)std::floor(draw_extent.height * draw_extent_scale)};
     }
 
-    std::tuple<uint32_t, uint32_t> Graphics::get_color_image() const
-    {
-        VkMemoryGetFdInfoKHR get_handle_info{};
-        get_handle_info.sType = VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR;
-        get_handle_info.memory = swapchain_color_image_memory;
-        get_handle_info.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
-
-        int fd;
-        auto vkGetMemoryFdKHR = PFN_vkGetMemoryFdKHR(vkGetDeviceProcAddr(device, "vkGetMemoryFdKHR"));
-        vkGetMemoryFdKHR(device, &get_handle_info, &fd);
-        return std::make_tuple<uint32_t, uint32_t>(fd, swapchain_color_image_memory_size);
-    }
-    std::tuple<uint32_t, uint32_t> Graphics::get_depth_image() const
-    {
-        VkMemoryGetFdInfoKHR get_handle_info{};
-        get_handle_info.sType = VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR;
-        get_handle_info.memory = swapchain_depth_image_memory;
-        get_handle_info.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
-
-        int fd;
-        auto vkGetMemoryFdKHR = PFN_vkGetMemoryFdKHR(vkGetDeviceProcAddr(device, "vkGetMemoryFdKHR"));
-        vkGetMemoryFdKHR(device, &get_handle_info, &fd);
-        return std::make_tuple<uint32_t, uint32_t>(fd, swapchain_depth_image_memory_size);
-    }
+    
 }

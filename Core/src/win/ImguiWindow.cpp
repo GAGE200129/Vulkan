@@ -9,6 +9,7 @@
 #include <Core/src/gfx/Graphics.hpp>
 #include <Core/src/gfx/data/Camera.hpp>
 #include <Core/src/gfx/data/GUBO.hpp>
+#include <Core/src/gfx/data/Swapchain.hpp>
 
 #include <glad/glad.h>
 #define GLFW_INCLUDE_NONE
@@ -158,8 +159,8 @@ namespace gage::win
 
     void ImguiWindow::create_viewport(gfx::Graphics &gfx)
     {
-        const auto [color_fd, color_size] = gfx.get_color_image();
-        const auto [depth_fd, depth_size] = gfx.get_depth_image();
+        const auto [color_fd, color_size] = gfx.get_swapchain().get_color_image_external();
+        const auto [depth_fd, depth_size] = gfx.get_swapchain().get_depth_image_external();
         VkExtent2D extent = gfx.get_scaled_draw_extent();
 
         glCreateMemoryObjectsEXT(1, &gfx_color_texture_mem);

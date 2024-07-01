@@ -28,6 +28,7 @@ namespace gage::gfx::data
     class IData;
     class GUBO;
     class Camera;
+    class Swapchain;
 }
 
 struct GLFWwindow;
@@ -36,6 +37,7 @@ namespace gage::gfx
     class Graphics
     {
         friend class bind::IBindable;
+        friend class data::Swapchain;
     public:
         Graphics(GLFWwindow *window, std::string app_name);
         Graphics(const Graphics &) = delete;
@@ -57,16 +59,12 @@ namespace gage::gfx
         const glm::mat4& get_view() const;
         const data::GUBO& get_global_uniform_buffer() const;
         data::GUBO& get_global_uniform_buffer();
+        const data::Swapchain& get_swapchain() const;
 
-
-        std::tuple<uint32_t, uint32_t> get_color_image() const;
-        std::tuple<uint32_t, uint32_t> get_depth_image() const;
+       
 
         //void set_exclusive_mode(bool enabled);
         VkExtent2D get_scaled_draw_extent();
-    private:
-        void create_swapchain();
-        void destroy_swapchain();
     private:
         std::string app_name{};
         std::stack<std::function<void()>> delete_stack{};
@@ -94,23 +92,9 @@ namespace gage::gfx
 
         bool swapchain_resize_requested{};
         uint32_t swapchain_image_index{};
-        VkSwapchainKHR swapchain{};
-        VkFormat swapchain_image_format{VK_FORMAT_B8G8R8A8_UNORM};
-        VkColorSpaceKHR swapchain_image_color_space{VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
-        VkFormat swapchain_depth_format{VK_FORMAT_D32_SFLOAT};
-        VkPresentModeKHR swapchain_present_mode{VK_PRESENT_MODE_IMMEDIATE_KHR};
-        std::vector<VkImage> swapchain_images{};
-        std::vector<VkImageView> swapchain_image_views{};
 
-        VkDeviceMemory swapchain_depth_image_memory{};
-        VkDeviceSize swapchain_depth_image_memory_size{};
-        VkImage swapchain_depth_image{};
-        VkImageView swapchain_depth_image_view{};
-
-        VkDeviceMemory swapchain_color_image_memory{};
-        VkDeviceSize swapchain_color_image_memory_size{};
-        VkImage swapchain_color_image{};
-        VkImageView swapchain_color_image_view{};
+        std::unique_ptr<data::Swapchain> swapchain{};
+        
 
         VkDescriptorPool desc_pool{};
         std::unique_ptr<data::GUBO> global_uniform_buffer{};

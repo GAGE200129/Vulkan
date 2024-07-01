@@ -1,5 +1,7 @@
 #include "IBindable.hpp"
 
+#include "../data/Swapchain.hpp"
+
 namespace gage::gfx::bind
 {
     VkDevice IBindable::get_device(Graphics &gfx)
@@ -33,11 +35,11 @@ namespace gage::gfx::bind
 
     VkFormat IBindable::get_swapchain_image_format(Graphics &gfx)
     {
-        return gfx.swapchain_image_format;
+        return gfx.get_swapchain().get_image_format();
     }
     VkFormat IBindable::get_swapchain_depth_format(Graphics &gfx)
     {
-        return gfx.swapchain_depth_format;
+        return gfx.get_swapchain().get_depth_format();
     }
 
     VkDescriptorPool IBindable::get_desc_pool(Graphics& gfx)
