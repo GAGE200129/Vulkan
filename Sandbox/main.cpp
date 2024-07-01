@@ -8,7 +8,7 @@
 #include <Core/src/gfx/bind/IBindable.hpp>
 #include <Core/src/utils/FileLoader.hpp>
 #include <Core/src/gfx/data/Camera.hpp>
-#include <Core/ThirdParty/tiny_gltf.h>
+#include <Core/src/gfx/draw/StaticModel.hpp>
 
 #include <thread>
 
@@ -19,30 +19,6 @@ using namespace std::chrono_literals;
 
 int main()
 {
-    using namespace tinygltf;
-
-    Model model;
-    TinyGLTF loader;
-    std::string err;
-    std::string warn;
-
-    bool ret = loader.LoadBinaryFromFile(&model, &err, &warn, "res/models/box_textured.glb");
-
-    if (!warn.empty())
-    {
-        printf("Warn: %s\n", warn.c_str());
-    }
-
-    if (!err.empty())
-    {
-        printf("Err: %s\n", err.c_str());
-    }
-
-    if (!ret)
-    {
-        printf("Failed to parse glTF\n");
-        return -1;
-    }
     try
     {
         log::init();
@@ -59,11 +35,14 @@ int main()
                 boxes.push_back(std::make_unique<gfx::draw::Box>(graphics));
             }
 
+            auto model = std::make_unique<gfx::draw::StaticModel>(graphics, "res/models/box_textured.glb");
+
+
             gfx::data::Camera camera{};
             while (!window.is_closing())
             {
 
-                static constexpr int64_t NS_PER_FRAME = (1.0 / 30.0) * 1000000000;
+                static constexpr int64_t NS_PER_FRAME = (1.0 / 75.0) * 1000000000;
                 auto start = std::chrono::high_resolution_clock::now();
                 graphics.clear(camera);
                 for (auto &box : boxes)
@@ -71,6 +50,7 @@ int main()
                     box->update(0.016f);
                     box->draw(graphics);
                 }
+                model->draw(graphics);
                 graphics.end_frame();
 
                 imgui_window.clear();
@@ -86,7 +66,7 @@ int main()
             }
 
             graphics.wait();
-
+            model->destroy(graphics);
             for (auto &box : boxes)
             {
                 box->destroy(graphics);

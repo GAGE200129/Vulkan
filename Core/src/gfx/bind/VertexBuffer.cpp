@@ -11,6 +11,7 @@ namespace gage::gfx::bind
     VertexBuffer::VertexBuffer(Graphics &gfx, uint32_t binding, uint32_t size_in_bytes, void* vertices) :
         binding(binding)
     {
+        assert(size_in_bytes != 0 && vertices != nullptr);
         VkBufferCreateInfo staging_buffer_info = {};
         staging_buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         staging_buffer_info.size = size_in_bytes;

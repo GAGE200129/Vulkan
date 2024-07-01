@@ -301,10 +301,11 @@ namespace gage::gfx
         // wait until the GPU has finished rendering the last frame. Timeout of 1 second
         vk_check(vkWaitForFences(device, 1, &render_fence, true, 1000000000));
         vk_check(vkResetFences(device, 1, &render_fence));
-        VkResult swapchain_image_index_result = vkAcquireNextImageKHR(device, swapchain, 1000000000, present_semaphore, nullptr, &swapchain_image_index);
-        if (swapchain_image_index_result != VK_SUCCESS && swapchain_image_index_result != VK_SUBOPTIMAL_KHR)
+        
+        if (VkResult result = vkAcquireNextImageKHR(device, swapchain, 1000000000, present_semaphore, nullptr, &swapchain_image_index);
+            result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
         {
-            logger.fatal("Failed to acquire next image: ").vk_result(swapchain_image_index_result);
+            logger.fatal("Failed to acquire next image: ").vk_result(result);
             throw GraphicsException{};
         }
 
@@ -410,25 +411,20 @@ namespace gage::gfx
         submit.commandBufferCount = 1;
         submit.pCommandBuffers = &cmd;
 
-        // submit command buffer to the queue and execute it.
-        //  _renderFence will now block until the graphic commands finish execution
         vk_check(vkQueueSubmit(graphics_queue, 1, &submit, render_fence));
         VkPresentInfoKHR presentInfo = {};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
         presentInfo.pSwapchains = &swapchain;
         presentInfo.swapchainCount = 1;
-
         presentInfo.pWaitSemaphores = &render_semaphore;
         presentInfo.waitSemaphoreCount = 1;
-
         presentInfo.pImageIndices = &swapchain_image_index;
 
-        VkResult queue_present_result = vkQueuePresentKHR(graphics_queue, &presentInfo);
-
-        if (queue_present_result != VK_SUCCESS && queue_present_result != VK_SUBOPTIMAL_KHR)
+        ;
+        if (VkResult result = vkQueuePresentKHR(graphics_queue, &presentInfo); 
+            result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
         {
-            logger.fatal("Failed to present swapchain image: ").vk_result(queue_present_result);
+            logger.fatal("Failed to present swapchain image: ").vk_result(result);
             throw GraphicsException{};
         }
 
