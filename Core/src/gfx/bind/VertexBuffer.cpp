@@ -8,7 +8,7 @@
 
 namespace gage::gfx::bind
 {
-    VertexBuffer::VertexBuffer(Graphics &gfx, uint32_t binding, uint32_t size_in_bytes, void* vertices) :
+    VertexBuffer::VertexBuffer(Graphics &gfx, uint32_t binding, uint32_t size_in_bytes,const void* vertices) :
         binding(binding)
     {
         assert(size_in_bytes != 0 && vertices != nullptr);

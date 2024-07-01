@@ -8,6 +8,7 @@
 #include "../bind/DescriptorSet.hpp"
 #include "../bind/UniformBuffer.hpp"
 #include "../data/GUBO.hpp"
+#include "../data/Vertex.hpp"
 
 #include <Core/src/utils/FileLoader.hpp>
 #include <tiny_gltf.h>
@@ -20,48 +21,13 @@ namespace gage::gfx::draw
         bind::Texture *p_texture{};
         if (!is_static_initialized())
         {
-            struct Vertex
-            {
-                glm::vec3 position;
-                glm::vec3 normal;
-                glm::vec2 uv;
+            data::RawVertexArray vertex_array{
+                data::VertexLayout{}
+                    .emplace_back(data::ElementType::Vec3)
+                    .emplace_back(data::ElementType::Vec3)
+                    .emplace_back(data::ElementType::Vec2)
             };
-            std::vector<VkVertexInputBindingDescription> bindings;
-            std::vector<VkVertexInputAttributeDescription> attributes;
 
-            // we will have just 1 vertex buffer binding, with a per-vertex rate
-            VkVertexInputBindingDescription main_binding = {};
-            main_binding.binding = 0;
-            main_binding.stride = sizeof(Vertex);
-            main_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-            bindings.push_back(main_binding);
-
-            // Position will be stored at Location 0
-            VkVertexInputAttributeDescription position_attribute = {};
-            position_attribute.binding = 0;
-            position_attribute.location = 0;
-            position_attribute.format = VK_FORMAT_R32G32B32_SFLOAT;
-            position_attribute.offset = offsetof(Vertex, position);
-
-            // Normal will be stored at Location 1
-            VkVertexInputAttributeDescription normal_attribute = {};
-            normal_attribute.binding = 0;
-            normal_attribute.location = 1;
-            normal_attribute.format = VK_FORMAT_R32G32B32_SFLOAT;
-            normal_attribute.offset = offsetof(Vertex, normal);
-
-            // Color will be stored at Location 2
-            VkVertexInputAttributeDescription uv_attribute = {};
-            uv_attribute.binding = 0;
-            uv_attribute.location = 2;
-            uv_attribute.format = VK_FORMAT_R32G32_SFLOAT;
-            uv_attribute.offset = offsetof(Vertex, uv);
-
-            attributes.push_back(position_attribute);
-            attributes.push_back(normal_attribute);
-            attributes.push_back(uv_attribute);
-
-   
 
             tinygltf::Model model;
             tinygltf::TinyGLTF loader;
@@ -87,7 +53,6 @@ namespace gage::gfx::draw
             }
 
             std::vector<uint32_t> indices{};
-            std::vector<Vertex> vertices{};
             try
             {
                 using namespace tinygltf;
@@ -103,7 +68,7 @@ namespace gage::gfx::draw
                     return result;
                 };
 
-                auto extract_index_buffer_from_primitive = [extract_buffer_from_accessor](const Model &model, const Primitive &primitive, std::vector<uint32_t>& out_index_vec)
+                auto extract_index_buffer_from_primitive = [extract_buffer_from_accessor](const Model &model, const Primitive &primitive, std::vector<uint32_t> &out_index_vec)
                 {
                     const auto &accessor = model.accessors.at(primitive.indices);
                     auto index_vector = extract_buffer_from_accessor(model, accessor);
@@ -134,48 +99,48 @@ namespace gage::gfx::draw
                     }
                 };
 
-                auto extract_vertex_buffer_from_primitive = [extract_buffer_from_accessor](const Model &model, const Primitive &primitive, std::vector<Vertex>& out_vertex_vec)
+                auto extract_vertex_buffer_from_primitive = [extract_buffer_from_accessor](const Model &model, const Primitive &primitive, data::RawVertexArray &out_vertex_array)
                 {
                     bool attribute_valid = primitive.attributes.find("POSITION") != primitive.attributes.end();
                     attribute_valid |= primitive.attributes.find("NORMAL") != primitive.attributes.end();
                     attribute_valid |= primitive.attributes.find("TEXCOORD_0") != primitive.attributes.end();
-                    if(!attribute_valid)
+                    if (!attribute_valid)
                         throw GraphicsException{"Model vertex attribute must have POSITION, NORMAL, TEXCOORD_0 attributes"};
 
-                    const auto& position_accessor = model.accessors.at(primitive.attributes.at("POSITION"));
+                    const auto &position_accessor = model.accessors.at(primitive.attributes.at("POSITION"));
                     auto position_buffer = extract_buffer_from_accessor(model, position_accessor);
 
-                    const auto& normal_accessor = model.accessors.at(primitive.attributes.at("NORMAL"));
+                    const auto &normal_accessor = model.accessors.at(primitive.attributes.at("NORMAL"));
                     auto normal_buffer = extract_buffer_from_accessor(model, normal_accessor);
 
-                    const auto& texcoord_accessor = model.accessors.at(primitive.attributes.at("TEXCOORD_0"));
+                    const auto &texcoord_accessor = model.accessors.at(primitive.attributes.at("TEXCOORD_0"));
                     auto texcoord_buffer = extract_buffer_from_accessor(model, texcoord_accessor);
 
                     bool buffer_valid = position_accessor.count == normal_accessor.count && position_accessor.count == texcoord_accessor.count;
-                    if(!buffer_valid)
+                    if (!buffer_valid)
                         throw GraphicsException{"Buffer invalid !"};
 
-                    bool texcoord_valid = texcoord_accessor.componentType == 5126;//float
-                    if(!texcoord_valid)
+                    bool texcoord_valid = texcoord_accessor.componentType == 5126; // float
+                    if (!texcoord_valid)
                         throw GraphicsException{"Texture coord must be float !"};
 
-                    //Process position buffer
-                    for(uint32_t i = 0; i < position_accessor.count; i++)
+                    // Process
+                    for (uint32_t i = 0; i < position_accessor.count; i++)
                     {
-                        Vertex v{};
-                        std::memcpy(&v.position.x, position_buffer.data() + i * sizeof(glm::vec3), sizeof(glm::vec3));
-                        std::memcpy(&v.normal.x, normal_buffer.data() + i * sizeof(glm::vec3), sizeof(glm::vec3));
-                        std::memcpy(&v.uv.x, texcoord_buffer.data() + i * sizeof(glm::vec2), sizeof(glm::vec2));
-                        out_vertex_vec.push_back(v);
+                        glm::vec3 position{};
+                        glm::vec3 normal{};
+                        glm::vec2 uv{};
+                        std::memcpy(&position.x, position_buffer.data() + i * sizeof(glm::vec3), sizeof(glm::vec3));
+                        std::memcpy(&normal.x, normal_buffer.data() + i * sizeof(glm::vec3), sizeof(glm::vec3));
+                        std::memcpy(&uv.x, texcoord_buffer.data() + i * sizeof(glm::vec2), sizeof(glm::vec2));
+                        out_vertex_array.emplace_back(position, normal, uv);
                     }
                 };
                 const Mesh &mesh = model.meshes[0];
                 for (const auto &primitive : mesh.primitives)
                 {
                     extract_index_buffer_from_primitive(model, primitive, indices);
-                    extract_vertex_buffer_from_primitive(model, primitive, vertices);
-
-                    
+                    extract_vertex_buffer_from_primitive(model, primitive, vertex_array);
                 }
             }
             catch (std::exception &e)
@@ -206,6 +171,8 @@ namespace gage::gfx::draw
             push_constants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
             auto pipeline = std::make_unique<bind::Pipeline>();
+            auto attributes = vertex_array.get_layout().get_vulkan_attributes();
+            VkVertexInputBindingDescription bindings[] = {vertex_array.get_layout().get_vulkan_binding()};
             pipeline->set_vertex_layout(bindings, attributes);
             pipeline->set_push_constants(push_constants);
             pipeline->set_descriptor_set_bindings(descriptor_bindings);
@@ -228,7 +195,7 @@ namespace gage::gfx::draw
             add_static_bind(std::move(texture));
             add_static_bind(std::move(pipeline));
             add_static_index_buffer(std::make_unique<bind::IndexBuffer>(gfx, indices));
-            add_static_bind(std::make_unique<bind::VertexBuffer>(gfx, 0, vertices.size() * sizeof(Vertex), vertices.data()));
+            add_static_bind(std::make_unique<bind::VertexBuffer>(gfx, 0, vertex_array.size_in_bytes(), vertex_array.data()));
         }
         else
         {

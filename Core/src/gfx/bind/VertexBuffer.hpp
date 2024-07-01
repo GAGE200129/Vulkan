@@ -9,7 +9,7 @@ namespace gage::gfx::bind
     class VertexBuffer : public IBindable
     {
     public:
-        VertexBuffer(Graphics& gfx, uint32_t binding, uint32_t size_in_bytes, void* vertices);
+        VertexBuffer(Graphics& gfx, uint32_t binding, uint32_t size_in_bytes,const void* vertices);
         void bind(Graphics& gfx) override;
         void destroy(Graphics& gfx) override;
     private:

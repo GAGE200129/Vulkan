@@ -19,6 +19,7 @@ using namespace std::chrono_literals;
 
 int main()
 {
+
     try
     {
         log::init();

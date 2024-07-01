@@ -45,5 +45,5 @@ void main()
     vec4 specular = att * material.specular_intensity * spec * ubo.diffuse_color;  
     specular.a = 0;
 
-	outFragColor = clamp(ubo.ambient + diffuse * material.color + specular, 0.0, 1.0) * texture(u_texture, fs_uvs);
+	outFragColor = clamp(ubo.ambient + diffuse * material.color + specular, 0.0, 1.0);
 }
