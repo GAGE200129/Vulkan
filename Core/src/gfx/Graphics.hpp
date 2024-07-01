@@ -5,12 +5,9 @@
 #include <vk_mem_alloc.h>
 #include <functional>
 #include <stack>
+#include <glm/mat4x4.hpp>
 
 #include "Exception.hpp"
-
-
-
-#include <glm/mat4x4.hpp>
 
 namespace vkb
 {
@@ -26,9 +23,9 @@ namespace gage::gfx::bind
 namespace gage::gfx::data
 {
     class IData;
-    class GUBO;
     class Camera;
     class Swapchain;
+    class DefaultPipeline;
 }
 
 struct GLFWwindow;
@@ -38,6 +35,7 @@ namespace gage::gfx
     {
         friend class bind::IBindable;
         friend class data::Swapchain;
+        friend class data::DefaultPipeline;
     public:
         Graphics(GLFWwindow *window, std::string app_name);
         Graphics(const Graphics &) = delete;
@@ -46,7 +44,7 @@ namespace gage::gfx
 
         void wait();
         void clear(const data::Camera& camera);
-        // void draw_test_triangle();
+        void bind_default_pipeline();
         void draw_indexed(uint32_t vertex_count);
         void end_frame();
         const std::string &get_app_name() const noexcept;
@@ -57,10 +55,9 @@ namespace gage::gfx
 
         const glm::mat4& get_projection() const;
         const glm::mat4& get_view() const;
-        const data::GUBO& get_global_uniform_buffer() const;
-        data::GUBO& get_global_uniform_buffer();
         const data::Swapchain& get_swapchain() const;
-
+        const data::DefaultPipeline& get_default_pipeline() const;
+        data::DefaultPipeline& get_default_pipeline();
        
 
         //void set_exclusive_mode(bool enabled);
@@ -97,7 +94,6 @@ namespace gage::gfx
         
 
         VkDescriptorPool desc_pool{};
-        std::unique_ptr<data::GUBO> global_uniform_buffer{};
 
         VkCommandPool cmd_pool{};
         VkCommandBuffer transfer_cmd{}; //Uses trasnfer queue
@@ -117,5 +113,8 @@ namespace gage::gfx
         uint32_t frame_index{};
 
         VmaAllocator allocator{};
+
+        //Pipelines
+        std::unique_ptr<data::DefaultPipeline> default_pipeline{};
     };
 }

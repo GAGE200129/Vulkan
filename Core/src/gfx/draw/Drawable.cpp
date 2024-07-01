@@ -3,6 +3,7 @@
 #include "../Graphics.hpp"
 #include "../bind/IndexBuffer.hpp"
 #include "../bind/UniformBuffer.hpp"
+#include "../data/DefaultPipeline.hpp"
 
 #include <cassert>
 

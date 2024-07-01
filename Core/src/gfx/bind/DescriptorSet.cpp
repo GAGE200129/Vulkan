@@ -58,7 +58,7 @@ namespace gage::gfx::bind
 
     void DescriptorSet::bind(Graphics &gfx)
     {
-        vkCmdBindDescriptorSets(get_cmd(gfx), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set, 0, nullptr);
+        vkCmdBindDescriptorSets(get_cmd(gfx), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 1, 1, &descriptor_set, 0, nullptr);
     }
     void DescriptorSet::destroy(Graphics &gfx)
     {

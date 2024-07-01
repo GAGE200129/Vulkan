@@ -11,9 +11,9 @@
 
 #include "Exception.hpp"
 
-#include "data/GUBO.hpp"
 #include "data/Camera.hpp"
 #include "data/Swapchain.hpp"
+#include "data/DefaultPipeline.hpp"
 
 using namespace std::string_literals;
 
@@ -69,7 +69,6 @@ namespace gage::gfx
         draw_extent.height = height;
         draw_extent_temp.width = width;
         draw_extent_temp.height = height;
-        
 
         vkb::InstanceBuilder builder;
         // make the vulkan instance, with basic debug features
@@ -154,8 +153,8 @@ namespace gage::gfx
                           { vmaDestroyAllocator(allocator); });
 
         swapchain = std::make_unique<data::Swapchain>(*this);
-        delete_stack.push([this](){ swapchain.reset(); });
-
+        delete_stack.push([this]()
+                          { swapchain.reset(); });
 
         // Create descriptor pool
         VkDescriptorPoolSize pool_sizes[] = {
@@ -173,10 +172,6 @@ namespace gage::gfx
         delete_stack.push([this]()
                           { vkDestroyDescriptorPool(device, desc_pool, nullptr); });
 
-        // Create global descriptor set
-        global_uniform_buffer = std::make_unique<data::GUBO>(allocator);
-        delete_stack.push([this]()
-                          { global_uniform_buffer->destroy(allocator); });
 
         // use vkbootstrap to get a Graphics queue
         auto graphics_queue_result = vkb_device.get_queue(vkb::QueueType::graphics);
@@ -247,6 +242,10 @@ namespace gage::gfx
                 vkDestroySemaphore(device, present_semaphore, nullptr);
                 vkDestroySemaphore(device, render_semaphore, nullptr); });
         }
+
+        default_pipeline = std::make_unique<data::DefaultPipeline>(*this);
+        delete_stack.push([this]()
+                          { default_pipeline.reset(); });
     }
 
     Graphics::~Graphics()
@@ -269,16 +268,14 @@ namespace gage::gfx
     {
         vkCmdDrawIndexed(frame_datas[frame_index].cmd, vertex_count, 1, 0, 0, 0);
     }
-    void Graphics::clear(const data::Camera& camera)
+    void Graphics::clear(const data::Camera &camera)
     {
-        // Update global uniform
-        data::GUBO::Data& data = global_uniform_buffer->data;
-        data.camera_position = camera.get_position();
-        data.projection = glm::perspectiveFovRH_ZO(glm::radians(camera.get_field_of_view()), 
-            (float)draw_extent.width, (float)draw_extent.height, camera.get_near(), camera.get_far());
-        data.projection[1][1] *= -1;
-        data.view = camera.get_view();
-        global_uniform_buffer->update();
+        auto& ubo = default_pipeline->ubo;
+        ubo.camera_position = camera.get_position();
+        ubo.projection = glm::perspectiveFovRH_ZO(glm::radians(camera.get_field_of_view()),
+                                                   (float)draw_extent.width, (float)draw_extent.height, camera.get_near(), camera.get_far());
+        ubo.projection[1][1] *= -1;
+        ubo.view = camera.get_view();
 
         // Check for swapchain recreation
         if (swapchain_resize_requested)
@@ -301,7 +298,7 @@ namespace gage::gfx
         // wait until the GPU has finished rendering the last frame. Timeout of 1 second
         vk_check(vkWaitForFences(device, 1, &render_fence, true, 1000000000));
         vk_check(vkResetFences(device, 1, &render_fence));
-        
+
         if (VkResult result = vkAcquireNextImageKHR(device, swapchain->get(), 1000000000, present_semaphore, nullptr, &swapchain_image_index);
             result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
         {
@@ -423,7 +420,7 @@ namespace gage::gfx
         presentInfo.pImageIndices = &swapchain_image_index;
 
         ;
-        if (VkResult result = vkQueuePresentKHR(graphics_queue, &presentInfo); 
+        if (VkResult result = vkQueuePresentKHR(graphics_queue, &presentInfo);
             result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
         {
             logger.fatal("Failed to present swapchain image: ").vk_result(result);
@@ -432,6 +429,12 @@ namespace gage::gfx
 
         frame_index++;
         frame_index = frame_index % FRAMES_IN_FLIGHT;
+    }
+
+    void Graphics::bind_default_pipeline()
+    {
+        
+        default_pipeline->bind(frame_datas[frame_index].cmd);
     }
 
     const std::string &Graphics::get_app_name() const noexcept
@@ -445,31 +448,22 @@ namespace gage::gfx
         draw_extent_scale = scale;
     }
 
-    const glm::mat4 &Graphics::get_projection() const
-    {
-        return global_uniform_buffer->data.projection;
-    }
-    const glm::mat4 &Graphics::get_view() const
-    {
-        return global_uniform_buffer->data.view;
-    }
 
-    const data::GUBO &Graphics::get_global_uniform_buffer() const
-    {
-        return *global_uniform_buffer;
-    }
 
-    data::GUBO &Graphics::get_global_uniform_buffer()
-    {
-        return *global_uniform_buffer;
-    }
-
-    const data::Swapchain& Graphics::get_swapchain() const
+    const data::Swapchain &Graphics::get_swapchain() const
     {
         return *swapchain.get();
     }
 
+    const data::DefaultPipeline &Graphics::get_default_pipeline() const
+    {
+        return *default_pipeline.get();
+    }
 
+    data::DefaultPipeline &Graphics::get_default_pipeline()
+    {
+        return *default_pipeline.get();
+    }
 
     void Graphics::set_resize(int width, int height)
     {
@@ -484,5 +478,4 @@ namespace gage::gfx
                           (unsigned int)std::floor(draw_extent.height * draw_extent_scale)};
     }
 
-    
 }

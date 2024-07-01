@@ -8,7 +8,7 @@ layout(location = 2) in vec3 fs_world_pos;
 layout (location = 0) out vec4 outFragColor;
 
 //Descriptor
-layout(binding = 0) uniform UniformBuffer
+layout(set = 0, binding = 0) uniform UniformBuffer
 {
     mat4x4 projection;
     mat4x4 view;
@@ -21,8 +21,8 @@ layout(binding = 0) uniform UniformBuffer
     float att_linear;
     float att_exponent;
 } ubo;
-layout(binding = 1) uniform sampler2D u_texture;
-layout(binding = 2) uniform Material
+layout(set = 1, binding = 0) uniform sampler2D u_texture;
+layout(set = 1, binding = 1) uniform Material
 {
     vec4 color;
     float specular_intensity;

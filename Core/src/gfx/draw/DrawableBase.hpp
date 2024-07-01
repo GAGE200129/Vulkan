@@ -4,7 +4,6 @@
 #include "../bind/VertexBuffer.hpp"
 #include "../bind/IndexBuffer.hpp"
 #include "../bind/DescriptorSet.hpp"
-#include "../bind/Pipeline.hpp"
 #include "Drawable.hpp"
 
 #include <cassert>

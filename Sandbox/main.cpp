@@ -36,7 +36,7 @@ int main()
                 boxes.push_back(std::make_unique<gfx::draw::Box>(graphics));
             }
 
-            auto model = std::make_unique<gfx::draw::StaticModel>(graphics, "res/models/box_textured.glb");
+            // auto model = std::make_unique<gfx::draw::StaticModel>(graphics, "res/models/box_textured.glb");
 
 
             gfx::data::Camera camera{};
@@ -46,12 +46,13 @@ int main()
                 static constexpr int64_t NS_PER_FRAME = (1.0 / 75.0) * 1000000000;
                 auto start = std::chrono::high_resolution_clock::now();
                 graphics.clear(camera);
+                graphics.bind_default_pipeline();
                 for (auto &box : boxes)
                 {
                     box->update(0.016f);
                     box->draw(graphics);
                 }
-                model->draw(graphics);
+                // model->draw(graphics);
                 graphics.end_frame();
 
                 imgui_window.clear();
@@ -67,7 +68,7 @@ int main()
             }
 
             graphics.wait();
-            model->destroy(graphics);
+            // model->destroy(graphics);
             for (auto &box : boxes)
             {
                 box->destroy(graphics);

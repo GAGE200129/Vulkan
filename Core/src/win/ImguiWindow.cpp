@@ -8,8 +8,8 @@
 #include <Core/src/log/Log.hpp>
 #include <Core/src/gfx/Graphics.hpp>
 #include <Core/src/gfx/data/Camera.hpp>
-#include <Core/src/gfx/data/GUBO.hpp>
 #include <Core/src/gfx/data/Swapchain.hpp>
+#include <Core/src/gfx/data/DefaultPipeline.hpp>
 
 #include <glad/glad.h>
 #define GLFW_INCLUDE_NONE
@@ -148,11 +148,11 @@ namespace gage::win
 
         if (ImGui::Begin("Lightning"))
         {
-            gfx::data::GUBO& ubo = window.get_graphics().get_global_uniform_buffer();
-            ImGui::DragFloat3("Position", &ubo.data.point_light_position.x, 0.1f);
-            ImGui::ColorPicker3("diffuse color", &ubo.data.diffuse_color.x);
-            ImGui::DragFloat("diffuse intensity", &ubo.data.diffuse_intensity, 0.01f);
-            ImGui::DragFloat3("Attenuation", &ubo.data.att_constant, 0.0001f);
+            auto& ubo = window.get_graphics().get_default_pipeline().ubo;
+            ImGui::DragFloat3("Position", &ubo.point_light_position.x, 0.1f);
+            ImGui::ColorPicker3("diffuse color", &ubo.diffuse_color.x);
+            ImGui::DragFloat("diffuse intensity", &ubo.diffuse_intensity, 0.01f);
+            ImGui::DragFloat3("Attenuation", &ubo.att_constant, 0.0001f);
         }
         ImGui::End();
     }
