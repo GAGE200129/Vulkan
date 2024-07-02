@@ -12,8 +12,7 @@
 #include "Exception.hpp"
 
 #include "data/Camera.hpp"
-#include "data/Swapchain.hpp"
-#include "data/DefaultPipeline.hpp"
+
 
 using namespace std::string_literals;
 
@@ -152,7 +151,7 @@ namespace gage::gfx
         delete_stack.push([this]()
                           { vmaDestroyAllocator(allocator); });
 
-        swapchain = std::make_unique<data::Swapchain>(*this);
+        swapchain.emplace(*this);
         delete_stack.push([this]()
                           { swapchain.reset(); });
 
@@ -243,7 +242,7 @@ namespace gage::gfx
                 vkDestroySemaphore(device, render_semaphore, nullptr); });
         }
 
-        default_pipeline = std::make_unique<data::DefaultPipeline>(*this);
+        default_pipeline.emplace(*this);
         delete_stack.push([this]()
                           { default_pipeline.reset(); });
     }
@@ -282,8 +281,8 @@ namespace gage::gfx
         {
             vkDeviceWaitIdle(device);
             draw_extent = draw_extent_temp;
-            swapchain.release();
-            swapchain = std::make_unique<data::Swapchain>(*this);
+            swapchain.reset();
+            swapchain.emplace(*this);
             swapchain_resize_requested = false;
         }
 
@@ -452,17 +451,17 @@ namespace gage::gfx
 
     const data::Swapchain &Graphics::get_swapchain() const
     {
-        return *swapchain.get();
+        return swapchain.value();
     }
 
     const data::DefaultPipeline &Graphics::get_default_pipeline() const
     {
-        return *default_pipeline.get();
+        return default_pipeline.value();
     }
 
     data::DefaultPipeline &Graphics::get_default_pipeline()
     {
-        return *default_pipeline.get();
+        return default_pipeline.value();
     }
 
     void Graphics::set_resize(int width, int height)

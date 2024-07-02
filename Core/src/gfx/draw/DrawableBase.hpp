@@ -15,6 +15,11 @@ namespace gage::gfx::draw
     template<typename T>
     class DrawableBase : public Drawable
     {
+    public:
+        virtual ~DrawableBase()
+        {
+            static_bindables.clear();
+        }
     protected:
         bool is_static_initialized() const
         {
@@ -32,7 +37,7 @@ namespace gage::gfx::draw
             this->index_buffer = index_buffer.get();
             static_bindables.push_back(std::move(index_buffer));
         }
-        std::vector<std::unique_ptr<bind::IBindable>>& get_static_bind() override
+        std::vector<std::unique_ptr<bind::IBindable>>& get_static_bind() final
         {
             return static_bindables;
         }

@@ -9,8 +9,8 @@ namespace gage::gfx::bind
     {
     public:
         IndexBuffer(Graphics& gfx, std::span<uint32_t> indices);
-        void bind(Graphics& gfx) override;
-        void destroy(Graphics& gfx) override;
+        virtual ~IndexBuffer();
+        void bind(Graphics& gfx) final;
 
         uint32_t get_vertex_count() const;
     private:

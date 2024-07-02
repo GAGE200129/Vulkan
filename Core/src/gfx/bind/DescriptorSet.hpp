@@ -11,12 +11,12 @@ namespace gage::gfx::bind
     {
     public:
         DescriptorSet(Graphics& gfx, VkPipelineLayout pipeline_layout, VkDescriptorSetLayout layouts);
+        virtual ~DescriptorSet();
 
         void set_texture(Graphics& gfx, uint32_t binding, const Texture& texture);
         void set_buffer(Graphics& gfx, uint32_t binding, VkBuffer buffer, uint32_t size, VkDescriptorType type);
 
-        void bind(Graphics& gfx) override;
-        void destroy(Graphics& gfx) override;
+        void bind(Graphics& gfx) final;
     private:
         VkPipelineLayout pipeline_layout{};
         VkDescriptorSet descriptor_set{};

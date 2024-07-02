@@ -2,6 +2,7 @@
 
 #include <string>
 #include <memory>
+#include <optional>
 #include <Core/src/gfx/Graphics.hpp>
 
 namespace gage::gfx
@@ -31,7 +32,7 @@ namespace gage::win
         gfx::Graphics& get_graphics();
     private:
         GLFWwindow* p_window{};
-        std::unique_ptr<gfx::Graphics> p_graphics{};
+        std::optional<gfx::Graphics> p_graphics{};
     };
 
     void init();

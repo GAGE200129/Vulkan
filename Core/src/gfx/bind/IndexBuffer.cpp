@@ -8,6 +8,7 @@
 namespace gage::gfx::bind
 {
     IndexBuffer::IndexBuffer(Graphics& gfx, std::span<uint32_t> indices) :
+        IBindable(gfx),
         vertex_count(indices.size())
     {
         assert(indices.size() != 0);
@@ -68,7 +69,7 @@ namespace gage::gfx::bind
         vmaDestroyBuffer(get_allocator(gfx), staging_buffer, staging_allocation);
     }   
 
-    void IndexBuffer::destroy(Graphics& gfx)
+    IndexBuffer::~IndexBuffer()
     {
         vmaDestroyBuffer(get_allocator(gfx), buffer, allocation);
     }

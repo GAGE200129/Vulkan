@@ -5,9 +5,12 @@
 #include <vk_mem_alloc.h>
 #include <functional>
 #include <stack>
+#include <optional>
 #include <glm/mat4x4.hpp>
 
 #include "Exception.hpp"
+#include "data/Swapchain.hpp"
+#include "data/DefaultPipeline.hpp"
 
 namespace vkb
 {
@@ -22,10 +25,7 @@ namespace gage::gfx::bind
 
 namespace gage::gfx::data
 {
-    class IData;
     class Camera;
-    class Swapchain;
-    class DefaultPipeline;
 }
 
 struct GLFWwindow;
@@ -90,7 +90,7 @@ namespace gage::gfx
         bool swapchain_resize_requested{};
         uint32_t swapchain_image_index{};
 
-        std::unique_ptr<data::Swapchain> swapchain{};
+        std::optional<data::Swapchain> swapchain{};
         
 
         VkDescriptorPool desc_pool{};
@@ -115,6 +115,6 @@ namespace gage::gfx
         VmaAllocator allocator{};
 
         //Pipelines
-        std::unique_ptr<data::DefaultPipeline> default_pipeline{};
+        std::optional<data::DefaultPipeline> default_pipeline{};
     };
 }

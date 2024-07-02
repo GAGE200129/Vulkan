@@ -22,7 +22,7 @@ namespace gage::win
             throw WindowException{ "Failed to create window !" };
         }
 
-        p_graphics = std::make_unique<gfx::Graphics>(p_window, title);
+        p_graphics.emplace(p_window, title);
     }
     Window::~Window()
     {
@@ -72,7 +72,7 @@ namespace gage::win
 
     gfx::Graphics& Window::get_graphics()
     {
-        return *p_graphics.get();
+        return p_graphics.value();
     }
 
     void init()

@@ -6,9 +6,9 @@ namespace gage::gfx::bind
     class IBindable
     {
     public:
+        IBindable(Graphics& gfx);
         virtual void bind(Graphics& gfx) = 0;
-        virtual void destroy(Graphics& gfx) = 0;
-        virtual ~IBindable();
+        virtual ~IBindable() = default;
 
     protected:
         static VkDevice get_device(Graphics& gfx); 
@@ -20,5 +20,7 @@ namespace gage::gfx::bind
         static VkDescriptorPool get_desc_pool(Graphics& gfx);
         static VkFormat get_swapchain_image_format(Graphics& gfx);
         static VkFormat get_swapchain_depth_format(Graphics& gfx);
+    protected:
+        Graphics& gfx;
     };
 };

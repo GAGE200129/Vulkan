@@ -4,6 +4,12 @@
 
 namespace gage::gfx::bind
 {
+
+    IBindable::IBindable(Graphics& gfx) :
+        gfx(gfx)
+    {
+    }
+
     VkDevice IBindable::get_device(Graphics &gfx)
     {
         return gfx.device;
@@ -47,7 +53,5 @@ namespace gage::gfx::bind
         return gfx.desc_pool;
     }
 
-    IBindable::~IBindable()
-    {
-    }
+    
 }

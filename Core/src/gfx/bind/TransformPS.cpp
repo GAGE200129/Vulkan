@@ -8,7 +8,8 @@
 
 namespace gage::gfx::bind
 {
-    TransformPS::TransformPS(Graphics &, VkPipelineLayout layout,const draw::Drawable &parent) : 
+    TransformPS::TransformPS(Graphics &gfx, VkPipelineLayout layout,const draw::Drawable &parent) : 
+        IBindable(gfx),
         parent(parent),
         layout(layout)
     {

@@ -3,7 +3,8 @@
 namespace gage::gfx::bind
 {
     UniformBuffer::UniformBuffer(Graphics &gfx, size_t size) :
-     size_in_bytes(size)
+        IBindable(gfx),
+        size_in_bytes(size)
     {
         VkBufferCreateInfo buffer_info = {};
         buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -23,7 +24,7 @@ namespace gage::gfx::bind
     {
         std::memcpy(mapped_data, data, size_in_bytes);
     }
-    void UniformBuffer::destroy(Graphics &gfx)
+    UniformBuffer::~UniformBuffer()
     {
         vmaUnmapMemory(get_allocator(gfx), allocation);
         vmaDestroyBuffer(get_allocator(gfx), buffer, allocation);

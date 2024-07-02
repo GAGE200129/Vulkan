@@ -30,13 +30,10 @@ int main()
             win::ImguiWindow imgui_window{graphics};
 
             std::vector<std::unique_ptr<gfx::draw::Box>> boxes;
-
             for (int i = 0; i < 100; i++)
             {
                 boxes.push_back(std::make_unique<gfx::draw::Box>(graphics));
             }
-
-            // auto model = std::make_unique<gfx::draw::StaticModel>(graphics, "res/models/box_textured.glb");
 
 
             gfx::data::Camera camera{};
@@ -68,11 +65,7 @@ int main()
             }
 
             graphics.wait();
-            // model->destroy(graphics);
-            for (auto &box : boxes)
-            {
-                box->destroy(graphics);
-            }
+            boxes.clear();
         }
         win::shutdown();
     }

@@ -9,21 +9,7 @@
 
 namespace gage::gfx::draw
 {
-    void Drawable::destroy(Graphics& gfx)
-    {
-        for(const auto& bind : bindables)
-        {
-            bind->destroy(gfx);
-        }
-        if(!get_static_bind().empty())
-        {
-            for(const auto& bind : get_static_bind())
-            {
-                bind->destroy(gfx);
-            }
-            get_static_bind().clear();
-        }   
-    }
+
     void Drawable::draw(Graphics& gfx)
     {
         for(const auto& bind : bindables)

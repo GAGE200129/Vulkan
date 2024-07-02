@@ -13,9 +13,10 @@ namespace gage::gfx::draw
     {
     public: 
         Box(Graphics& gfx);
-        void update(float dt) override;
+        virtual ~Box() = default;
+        void update(float dt) final;
 
-        glm::mat4 get_world_transform() const override;
+        glm::mat4 get_world_transform() const final;
     private:
         struct Material
         {

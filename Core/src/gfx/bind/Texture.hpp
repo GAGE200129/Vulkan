@@ -11,9 +11,9 @@ namespace gage::gfx::bind
     {
     public:
         Texture(Graphics& gfx, const utils::Image& in_image);
-
-        void bind(Graphics& gfx) override;
-        void destroy(Graphics& gfx) override;
+        virtual ~Texture();
+        
+        void bind(Graphics& gfx) final;
 
         VkImage get_image() const;
         VkImageView get_image_view() const;

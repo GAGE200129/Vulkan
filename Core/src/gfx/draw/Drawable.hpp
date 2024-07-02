@@ -27,7 +27,6 @@ namespace gage::gfx::draw
         Drawable(const Drawable&) = delete;
 
         void draw(Graphics& gfx);
-        void destroy(Graphics& gfx);
 
         void add_bind(std::unique_ptr<bind::IBindable> bind);
         void add_index_buffer(std::unique_ptr<bind::IndexBuffer> index_buffer);

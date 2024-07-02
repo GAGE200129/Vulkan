@@ -5,7 +5,9 @@
 
 namespace gage::gfx::bind
 {
-    DescriptorSet::DescriptorSet(Graphics &gfx, VkPipelineLayout pipeline_layout, VkDescriptorSetLayout layout) : pipeline_layout(pipeline_layout)
+    DescriptorSet::DescriptorSet(Graphics &gfx, VkPipelineLayout pipeline_layout, VkDescriptorSetLayout layout) : 
+        IBindable(gfx),
+        pipeline_layout(pipeline_layout)
     {
         VkDescriptorSetAllocateInfo alloc_info{};
         alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -13,6 +15,11 @@ namespace gage::gfx::bind
         alloc_info.descriptorPool = get_desc_pool(gfx);
         alloc_info.pSetLayouts = &layout;
         vk_check(vkAllocateDescriptorSets(get_device(gfx), &alloc_info, &descriptor_set));
+    }
+
+    DescriptorSet::~DescriptorSet()
+    {
+        vkFreeDescriptorSets(get_device(gfx), get_desc_pool(gfx), 1, &descriptor_set);
     }
 
     void DescriptorSet::set_texture(Graphics &gfx, uint32_t binding, const Texture& texture)
@@ -59,9 +66,5 @@ namespace gage::gfx::bind
     void DescriptorSet::bind(Graphics &gfx)
     {
         vkCmdBindDescriptorSets(get_cmd(gfx), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 1, 1, &descriptor_set, 0, nullptr);
-    }
-    void DescriptorSet::destroy(Graphics &gfx)
-    {
-        vk_check(vkFreeDescriptorSets(get_device(gfx), get_desc_pool(gfx), 1, &descriptor_set));
     }
 }

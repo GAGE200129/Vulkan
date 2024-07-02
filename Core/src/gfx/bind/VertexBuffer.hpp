@@ -10,8 +10,8 @@ namespace gage::gfx::bind
     {
     public:
         VertexBuffer(Graphics& gfx, uint32_t binding, uint32_t size_in_bytes,const void* vertices);
-        void bind(Graphics& gfx) override;
-        void destroy(Graphics& gfx) override;
+        virtual ~VertexBuffer();
+        void bind(Graphics& gfx) final;
     private:
         uint32_t binding{};
         VkBuffer buffer{};

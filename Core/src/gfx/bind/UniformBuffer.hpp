@@ -11,11 +11,11 @@ namespace gage::gfx::bind
     {
     public:
         UniformBuffer(Graphics& gfx, size_t size);
+        virtual  ~UniformBuffer();
 
-        void bind(Graphics&) override {}
+        void bind(Graphics&) final {}
 
         void update(const void* data);
-        void destroy(Graphics& gfx) override;
         VkBuffer get() const;
         size_t get_size() const ;
     private:

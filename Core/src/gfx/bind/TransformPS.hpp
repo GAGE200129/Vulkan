@@ -13,8 +13,8 @@ namespace gage::gfx::bind
     {
     public:
         TransformPS(Graphics& gfx, VkPipelineLayout layout, const draw::Drawable& parent);
-        void bind(Graphics& gfx) override;
-        void destroy(Graphics&) override {};
+        virtual ~TransformPS() = default;
+        void bind(Graphics& gfx) final;
     private:
         const draw::Drawable& parent;
         VkPipelineLayout layout;

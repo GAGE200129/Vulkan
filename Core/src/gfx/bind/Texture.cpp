@@ -6,7 +6,8 @@
 
 namespace gage::gfx::bind
 {
-    Texture::Texture(Graphics &gfx, const utils::Image &in_image)
+    Texture::Texture(Graphics &gfx, const utils::Image &in_image) :
+        IBindable(gfx)
     {
         VkImageCreateInfo img_ci = {};
         img_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -160,7 +161,7 @@ namespace gage::gfx::bind
     void Texture::bind(Graphics &)
     {
     }
-    void Texture::destroy(Graphics &gfx)
+    Texture::~Texture()
     {
         vkDestroySampler(get_device(gfx), sampler, nullptr);
         vmaDestroyImage(get_allocator(gfx), image, allocation);
