@@ -8,7 +8,7 @@
 #include <Core/src/gfx/bind/IBindable.hpp>
 #include <Core/src/utils/FileLoader.hpp>
 #include <Core/src/gfx/data/Camera.hpp>
-#include <Core/src/gfx/draw/StaticModel.hpp>
+#include <Core/src/gfx/draw/Model.hpp>
 
 #include <thread>
 
@@ -29,11 +29,11 @@ int main()
             auto &graphics = window.get_graphics();
             win::ImguiWindow imgui_window{graphics};
 
-            std::vector<std::unique_ptr<gfx::draw::Box>> boxes;
-            for (int i = 0; i < 100; i++)
-            {
-                boxes.push_back(std::make_unique<gfx::draw::Box>(graphics));
-            }
+
+            std::optional<gfx::draw::Model> model, model2, model3;
+            model.emplace(graphics, "res/models/sponza.glb");
+            model2.emplace(graphics, "res/models/box_textured.glb");
+            model3.emplace(graphics, "res/models/death.glb");
 
 
             gfx::data::Camera camera{};
@@ -42,14 +42,12 @@ int main()
 
                 static constexpr int64_t NS_PER_FRAME = (1.0 / 75.0) * 1000000000;
                 auto start = std::chrono::high_resolution_clock::now();
-                graphics.clear(camera);
-                graphics.bind_default_pipeline();
-                for (auto &box : boxes)
-                {
-                    box->update(0.016f);
-                    box->draw(graphics);
-                }
-                // model->draw(graphics);
+                auto cmd = graphics.clear(camera);
+                graphics.get_default_pipeline().bind(cmd);
+                model.value().draw(cmd);
+                model2.value().draw(cmd);
+                model3.value().draw(cmd);
+
                 graphics.end_frame();
 
                 imgui_window.clear();
@@ -65,7 +63,8 @@ int main()
             }
 
             graphics.wait();
-            boxes.clear();
+            model.reset();
+
         }
         win::shutdown();
     }

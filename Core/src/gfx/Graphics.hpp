@@ -6,6 +6,7 @@
 #include <functional>
 #include <stack>
 #include <optional>
+#include <mutex>
 #include <glm/mat4x4.hpp>
 
 #include "Exception.hpp"
@@ -26,6 +27,7 @@ namespace gage::gfx::bind
 namespace gage::gfx::data
 {
     class Camera;
+    class GPUBuffer;
 }
 
 struct GLFWwindow;
@@ -36,6 +38,7 @@ namespace gage::gfx
         friend class bind::IBindable;
         friend class data::Swapchain;
         friend class data::DefaultPipeline;
+        friend class data::GPUBuffer;
     public:
         Graphics(GLFWwindow *window, std::string app_name);
         Graphics(const Graphics &) = delete;
@@ -43,10 +46,11 @@ namespace gage::gfx
         ~Graphics();
 
         void wait();
-        void clear(const data::Camera& camera);
-        void bind_default_pipeline();
+        VkCommandBuffer clear(const data::Camera& camera);
         void draw_indexed(uint32_t vertex_count);
         void end_frame();
+
+
         const std::string &get_app_name() const noexcept;
 
 
@@ -63,6 +67,7 @@ namespace gage::gfx
         //void set_exclusive_mode(bool enabled);
         VkExtent2D get_scaled_draw_extent();
     private:
+        std::mutex uploading_mutex{};
         std::string app_name{};
         std::stack<std::function<void()>> delete_stack{};
 
@@ -92,16 +97,13 @@ namespace gage::gfx
 
         std::optional<data::Swapchain> swapchain{};
         
-
         VkDescriptorPool desc_pool{};
 
         VkCommandPool cmd_pool{};
-        VkCommandBuffer transfer_cmd{}; //Uses trasnfer queue
         
+        VkQueue queue{};
+        uint32_t queue_family{};
 
-        VkQueue graphics_queue{};
-        uint32_t graphics_queue_family{};
-        
         static constexpr int FRAMES_IN_FLIGHT = 2;
         struct FrameData
         {

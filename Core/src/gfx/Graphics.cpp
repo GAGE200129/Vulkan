@@ -172,33 +172,21 @@ namespace gage::gfx
                           { vkDestroyDescriptorPool(device, desc_pool, nullptr); });
 
 
-        // use vkbootstrap to get a Graphics queue
-        auto graphics_queue_result = vkb_device.get_queue(vkb::QueueType::graphics);
-        auto graphics_queue_family_result = vkb_device.get_queue_index(vkb::QueueType::graphics);
-        vkb_check(graphics_queue_result);
-        vkb_check(graphics_queue_family_result);
-
-        graphics_queue = graphics_queue_result.value();
-        graphics_queue_family = graphics_queue_family_result.value();
-
+        // use vkbootstrap to get a Graphics queue family
+        auto queue_family_result = vkb_device.get_queue_index(vkb::QueueType::graphics);
+        vkb_check(queue_family_result);
+        queue_family = queue_family_result.value();
+        //Get queue
+        vkGetDeviceQueue(device, queue_family, 0, &queue);
+    
         // Create command pool
         VkCommandPoolCreateInfo command_pool_info = {};
         command_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         command_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-        command_pool_info.queueFamilyIndex = graphics_queue_family;
-
+        command_pool_info.queueFamilyIndex = queue_family;
         vk_check(vkCreateCommandPool(device, &command_pool_info, nullptr, &cmd_pool));
         delete_stack.push([this]()
                           { vkDestroyCommandPool(device, cmd_pool, nullptr); });
-        // Create transfer cmd
-        VkCommandBufferAllocateInfo transfer_cmd_alloc_info = {};
-        transfer_cmd_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        transfer_cmd_alloc_info.commandPool = cmd_pool;
-        transfer_cmd_alloc_info.commandBufferCount = 1;
-
-        vk_check(vkAllocateCommandBuffers(device, &transfer_cmd_alloc_info, &transfer_cmd));
-        delete_stack.push([this]()
-                          { vkFreeCommandBuffers(device, cmd_pool, 1, &transfer_cmd); });
 
         // Create sync structures
         for (int i = 0; i < FRAMES_IN_FLIGHT; i++)
@@ -267,8 +255,11 @@ namespace gage::gfx
     {
         vkCmdDrawIndexed(frame_datas[frame_index].cmd, vertex_count, 1, 0, 0, 0);
     }
-    void Graphics::clear(const data::Camera &camera)
+    VkCommandBuffer Graphics::clear(const data::Camera &camera)
     {
+        uploading_mutex.lock();
+
+        //Update global ubo
         auto& ubo = default_pipeline->ubo;
         ubo.camera_position = camera.get_position();
         ubo.projection = glm::perspectiveFovRH_ZO(glm::radians(camera.get_field_of_view()),
@@ -283,14 +274,13 @@ namespace gage::gfx
             draw_extent = draw_extent_temp;
             swapchain.reset();
             swapchain.emplace(*this);
+            default_pipeline.reset();
+            default_pipeline.emplace(*this);
             swapchain_resize_requested = false;
         }
 
-        if (draw_extent.width == 0 || draw_extent.height == 0)
-            return;
 
         VkSemaphore &present_semaphore = frame_datas[frame_index].present_semaphore;
-        // VkSemaphore& render_semaphore = frame_datas[frame_index].render_semaphore;
         VkFence &render_fence = frame_datas[frame_index].render_fence;
         VkCommandBuffer &cmd = frame_datas[frame_index].cmd;
 
@@ -349,6 +339,8 @@ namespace gage::gfx
         render_info.pDepthAttachment = &depth_attachment;
         render_info.layerCount = 1;
         vkCmdBeginRendering(cmd, &render_info);
+
+        return frame_datas[frame_index].cmd;
     }
 
     void Graphics::end_frame()
@@ -407,7 +399,7 @@ namespace gage::gfx
         submit.commandBufferCount = 1;
         submit.pCommandBuffers = &cmd;
 
-        vk_check(vkQueueSubmit(graphics_queue, 1, &submit, render_fence));
+        vk_check(vkQueueSubmit(queue, 1, &submit, render_fence));
 
         VkSwapchainKHR swapchain = this->swapchain->get();
         VkPresentInfoKHR presentInfo = {};
@@ -419,7 +411,7 @@ namespace gage::gfx
         presentInfo.pImageIndices = &swapchain_image_index;
 
         ;
-        if (VkResult result = vkQueuePresentKHR(graphics_queue, &presentInfo);
+        if (VkResult result = vkQueuePresentKHR(queue, &presentInfo);
             result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
         {
             logger.fatal("Failed to present swapchain image: ").vk_result(result);
@@ -428,13 +420,10 @@ namespace gage::gfx
 
         frame_index++;
         frame_index = frame_index % FRAMES_IN_FLIGHT;
+
+        uploading_mutex.unlock();
     }
 
-    void Graphics::bind_default_pipeline()
-    {
-        
-        default_pipeline->bind(frame_datas[frame_index].cmd);
-    }
 
     const std::string &Graphics::get_app_name() const noexcept
     {
@@ -446,8 +435,6 @@ namespace gage::gfx
         assert(scale >= 0.0f && scale <= 2.0f);
         draw_extent_scale = scale;
     }
-
-
 
     const data::Swapchain &Graphics::get_swapchain() const
     {

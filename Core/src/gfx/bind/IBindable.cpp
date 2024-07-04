@@ -26,12 +26,12 @@ namespace gage::gfx::bind
 
     VkCommandBuffer IBindable::get_transfer_cmd(Graphics &gfx)
     {
-        return gfx.transfer_cmd;
+        return VK_NULL_HANDLE;
     }
 
     VkQueue IBindable::get_queue(Graphics& gfx)
     {
-        return gfx.graphics_queue;
+        return gfx.queue;
     }
 
     VkExtent2D IBindable::get_draw_extent(Graphics &gfx)

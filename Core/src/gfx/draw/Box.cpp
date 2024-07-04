@@ -129,16 +129,16 @@ namespace gage::gfx::draw
             this->index_buffer = search_static<bind::IndexBuffer>();
             p_texture = search_static<bind::Texture>();
         }
-        auto ubo = std::make_unique<bind::UniformBuffer>(gfx, sizeof(Material));
-        ubo->update(&material);
-        auto descriptor_set = std::make_unique<bind::DescriptorSet>(gfx, gfx.get_default_pipeline().get_pipeline_layout(), gfx.get_default_pipeline().get_instance_set_layout());
-        descriptor_set->set_texture(gfx, 0, *p_texture);
-        descriptor_set->set_buffer(gfx, 1, ubo->get(), ubo->get_size(), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+        // auto ubo = std::make_unique<bind::UniformBuffer>(gfx, sizeof(Material));
+        // ubo->update(&material);
+        // auto descriptor_set = std::make_unique<bind::DescriptorSet>(gfx, gfx.get_default_pipeline().get_pipeline_layout(), gfx.get_default_pipeline().get_instance_set_layout());
+        // descriptor_set->set_texture(gfx, 0, *p_texture);
+        // descriptor_set->set_buffer(gfx, 1, ubo->get(), ubo->get_size(), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 
 
         add_bind(std::make_unique<bind::TransformPS>(gfx, gfx.get_default_pipeline().get_pipeline_layout(), *this));
-        add_bind(std::move(ubo));
-        add_bind(std::move(descriptor_set));
+        //add_bind(std::move(ubo));
+        //add_bind(std::move(descriptor_set));
     }
 
     void Box::update(float dt)

@@ -27,23 +27,25 @@ namespace gage::gfx::data
         vk_check(vkCreateDescriptorSetLayout(gfx.device, &layout_ci, nullptr, &global_set_layout));
 
         // PER INSTANCE SET LAYOUT
-        std::vector<VkDescriptorSetLayoutBinding> instance_bindings{
-            {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
-            {.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
-        };
+        // std::vector<VkDescriptorSetLayoutBinding> instance_bindings{
+        //     {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
+        //     {.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
+        // };
 
-        layout_ci.bindingCount = instance_bindings.size();
-        layout_ci.pBindings = instance_bindings.data();
-        layout_ci.flags = 0;
-        vk_check(vkCreateDescriptorSetLayout(gfx.device, &layout_ci, nullptr, &instance_set_layout));
+        // layout_ci.bindingCount = instance_bindings.size();
+        // layout_ci.pBindings = instance_bindings.data();
+        // layout_ci.flags = 0;
+        // vk_check(vkCreateDescriptorSetLayout(gfx.device, &layout_ci, nullptr, &instance_set_layout));
 
         std::vector<VkPushConstantRange> push_constants{
             VkPushConstantRange{
                 VK_SHADER_STAGE_VERTEX_BIT,
                 0,
-                sizeof(float) * 16}};
+                sizeof(glm::mat4x4)
+            }
+        };
 
-        std::vector<VkDescriptorSetLayout> layouts = {global_set_layout, instance_set_layout};
+        std::vector<VkDescriptorSetLayout> layouts = {global_set_layout};
         VkPipelineLayoutCreateInfo pipeline_layout_info = {};
         pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipeline_layout_info.pushConstantRangeCount = push_constants.size();
@@ -53,12 +55,14 @@ namespace gage::gfx::data
         vk_check(vkCreatePipelineLayout(gfx.device, &pipeline_layout_info, nullptr, &pipeline_layout));
 
         std::vector<VkVertexInputBindingDescription> vertex_bindings{
-            {.binding = 0, .stride = (sizeof(float) * 8), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}};
+            {.binding = 0, .stride = (sizeof(float) * 3), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX},
+            {.binding = 1, .stride = (sizeof(float) * 3), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX},
+            {.binding = 2, .stride = (sizeof(float) * 2), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}};
 
         std::vector<VkVertexInputAttributeDescription> vertex_attributes{
             {.location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0},
-            {.location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = sizeof(float) * 3},
-            {.location = 2, .binding = 0, .format = VK_FORMAT_R32G32_SFLOAT, .offset = sizeof(float) * 6}};
+            {.location = 1, .binding = 1, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0},
+            {.location = 2, .binding = 2, .format = VK_FORMAT_R32G32_SFLOAT, .offset = 0}};
 
         VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
         vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -105,16 +109,16 @@ namespace gage::gfx::data
         VkViewport viewport = {};
         viewport.x = 0;
         viewport.y = 0;
-        viewport.width = gfx.draw_extent.width;
-        viewport.height = gfx.draw_extent.height;
+        viewport.width = gfx.get_scaled_draw_extent().width;
+        viewport.height = gfx.get_scaled_draw_extent().height;
         viewport.minDepth = 0.f;
         viewport.maxDepth = 1.f;
 
         VkRect2D scissor = {};
         scissor.offset.x = 0;
         scissor.offset.y = 0;
-        scissor.extent.width = gfx.draw_extent.width;
-        scissor.extent.height = gfx.draw_extent.height;
+        scissor.extent.width = gfx.get_scaled_draw_extent().width;
+        scissor.extent.height = gfx.get_scaled_draw_extent().height;
 
         VkPipelineViewportStateCreateInfo viewport_state{};
         viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -248,7 +252,7 @@ namespace gage::gfx::data
         vkDestroyPipeline(gfx.device, pipeline, nullptr);
         vkDestroyPipelineLayout(gfx.device, pipeline_layout, nullptr);
         vkDestroyDescriptorSetLayout(gfx.device, global_set_layout, nullptr);
-        vkDestroyDescriptorSetLayout(gfx.device, instance_set_layout, nullptr);
+        // vkDestroyDescriptorSetLayout(gfx.device, instance_set_layout, nullptr);
     }
 
     void DefaultPipeline::bind(VkCommandBuffer cmd)
@@ -262,8 +266,13 @@ namespace gage::gfx::data
     {
         return pipeline_layout;
     }
-    VkDescriptorSetLayout DefaultPipeline::get_instance_set_layout() const
+
+    void DefaultPipeline::set_push_constant(VkCommandBuffer cmd, const glm::mat4x4 &transform)
     {
-        return instance_set_layout;
+        vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4x4), &transform);
     }
+    // VkDescriptorSetLayout DefaultPipeline::get_instance_set_layout() const
+    // {
+    //     return instance_set_layout;
+    // }
 }

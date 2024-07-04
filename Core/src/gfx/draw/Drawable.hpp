@@ -32,7 +32,7 @@ namespace gage::gfx::draw
         void add_index_buffer(std::unique_ptr<bind::IndexBuffer> index_buffer);
 
         virtual glm::mat4 get_world_transform() const = 0;
-        virtual void update(float dt) = 0;
+        virtual void update(float) {};
     protected:
         virtual std::vector<std::unique_ptr<bind::IBindable>>& get_static_bind() = 0;
     protected:
