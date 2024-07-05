@@ -4,8 +4,6 @@
 #include <Core/src/win/Window.hpp>
 #include <Core/src/win/ImguiWindow.hpp>
 #include <Core/src/gfx/Exception.hpp>
-#include <Core/src/gfx/draw/Box.hpp>
-#include <Core/src/gfx/bind/IBindable.hpp>
 #include <Core/src/utils/FileLoader.hpp>
 #include <Core/src/gfx/data/Camera.hpp>
 #include <Core/src/gfx/draw/Model.hpp>
