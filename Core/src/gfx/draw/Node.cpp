@@ -36,9 +36,10 @@ namespace gage::gfx::draw
         glm::mat4x4 transform = glm::scale(glm::mat4x4(1.0f), scale);
         transform *= glm::mat4x4(rotation);
         transform = glm::translate(transform, position);
-
+        const auto& mesh_instance = model.meshes.at(mesh);
         gfx.get_default_pipeline().set_push_constant(cmd, transform);
-        model.meshes.at(mesh).draw(cmd);
+        
+        mesh_instance.draw(cmd);
 
 
     }

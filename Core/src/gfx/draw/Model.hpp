@@ -10,6 +10,7 @@
 
 #include "Mesh.hpp"
 #include "Node.hpp"
+#include "Material.hpp"
 
 namespace gage::gfx
 {
@@ -21,6 +22,7 @@ namespace gage::gfx::draw
     class Model
     {
         friend class Node;
+        friend class Mesh;
     public:
         Model(Graphics& gfx, const std::string& file_path);
         ~Model();
@@ -37,5 +39,7 @@ namespace gage::gfx::draw
 
         uint32_t root_node{};
         std::vector<Node> nodes{};
+
+        std::vector<Material> materials{};
     };
 }

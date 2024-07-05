@@ -36,7 +36,8 @@ namespace gage::gfx::data
         void set_push_constant(VkCommandBuffer cmd, const glm::mat4x4& transform);
 
         VkPipelineLayout get_pipeline_layout() const;
-        //VkDescriptorSetLayout get_instance_set_layout() const;
+        VkDescriptorSet allocate_instance_set(size_t size_in_bytes, VkBuffer buffer) const;
+        void free_instance_set(VkDescriptorSet set) const;
     private:
 
         Graphics& gfx;
@@ -44,7 +45,7 @@ namespace gage::gfx::data
         VkPipeline pipeline{};
         VkDescriptorSetLayout global_set_layout{};
         VkDescriptorSet global_set{};
-        //VkDescriptorSetLayout instance_set_layout{};
+        VkDescriptorSetLayout instance_set_layout{};
 
         VkBuffer global_buffer{};
         VmaAllocation global_alloc{};

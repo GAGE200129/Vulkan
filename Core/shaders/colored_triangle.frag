@@ -22,13 +22,12 @@ layout(set = 0, binding = 0) uniform UniformBuffer
     float att_exponent;
 } ubo;
 
-// layout(set = 1, binding = 0) uniform sampler2D u_texture;
-// layout(set = 1, binding = 1) uniform Material
-// {
-//     vec4 color;
-//     float specular_intensity;
-//     float specular_power; float _padding[2];
-// } material;
+layout(set = 1, binding = 0) uniform Material
+{
+    vec4 color;
+    float specular_intensity;
+    float specular_power;
+} material;
 
 void main() 
 {
@@ -37,18 +36,10 @@ void main()
     const vec3 dir_light_vec = to_light_vec / dist_to_light;
 
     const float att = 1.0 / (ubo.att_constant + ubo.att_linear * dist_to_light + ubo.att_exponent * (dist_to_light * dist_to_light));
-    const vec4 diffuse = ubo.diffuse_color * ubo.diffuse_intensity * att * max(0.0, dot(dir_light_vec, fs_normal));
+    const vec4 diffuse = material.color * ubo.diffuse_color * ubo.diffuse_intensity * att * max(0.0, dot(dir_light_vec, fs_normal));
 
-    vec3 view_dir = normalize(ubo.camera_position - fs_world_pos);
-    vec3 reflect_dir = reflect(-dir_light_vec, fs_normal);
 
-    //Specular power
-    float spec = pow(max(dot(view_dir, reflect_dir), 0.0), 64);
-
-    //Specular intelsity
-    vec4 specular = att * 1.0f * spec * ubo.diffuse_color;  
-    specular.a = 0;
 
     //Material color
-	outFragColor = clamp(ubo.ambient + diffuse  + specular, 0.0, 1.0);
+	outFragColor = clamp(ubo.ambient + diffuse , 0.0, 1.0);
 }

@@ -19,15 +19,17 @@ namespace gage::gfx
 
 namespace gage::gfx::draw
 {
+    class Model;
     class Mesh
     {
     public:
-        Mesh(Graphics &gfx, const tinygltf::Model& model, const tinygltf::Mesh &mesh);
+        Mesh(Graphics &gfx, Model& model, const tinygltf::Model& gltf_model, const tinygltf::Mesh &mesh);
        ~Mesh();
 
         void draw(VkCommandBuffer cmd) const;
     private:
-
+        Graphics& gfx;
+        Model& model;
         class MeshSection
         {
         public:
@@ -35,13 +37,15 @@ namespace gage::gfx::draw
                 const std::vector<uint32_t>& in_index_buffer,
                 const std::vector<glm::vec3>& in_position_buffer,
                 const std::vector<glm::vec3>& in_normal_buffer,
-                const std::vector<glm::vec2>& in_texcoord_buffer);
+                const std::vector<glm::vec2>& in_texcoord_buffer,
+                int32_t material_index);
 
             uint32_t vertex_count;
             data::GPUBuffer index_buffer; 
             data::GPUBuffer position_buffer; 
             data::GPUBuffer normal_buffer; 
-            data::GPUBuffer texcoord_buffer; 
+            data::GPUBuffer texcoord_buffer;
+            int32_t material_index;
         };
 
         std::vector<MeshSection> sections{};

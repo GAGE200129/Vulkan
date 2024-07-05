@@ -46,7 +46,7 @@ namespace gage::gfx::draw
         meshes.reserve(model.meshes.size());
         for (const auto &gltf_mesh : model.meshes)
         {
-            meshes.emplace_back(gfx, model, gltf_mesh);
+            meshes.emplace_back(gfx, *this, model, gltf_mesh);
         }
         // Process nodes
         nodes.reserve(model.nodes.size());
@@ -88,6 +88,13 @@ namespace gage::gfx::draw
             }
 
             nodes.emplace_back(gfx, *this, position, rotation, scale, std::move(children), gltf_node.mesh);
+        }
+
+        //Materials
+        materials.reserve(model.materials.size());
+        for(const auto& gltf_material : model.materials)
+        {
+            materials.emplace_back(gfx);
         }
 
         this->ready = true;

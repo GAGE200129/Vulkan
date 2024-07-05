@@ -410,7 +410,6 @@ namespace gage::gfx
         presentInfo.waitSemaphoreCount = 1;
         presentInfo.pImageIndices = &swapchain_image_index;
 
-        ;
         if (VkResult result = vkQueuePresentKHR(queue, &presentInfo);
             result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
         {

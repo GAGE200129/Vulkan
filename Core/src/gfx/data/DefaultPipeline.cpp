@@ -27,15 +27,15 @@ namespace gage::gfx::data
         vk_check(vkCreateDescriptorSetLayout(gfx.device, &layout_ci, nullptr, &global_set_layout));
 
         // PER INSTANCE SET LAYOUT
-        // std::vector<VkDescriptorSetLayoutBinding> instance_bindings{
-        //     {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
-        //     {.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
-        // };
+        std::vector<VkDescriptorSetLayoutBinding> instance_bindings{
+            //{.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
+            {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
+        };
 
-        // layout_ci.bindingCount = instance_bindings.size();
-        // layout_ci.pBindings = instance_bindings.data();
-        // layout_ci.flags = 0;
-        // vk_check(vkCreateDescriptorSetLayout(gfx.device, &layout_ci, nullptr, &instance_set_layout));
+        layout_ci.bindingCount = instance_bindings.size();
+        layout_ci.pBindings = instance_bindings.data();
+        layout_ci.flags = 0;
+        vk_check(vkCreateDescriptorSetLayout(gfx.device, &layout_ci, nullptr, &instance_set_layout));
 
         std::vector<VkPushConstantRange> push_constants{
             VkPushConstantRange{
@@ -45,7 +45,7 @@ namespace gage::gfx::data
             }
         };
 
-        std::vector<VkDescriptorSetLayout> layouts = {global_set_layout};
+        std::vector<VkDescriptorSetLayout> layouts = {global_set_layout, instance_set_layout};
         VkPipelineLayoutCreateInfo pipeline_layout_info = {};
         pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipeline_layout_info.pushConstantRangeCount = push_constants.size();
@@ -252,7 +252,7 @@ namespace gage::gfx::data
         vkDestroyPipeline(gfx.device, pipeline, nullptr);
         vkDestroyPipelineLayout(gfx.device, pipeline_layout, nullptr);
         vkDestroyDescriptorSetLayout(gfx.device, global_set_layout, nullptr);
-        // vkDestroyDescriptorSetLayout(gfx.device, instance_set_layout, nullptr);
+        vkDestroyDescriptorSetLayout(gfx.device, instance_set_layout, nullptr);
     }
 
     void DefaultPipeline::bind(VkCommandBuffer cmd)
@@ -271,8 +271,42 @@ namespace gage::gfx::data
     {
         vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4x4), &transform);
     }
-    // VkDescriptorSetLayout DefaultPipeline::get_instance_set_layout() const
-    // {
-    //     return instance_set_layout;
-    // }
+
+    VkDescriptorSet DefaultPipeline::allocate_instance_set(size_t size_in_bytes, VkBuffer buffer) const
+    {
+        gfx.uploading_mutex.lock();
+        VkDescriptorSet res{};
+        VkDescriptorSetAllocateInfo alloc_info{};
+        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        alloc_info.descriptorSetCount = 1;
+        alloc_info.descriptorPool = gfx.desc_pool;
+        alloc_info.pSetLayouts = &instance_set_layout;
+        vk_check(vkAllocateDescriptorSets(gfx.device, &alloc_info, &res));
+
+        VkDescriptorBufferInfo buffer_desc_info{};
+        buffer_desc_info.buffer = buffer;
+        buffer_desc_info.offset = 0;
+        buffer_desc_info.range = size_in_bytes;
+
+        VkWriteDescriptorSet uniform_desc_write{};
+        uniform_desc_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        uniform_desc_write.dstSet = res;
+        uniform_desc_write.dstBinding = 0;
+        uniform_desc_write.dstArrayElement = 0;
+        uniform_desc_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        uniform_desc_write.descriptorCount = 1;
+        uniform_desc_write.pBufferInfo = &buffer_desc_info;
+        uniform_desc_write.pImageInfo = nullptr;
+        uniform_desc_write.pTexelBufferView = nullptr;
+        vkUpdateDescriptorSets(gfx.device, 1, &uniform_desc_write, 0, nullptr);
+
+        gfx.uploading_mutex.unlock();
+
+        return res;
+    }
+
+    void DefaultPipeline::free_instance_set(VkDescriptorSet set) const
+    {
+        vkFreeDescriptorSets(gfx.device, gfx.desc_pool, 1, &set);
+    }
 }

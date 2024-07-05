@@ -28,6 +28,8 @@ namespace gage::gfx::data
 {
     class Camera;
     class GPUBuffer;
+    class CPUBuffer;
+    class DescriptorSet;
 }
 
 struct GLFWwindow;
@@ -39,6 +41,8 @@ namespace gage::gfx
         friend class data::Swapchain;
         friend class data::DefaultPipeline;
         friend class data::GPUBuffer;
+        friend class data::CPUBuffer;
+        friend class data::DescriptorSet;
     public:
         Graphics(GLFWwindow *window, std::string app_name);
         Graphics(const Graphics &) = delete;
