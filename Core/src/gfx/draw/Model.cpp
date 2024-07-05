@@ -6,12 +6,68 @@
 #include "Mesh.hpp"
 
 #include <tiny_gltf.h>
+#include <stb_image.h>
 
+namespace tinygltf
+{
+    bool LoadImageData(tinygltf::Image *image, const int /*image_idx*/,
+                       std::string * /*err*/, std::string * /*warn*/,
+                       int /*req_width*/, int /*req_height*/,
+                       const unsigned char *bytes, int size, void * /*user_data*/)
+    {
 
+        int w = 0, h = 0, comp = 0, req_comp = STBI_rgb_alpha;
+        // Try to decode image header
+        if (stbi_info_from_memory(bytes, size, &w, &h, &comp))
+        {
+            //*warn += "Unknown image format. STB cannot decode image header for image[" + std::to_string(image_idx) + "] name = \"" + image->name + "\".\n";
+            stbi_uc *data = stbi_load_from_memory(bytes, size, &w, &h, &comp, req_comp);
+
+            image->width = w;
+            image->height = h;
+            image->component = comp;
+            image->bits = 8;
+            image->pixel_type = TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE;
+            image->as_is = false;
+            image->image.resize(w * h * comp);
+            std::copy(data, data + w * h * comp, image->image.begin());
+
+            stbi_image_free(data);
+        }
+        else
+        {
+            unsigned char image_data[] = 
+            {
+                0, 255, 0, 255, 255, 0, 0, 255,
+                255, 255, 0, 255, 255, 0, 255, 255
+            };  
+            image->width = 2;
+            image->height = 2;
+            image->component = 4;
+            image->bits = 8;
+            image->pixel_type = TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE;
+            image->as_is = false;
+            image->image.resize(2 * 2 * 4);
+            std::copy(image_data, image_data + 2 * 2 * 4, image->image.begin());
+        }
+
+        return true;
+    }
+
+    bool WriteImageData(
+        const std::string * /* basepath */, const std::string * /* filename */,
+        const tinygltf::Image *image, bool /* embedImages */,
+        const tinygltf::FsCallbacks * /* fs_cb */, const tinygltf::URICallbacks * /* uri_cb */,
+        std::string * /* out_uri */, void * /* user_pointer */)
+    {
+        assert(false);
+    }
+}
 namespace gage::gfx::draw
 {
-    Model::Model(Graphics &gfx, const std::string &file_path) : 
-        gfx(gfx)
+    Model::Model(Graphics &gfx, const std::string &file_path, Mode mode) : 
+        gfx(gfx),
+        mode(mode)
     {
         ready = false;
         thread.emplace(&Model::load_async, this, file_path);
@@ -19,7 +75,7 @@ namespace gage::gfx::draw
 
     void Model::draw(VkCommandBuffer cmd) const
     {
-        if(!ready)  
+        if (!ready)
             return;
         nodes.at(root_node).draw(cmd);
     }
@@ -35,13 +91,25 @@ namespace gage::gfx::draw
         tinygltf::TinyGLTF loader;
         std::string err;
         std::string warn;
-        // tinygltf::Set
+        loader.SetImageLoader(tinygltf::LoadImageData, nullptr);
+        loader.SetImageWriter(tinygltf::WriteImageData, nullptr);
 
-        bool ret = loader.LoadBinaryFromFile(&model, &err, &warn, file_path);
+        bool ret = false;
+        switch(mode)
+        {
+        case Mode::Binary:
+            ret = loader.LoadBinaryFromFile(&model, &err, &warn, file_path);
+            break;
+        case Mode::ASCII:
+            ret = loader.LoadASCIIFromFile(&model, &err, &warn, file_path);
+            break;
+        }
+
         if (!ret)
         {
             throw GraphicsException{"Failed to load model: " + file_path + "| " + warn + "| " + err};
         }
+
         // Process meshes
         meshes.reserve(model.meshes.size());
         for (const auto &gltf_mesh : model.meshes)
@@ -90,14 +158,13 @@ namespace gage::gfx::draw
             nodes.emplace_back(gfx, *this, position, rotation, scale, std::move(children), gltf_node.mesh);
         }
 
-        //Materials
+        // Materials
         materials.reserve(model.materials.size());
-        for(const auto& gltf_material : model.materials)
+        for (const auto &gltf_material : model.materials)
         {
-            materials.emplace_back(gfx);
+            materials.emplace_back(gfx, gltf_material);
         }
 
         this->ready = true;
-        
     }
 }

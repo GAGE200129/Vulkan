@@ -5,6 +5,11 @@
 #include <glm/vec4.hpp>
 #include <optional>
 
+namespace tinygltf
+{
+    class Material;
+}
+
 namespace gage::gfx
 {
     class Graphics;
@@ -15,7 +20,7 @@ namespace gage::gfx::draw
     class Material
     {
     public:
-        Material(Graphics& gfx);
+        Material(Graphics& gfx, const tinygltf::Material& gltf_material);
         ~Material();
 
 

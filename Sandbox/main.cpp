@@ -31,9 +31,9 @@ int main()
 
 
             std::optional<gfx::draw::Model> model, model2, model3;
-            model.emplace(graphics, "res/models/sponza.glb");
-            model2.emplace(graphics, "res/models/box_textured.glb");
-            model3.emplace(graphics, "res/models/death.glb");
+            model.emplace(graphics, "res/models/sponza.glb", gfx::draw::Model::Mode::Binary);
+            model2.emplace(graphics, "res/models/box_textured.glb", gfx::draw::Model::Mode::Binary);
+            //model3.emplace(graphics, "res/models/bonza/Bonza4X.gltf", gfx::draw::Model::Mode::ASCII);
 
 
             gfx::data::Camera camera{};
@@ -46,7 +46,7 @@ int main()
                 graphics.get_default_pipeline().bind(cmd);
                 model.value().draw(cmd);
                 model2.value().draw(cmd);
-                model3.value().draw(cmd);
+                //model3.value().draw(cmd);
 
                 graphics.end_frame();
 

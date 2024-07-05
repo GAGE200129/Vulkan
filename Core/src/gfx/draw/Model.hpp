@@ -24,7 +24,12 @@ namespace gage::gfx::draw
         friend class Node;
         friend class Mesh;
     public:
-        Model(Graphics& gfx, const std::string& file_path);
+        enum class Mode
+        {
+            Binary,
+            ASCII
+        };
+        Model(Graphics& gfx, const std::string& file_path, Mode mode = Mode::Binary);
         ~Model();
 
         void draw(VkCommandBuffer cmd) const;
@@ -34,6 +39,8 @@ namespace gage::gfx::draw
         Graphics& gfx;
         std::optional<std::thread> thread{};
         bool ready{};
+
+        Mode mode{};
 
         std::vector<Mesh> meshes{};
 
