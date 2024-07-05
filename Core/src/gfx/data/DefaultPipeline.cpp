@@ -28,8 +28,8 @@ namespace gage::gfx::data
 
         // PER INSTANCE SET LAYOUT
         std::vector<VkDescriptorSetLayoutBinding> instance_bindings{
-            //{.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
             {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
+            {.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
         };
 
         layout_ci.bindingCount = instance_bindings.size();
@@ -41,9 +41,7 @@ namespace gage::gfx::data
             VkPushConstantRange{
                 VK_SHADER_STAGE_VERTEX_BIT,
                 0,
-                sizeof(glm::mat4x4)
-            }
-        };
+                sizeof(glm::mat4x4)}};
 
         std::vector<VkDescriptorSetLayout> layouts = {global_set_layout, instance_set_layout};
         VkPipelineLayoutCreateInfo pipeline_layout_info = {};
@@ -242,10 +240,16 @@ namespace gage::gfx::data
         descriptor_write.pBufferInfo = &buffer_info;
 
         vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
+
+        create_default_image_sampler();
     }
 
     DefaultPipeline::~DefaultPipeline()
     {
+        vkDestroySampler(gfx.device, default_sampler, nullptr);
+        vkDestroyImageView(gfx.device, default_image_view, nullptr);
+        vmaDestroyImage(gfx.allocator, default_image, default_image_alloc);
+
         vmaDestroyBuffer(gfx.allocator, global_buffer, global_alloc);
         vkFreeDescriptorSets(gfx.device, gfx.desc_pool, 1, &global_set);
 
@@ -272,7 +276,8 @@ namespace gage::gfx::data
         vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4x4), &transform);
     }
 
-    VkDescriptorSet DefaultPipeline::allocate_instance_set(size_t size_in_bytes, VkBuffer buffer) const
+    VkDescriptorSet DefaultPipeline::allocate_instance_set(size_t size_in_bytes, VkBuffer buffer,
+                                                           VkImageView albedo_view, VkSampler albedo_sampler) const
     {
         gfx.uploading_mutex.lock();
         VkDescriptorSet res{};
@@ -283,22 +288,38 @@ namespace gage::gfx::data
         alloc_info.pSetLayouts = &instance_set_layout;
         vk_check(vkAllocateDescriptorSets(gfx.device, &alloc_info, &res));
 
+        // uniform buffer
         VkDescriptorBufferInfo buffer_desc_info{};
         buffer_desc_info.buffer = buffer;
         buffer_desc_info.offset = 0;
         buffer_desc_info.range = size_in_bytes;
 
-        VkWriteDescriptorSet uniform_desc_write{};
-        uniform_desc_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        uniform_desc_write.dstSet = res;
-        uniform_desc_write.dstBinding = 0;
-        uniform_desc_write.dstArrayElement = 0;
-        uniform_desc_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        uniform_desc_write.descriptorCount = 1;
-        uniform_desc_write.pBufferInfo = &buffer_desc_info;
-        uniform_desc_write.pImageInfo = nullptr;
-        uniform_desc_write.pTexelBufferView = nullptr;
-        vkUpdateDescriptorSets(gfx.device, 1, &uniform_desc_write, 0, nullptr);
+        VkWriteDescriptorSet descriptor_write{};
+        descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptor_write.dstSet = res;
+        descriptor_write.dstBinding = 0;
+        descriptor_write.dstArrayElement = 0;
+        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptor_write.descriptorCount = 1;
+        descriptor_write.pBufferInfo = &buffer_desc_info;
+        descriptor_write.pImageInfo = nullptr;
+        descriptor_write.pTexelBufferView = nullptr;
+        vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
+        // Albedo texture
+        VkDescriptorImageInfo img_info{};
+        img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        img_info.imageView = albedo_view ? albedo_view : default_image_view;
+        img_info.sampler = albedo_sampler ? albedo_sampler : default_sampler;
+
+        descriptor_write.dstSet = res;
+        descriptor_write.dstBinding = 1;
+        descriptor_write.dstArrayElement = 0;
+        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptor_write.descriptorCount = 1;
+        descriptor_write.pBufferInfo = nullptr;
+        descriptor_write.pImageInfo = &img_info;
+        descriptor_write.pTexelBufferView = nullptr;
+        vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
 
         gfx.uploading_mutex.unlock();
 
@@ -309,4 +330,170 @@ namespace gage::gfx::data
     {
         vkFreeDescriptorSets(gfx.device, gfx.desc_pool, 1, &set);
     }
+
+    void DefaultPipeline::create_default_image_sampler()
+    {
+        // Create default sampler
+        VkSamplerCreateInfo sampler_info{};
+        sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        sampler_info.magFilter = VK_FILTER_NEAREST;
+        sampler_info.minFilter = VK_FILTER_NEAREST;
+        sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler_info.anisotropyEnable = VK_FALSE;
+        sampler_info.maxAnisotropy = 0;
+        sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        sampler_info.unnormalizedCoordinates = VK_FALSE;
+        sampler_info.compareEnable = VK_FALSE;
+        sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+        sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        sampler_info.mipLodBias = 0.0f;
+        sampler_info.minLod = 0.0f;
+        sampler_info.maxLod = 0.0f;
+
+        vk_check(vkCreateSampler(gfx.device, &sampler_info, nullptr, &default_sampler));
+
+        // Create default image and image view
+
+        unsigned char image_data[] =
+        {
+            0, 255, 0, 255, 255, 0, 0, 255,
+            255, 255, 0, 255, 255, 0, 255, 255
+        };
+        VkImageCreateInfo img_ci = {};
+        img_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        img_ci.imageType = VK_IMAGE_TYPE_2D;
+        img_ci.extent.width = 2;
+        img_ci.extent.height = 2;
+        img_ci.extent.depth = 1;
+        img_ci.mipLevels = 1;
+        img_ci.arrayLayers = 1;
+        img_ci.format = VK_FORMAT_R8G8B8A8_UNORM;
+        img_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+        img_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        img_ci.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        img_ci.samples = VK_SAMPLE_COUNT_1_BIT;
+
+        VmaAllocationCreateInfo alloc_ci = {};
+        alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
+        alloc_ci.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+
+        vk_check(vmaCreateImage(gfx.allocator, &img_ci, &alloc_ci, &default_image, &default_image_alloc, nullptr));
+
+        // Staging
+        VkBufferCreateInfo staging_buffer_info = {};
+        staging_buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        staging_buffer_info.size = sizeof(image_data);
+        staging_buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        VmaAllocationCreateInfo staging_alloc_info = {};
+        staging_alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
+        staging_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+
+        // Copy staging
+        VkBuffer staging_buffer{};
+        VmaAllocation staging_allocation{};
+        vk_check(vmaCreateBuffer(gfx.allocator, &staging_buffer_info, &staging_alloc_info, &staging_buffer, &staging_allocation, nullptr));
+
+        void *data;
+        vmaMapMemory(gfx.allocator, staging_allocation, &data);
+        std::memcpy(data, image_data, sizeof(image_data));
+        vmaUnmapMemory(gfx.allocator, staging_allocation);
+
+        // Copy to image
+
+        //Allocate cmd buffer
+        VkCommandBufferAllocateInfo cmd_alloc_info{};
+        cmd_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        cmd_alloc_info.commandPool = gfx.cmd_pool;
+        cmd_alloc_info.commandBufferCount = 1;
+        cmd_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+        VkCommandBuffer cmd{};
+        vk_check(vkAllocateCommandBuffers(gfx.device, &cmd_alloc_info, &cmd));
+
+        VkCommandBufferBeginInfo transfer_begin_info{};
+        transfer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        transfer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        vkBeginCommandBuffer(cmd, &transfer_begin_info);
+
+        VkImageMemoryBarrier barrier = {};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+        barrier.image = default_image;
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.baseMipLevel = 0;
+        barrier.subresourceRange.levelCount = 1;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount = 1;
+
+        vkCmdPipelineBarrier(
+            cmd,
+            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            0,
+            0, nullptr,
+            0, nullptr,
+            1, &barrier);
+
+        VkBufferImageCopy copy_region{};
+        copy_region.bufferOffset = 0;
+        copy_region.bufferRowLength = 0;
+        copy_region.bufferImageHeight = 0;
+
+        copy_region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        copy_region.imageSubresource.mipLevel = 0;
+        copy_region.imageSubresource.baseArrayLayer = 0;
+        copy_region.imageSubresource.layerCount = 1;
+
+        copy_region.imageOffset = {0, 0, 0};
+        copy_region.imageExtent = {
+            2,
+            2,
+            1};
+
+        vkCmdCopyBufferToImage(cmd, staging_buffer, default_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
+
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        vkCmdPipelineBarrier(
+            cmd,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            0,
+            0, nullptr,
+            0, nullptr,
+            1, &barrier);
+
+        vkEndCommandBuffer(cmd);
+
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &cmd;
+
+        vkQueueSubmit(gfx.queue, 1, &submit_info, nullptr);
+        vkQueueWaitIdle(gfx.queue);
+
+
+        VkImageViewCreateInfo view_info{};
+        view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        view_info.image = default_image;
+        view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        view_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+        view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        view_info.subresourceRange.baseMipLevel = 0;
+        view_info.subresourceRange.levelCount = 1;
+        view_info.subresourceRange.baseArrayLayer = 0;
+        view_info.subresourceRange.layerCount = 1;
+
+        vk_check(vkCreateImageView(gfx.device, &view_info, nullptr, &default_image_view));
+        vmaDestroyBuffer(gfx.allocator, staging_buffer, staging_allocation);
+    }
+
 }

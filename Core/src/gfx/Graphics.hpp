@@ -30,6 +30,7 @@ namespace gage::gfx::data
     class GPUBuffer;
     class CPUBuffer;
     class DescriptorSet;
+    class Image;
 }
 
 struct GLFWwindow;
@@ -43,6 +44,7 @@ namespace gage::gfx
         friend class data::GPUBuffer;
         friend class data::CPUBuffer;
         friend class data::DescriptorSet;
+        friend class data::Image;
     public:
         Graphics(GLFWwindow *window, std::string app_name);
         Graphics(const Graphics &) = delete;

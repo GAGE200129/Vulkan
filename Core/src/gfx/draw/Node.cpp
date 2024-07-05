@@ -26,7 +26,7 @@ namespace gage::gfx::draw
     {
         for(const auto& child : children)
         {
-            model.nodes.at(child).draw(cmd);
+            model.nodes.at(child)->draw(cmd);
         }
 
 
@@ -39,7 +39,7 @@ namespace gage::gfx::draw
         const auto& mesh_instance = model.meshes.at(mesh);
         gfx.get_default_pipeline().set_push_constant(cmd, transform);
         
-        mesh_instance.draw(cmd);
+        mesh_instance->draw(cmd);
 
 
     }

@@ -42,11 +42,11 @@ namespace gage::gfx::draw
 
         Mode mode{};
 
-        std::vector<Mesh> meshes{};
+        std::vector<std::unique_ptr<Mesh>> meshes{};
 
         uint32_t root_node{};
-        std::vector<Node> nodes{};
+        std::vector<std::unique_ptr<Node>>  nodes{};
 
-        std::vector<Material> materials{};
+        std::vector<std::unique_ptr<Material>>  materials{};
     };
 }

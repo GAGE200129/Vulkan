@@ -30,21 +30,21 @@ int main()
 
             std::optional<gfx::draw::Model> model, model2, model3;
             model.emplace(graphics, "res/models/sponza.glb", gfx::draw::Model::Mode::Binary);
-            model2.emplace(graphics, "res/models/box_textured.glb", gfx::draw::Model::Mode::Binary);
-            //model3.emplace(graphics, "res/models/bonza/Bonza4X.gltf", gfx::draw::Model::Mode::ASCII);
+            //model2.emplace(graphics, "res/models/box_textured.glb", gfx::draw::Model::Mode::Binary);
+            model3.emplace(graphics, "res/models/DamagedHelmet.gltf", gfx::draw::Model::Mode::ASCII);
 
 
             gfx::data::Camera camera{};
             while (!window.is_closing())
             {
 
-                static constexpr int64_t NS_PER_FRAME = (1.0 / 75.0) * 1000000000;
+                static constexpr int64_t NS_PER_FRAME = (1.0 / 30.0) * 1000000000;
                 auto start = std::chrono::high_resolution_clock::now();
                 auto cmd = graphics.clear(camera);
                 graphics.get_default_pipeline().bind(cmd);
                 model.value().draw(cmd);
-                model2.value().draw(cmd);
-                //model3.value().draw(cmd);
+                //model2.value().draw(cmd);
+                model3.value().draw(cmd);
 
                 graphics.end_frame();
 
@@ -62,6 +62,8 @@ int main()
 
             graphics.wait();
             model.reset();
+            //model2.reset();
+            model3.reset();
 
         }
         win::shutdown();

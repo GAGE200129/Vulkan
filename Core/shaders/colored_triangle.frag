@@ -27,7 +27,10 @@ layout(set = 1, binding = 0) uniform Material
     vec4 color;
     float specular_intensity;
     float specular_power;
+    bool has_albedo;
 } material;
+
+layout(set = 1, binding = 1) uniform sampler2D albedo;
 
 void main() 
 {
@@ -35,11 +38,10 @@ void main()
     const float dist_to_light = length(to_light_vec);
     const vec3 dir_light_vec = to_light_vec / dist_to_light;
 
-    const float att = 1.0 / (ubo.att_constant + ubo.att_linear * dist_to_light + ubo.att_exponent * (dist_to_light * dist_to_light));
-    const vec4 diffuse = material.color * ubo.diffuse_color * ubo.diffuse_intensity * att * max(0.0, dot(dir_light_vec, fs_normal));
+    const vec4 diffuse = ubo.diffuse_color * ubo.diffuse_intensity * max(0.0, dot(dir_light_vec, fs_normal));
 
+    outFragColor = diffuse;
 
-
-    //Material color
-	outFragColor = clamp(ubo.ambient + diffuse , 0.0, 1.0);
+    if(material.has_albedo)
+        outFragColor *= texture(albedo, fs_uvs);
 }

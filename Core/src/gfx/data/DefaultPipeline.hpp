@@ -36,8 +36,11 @@ namespace gage::gfx::data
         void set_push_constant(VkCommandBuffer cmd, const glm::mat4x4& transform);
 
         VkPipelineLayout get_pipeline_layout() const;
-        VkDescriptorSet allocate_instance_set(size_t size_in_bytes, VkBuffer buffer) const;
+        VkDescriptorSet allocate_instance_set(size_t size_in_bytes, VkBuffer buffer,
+           VkImageView albedo_view, VkSampler albedo_sampler) const;
         void free_instance_set(VkDescriptorSet set) const;
+    private:
+        void create_default_image_sampler();
     private:
 
         Graphics& gfx;
@@ -50,5 +53,10 @@ namespace gage::gfx::data
         VkBuffer global_buffer{};
         VmaAllocation global_alloc{};
         VmaAllocationInfo global_alloc_info{};
+
+        VkImage default_image{};
+        VkImageView default_image_view{};
+        VmaAllocation default_image_alloc{};
+        VkSampler default_sampler{};
     };
 }

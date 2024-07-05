@@ -9,9 +9,8 @@
 
 namespace gage::gfx::draw
 {
-    Mesh::Mesh(Graphics &gfx, Model& model, const tinygltf::Model &gltf_model, const tinygltf::Mesh &mesh) :
-        gfx(gfx),
-        model(model)
+    Mesh::Mesh(Graphics &gfx, Model &model, const tinygltf::Model &gltf_model, const tinygltf::Mesh &mesh) : gfx(gfx),
+                                                                                                             model(model)
     {
         using namespace tinygltf;
         auto extract_buffer_from_accessor = [&](const Accessor &accessor)
@@ -97,9 +96,11 @@ namespace gage::gfx::draw
             }
         };
 
-        this->sections.reserve(mesh.primitives.size());
-        for (const auto &primitive : mesh.primitives)
+        this->sections = std::make_unique<MeshSection[]>(mesh.primitives.size());
+        this->section_count = mesh.primitives.size();
+        for (size_t i = 0; i < section_count; i++)
         {
+            const auto &primitive = mesh.primitives.at(i);
             std::vector<glm::vec3> positions{};
             std::vector<glm::vec3> normals{};
             std::vector<glm::vec2> texcoords{};
@@ -107,7 +108,15 @@ namespace gage::gfx::draw
             extract_indices_from_primitive(primitive, indices);
             extract_data_from_primitive(primitive, positions, normals, texcoords);
 
-            this->sections.emplace_back(gfx, indices, positions, normals, texcoords, primitive.material);
+            this->sections[i] = std::move(MeshSection{
+                (uint32_t)indices.size(),
+                std::make_unique<data::GPUBuffer>(gfx, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sizeof(uint32_t) * indices.size(), indices.data()),
+
+                std::make_unique<data::GPUBuffer>(gfx, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(glm::vec3) * positions.size(), positions.data()),
+                std::make_unique<data::GPUBuffer>(gfx, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(glm::vec3) * normals.size(), normals.data()),
+                std::make_unique<data::GPUBuffer>(gfx, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(glm::vec2) * texcoords.size(), texcoords.data()),
+                (int32_t) primitive.material
+            });
         }
     }
 
@@ -117,44 +126,31 @@ namespace gage::gfx::draw
 
     void Mesh::draw(VkCommandBuffer cmd) const
     {
-        for (const auto &section : sections)
+        for (size_t i = 0; i < section_count; i++)
         {
-            if(section.material_index < 0)
+            const auto &section = sections[i];
+            if (section.material_index < 0)
                 continue;
-            
+
             VkBuffer buffers[] =
                 {
-                    section.position_buffer.get_buffer_handle(),
-                    section.normal_buffer.get_buffer_handle(),
-                    section.texcoord_buffer.get_buffer_handle(),
+                    section.position_buffer->get_buffer_handle(),
+                    section.normal_buffer->get_buffer_handle(),
+                    section.texcoord_buffer->get_buffer_handle(),
                 };
             VkDeviceSize offsets[] =
                 {0, 0, 0};
 
-            VkDescriptorSet desc_set = model.materials.at(section.material_index).get_desc_set();
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, 
-                gfx.get_default_pipeline().get_pipeline_layout(),
-                1, 
-                1, &desc_set, 0, nullptr);
-            
+            VkDescriptorSet desc_set = model.materials.at(section.material_index)->get_desc_set();
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    gfx.get_default_pipeline().get_pipeline_layout(),
+                                    1,
+                                    1, &desc_set, 0, nullptr);
+
             vkCmdBindVertexBuffers(cmd, 0, sizeof(buffers) / sizeof(buffers[0]), buffers, offsets);
-            vkCmdBindIndexBuffer(cmd, section.index_buffer.get_buffer_handle(), 0, VK_INDEX_TYPE_UINT32);
+            vkCmdBindIndexBuffer(cmd, section.index_buffer->get_buffer_handle(), 0, VK_INDEX_TYPE_UINT32);
             vkCmdDrawIndexed(cmd, section.vertex_count, 1, 0, 0, 0);
         }
     }
 
-    Mesh::MeshSection::MeshSection(Graphics &gfx,
-                                   const std::vector<uint32_t> &in_index_buffer,
-                                   const std::vector<glm::vec3> &in_position_buffer,
-                                   const std::vector<glm::vec3> &in_normal_buffer,
-                                   const std::vector<glm::vec2> &in_texcoord_buffer,
-                                   int32_t material_index) : 
-                    vertex_count(in_index_buffer.size()),
-                    index_buffer(gfx, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sizeof(uint32_t) * in_index_buffer.size(), in_index_buffer.data()),
-                    position_buffer(gfx, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(glm::vec3) * in_position_buffer.size(), in_position_buffer.data()),
-                    normal_buffer(gfx, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(glm::vec3) * in_normal_buffer.size(), in_normal_buffer.data()),
-                    texcoord_buffer(gfx, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(glm::vec2) * in_texcoord_buffer.size(), in_texcoord_buffer.data()),
-                    material_index(material_index)
-    {
-    }
 }

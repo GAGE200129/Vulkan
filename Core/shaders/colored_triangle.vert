@@ -31,7 +31,7 @@ void main()
 {   
     vec4 p = model_transform * vec4(in_pos, 1.0f);
 	gl_Position = ubo.projection * ubo.view * p;
-	fs_normal = mat3(model_transform) * in_normal;
+	fs_normal = normalize(mat3(transpose(inverse(model_transform))) * in_normal);
 	fs_uvs = in_uvs;
     fs_world_pos = p.xyz;
 }

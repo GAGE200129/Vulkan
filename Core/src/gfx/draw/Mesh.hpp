@@ -3,6 +3,7 @@
 #include <vector>
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
+#include <memory>
 
 #include "../data/GPUBuffer.hpp"
 
@@ -30,24 +31,17 @@ namespace gage::gfx::draw
     private:
         Graphics& gfx;
         Model& model;
-        class MeshSection
+        struct MeshSection
         {
-        public:
-            MeshSection(Graphics& gfx,
-                const std::vector<uint32_t>& in_index_buffer,
-                const std::vector<glm::vec3>& in_position_buffer,
-                const std::vector<glm::vec3>& in_normal_buffer,
-                const std::vector<glm::vec2>& in_texcoord_buffer,
-                int32_t material_index);
-
             uint32_t vertex_count;
-            data::GPUBuffer index_buffer; 
-            data::GPUBuffer position_buffer; 
-            data::GPUBuffer normal_buffer; 
-            data::GPUBuffer texcoord_buffer;
+            std::unique_ptr<data::GPUBuffer> index_buffer; 
+            std::unique_ptr<data::GPUBuffer> position_buffer; 
+            std::unique_ptr<data::GPUBuffer> normal_buffer; 
+            std::unique_ptr<data::GPUBuffer> texcoord_buffer;
             int32_t material_index;
         };
 
-        std::vector<MeshSection> sections{};
+        std::unique_ptr<MeshSection[]> sections{};
+        size_t section_count{};
     };
 }

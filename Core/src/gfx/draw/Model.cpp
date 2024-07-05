@@ -7,6 +7,7 @@
 
 #include <tiny_gltf.h>
 #include <stb_image.h>
+#include <iostream>
 
 namespace tinygltf
 {
@@ -16,21 +17,20 @@ namespace tinygltf
                        const unsigned char *bytes, int size, void * /*user_data*/)
     {
 
-        int w = 0, h = 0, comp = 0, req_comp = STBI_rgb_alpha;
+        int w = 0, h = 0, comp = 0;
         // Try to decode image header
         if (stbi_info_from_memory(bytes, size, &w, &h, &comp))
         {
-            //*warn += "Unknown image format. STB cannot decode image header for image[" + std::to_string(image_idx) + "] name = \"" + image->name + "\".\n";
-            stbi_uc *data = stbi_load_from_memory(bytes, size, &w, &h, &comp, req_comp);
+            stbi_uc *data = stbi_load_from_memory(bytes, size, &w, &h, &comp, STBI_rgb_alpha);
 
             image->width = w;
             image->height = h;
-            image->component = comp;
+            image->component = 4;
             image->bits = 8;
             image->pixel_type = TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE;
             image->as_is = false;
-            image->image.resize(w * h * comp);
-            std::copy(data, data + w * h * comp, image->image.begin());
+            image->image.resize(w * h * 4);
+            std::memcpy(image->image.data(), data, w * h * 4);
 
             stbi_image_free(data);
         }
@@ -77,7 +77,7 @@ namespace gage::gfx::draw
     {
         if (!ready)
             return;
-        nodes.at(root_node).draw(cmd);
+        nodes.at(root_node)->draw(cmd);
     }
 
     Model::~Model()
@@ -114,7 +114,7 @@ namespace gage::gfx::draw
         meshes.reserve(model.meshes.size());
         for (const auto &gltf_mesh : model.meshes)
         {
-            meshes.emplace_back(gfx, *this, model, gltf_mesh);
+            meshes.push_back(std::make_unique<Mesh>(gfx, *this, model, gltf_mesh));
         }
         // Process nodes
         nodes.reserve(model.nodes.size());
@@ -155,14 +155,14 @@ namespace gage::gfx::draw
                 children.push_back((uint32_t)child);
             }
 
-            nodes.emplace_back(gfx, *this, position, rotation, scale, std::move(children), gltf_node.mesh);
+            nodes.push_back(std::make_unique<Node>(gfx, *this, position, rotation, scale, std::move(children), gltf_node.mesh));
         }
 
         // Materials
         materials.reserve(model.materials.size());
         for (const auto &gltf_material : model.materials)
         {
-            materials.emplace_back(gfx, gltf_material);
+            materials.push_back(std::make_unique<Material>(gfx, model, gltf_material));
         }
 
         this->ready = true;

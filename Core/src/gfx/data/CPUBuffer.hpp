@@ -16,6 +16,10 @@ namespace gage::gfx::data
         ~CPUBuffer();
 
 
+        CPUBuffer(const CPUBuffer&) = delete;
+        CPUBuffer(CPUBuffer&&) = delete;
+        CPUBuffer operator=(const CPUBuffer&) = delete;
+
         VkBuffer get_buffer_handle() const;
         void* get_mapped() const;
     private:
