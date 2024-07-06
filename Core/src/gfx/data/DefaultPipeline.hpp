@@ -15,18 +15,17 @@ namespace gage::gfx::data
     class DefaultPipeline
     {
     public:
+        struct DirectionalLight
+        {
+            glm::vec3 direction{0, -1, 0}; float _padding;
+            glm::vec3 color{1, 1, 1}; float _padding2;
+        };
         struct GlobalUniform
         {
             glm::mat4x4 projection{};
             glm::mat4x4 view{};
-            glm::vec3 camera_position; float _padding{};
-            glm::vec3 point_light_position{}; float _padding2{};
-            glm::vec4 ambient{0.15f, 0.15f, 0.15f, 1.0f};
-            glm::vec4 diffuse_color{1.0f,1.0f, 1.0f, 1.0f};
-            float diffuse_intensity{1.0f};
-            float att_constant{1.0f};
-            float att_linear{0.045f};
-            float att_exponent{0.0075f};
+            glm::vec3 camera_position{}; float _padding{};
+            DirectionalLight directional_light{};
         } ubo;
     public:
         DefaultPipeline(Graphics& gfx);

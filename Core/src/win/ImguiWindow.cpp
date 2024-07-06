@@ -149,10 +149,14 @@ namespace gage::win
         if (ImGui::Begin("Lightning"))
         {
             auto& ubo = window.get_graphics().get_default_pipeline().ubo;
-            ImGui::DragFloat3("Position", &ubo.point_light_position.x, 0.1f);
-            ImGui::ColorPicker3("diffuse color", &ubo.diffuse_color.x);
-            ImGui::DragFloat("diffuse intensity", &ubo.diffuse_intensity, 0.01f);
-            ImGui::DragFloat3("Attenuation", &ubo.att_constant, 0.0001f);
+            ImGui::Text("Directional light");
+            if(ImGui::DragFloat3("Direction", &ubo.directional_light.direction.x, 0.01f, -1, 1))
+            {
+                ubo.directional_light.direction = glm::normalize(ubo.directional_light.direction);
+            }
+            ImGui::ColorEdit3("Color", &ubo.directional_light.color.x);
+
+            ImGui::Separator();
         }
         ImGui::End();
     }

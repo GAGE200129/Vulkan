@@ -1,4 +1,7 @@
 #version 450
+#extension GL_ARB_shading_language_include : require
+
+#include "directional_light.inc"
 
 layout(location = 0) in vec3 fs_normal;
 layout(location = 1) in vec2 fs_uvs;
@@ -13,13 +16,7 @@ layout(set = 0, binding = 0) uniform UniformBuffer
     mat4x4 projection;
     mat4x4 view;
     vec3 camera_position; float _padding;
-    vec3 point_light_position; float _padding2;
-    vec4 ambient;
-    vec4 diffuse_color;
-    float diffuse_intensity;
-    float att_constant;
-    float att_linear;
-    float att_exponent;
+    DirectionalLight directional_light;
 } ubo;
 
 layout(set = 1, binding = 0) uniform Material
@@ -35,12 +32,8 @@ layout(set = 1, binding = 1) uniform sampler2D textures[2];
 
 void main() 
 {
-	const vec3 to_light_vec = ubo.point_light_position - fs_world_pos;
-    const float dist_to_light = length(to_light_vec);
-    const vec3 dir_light_vec = to_light_vec / dist_to_light;
-
-    const float attenuation = 1.0 / (ubo.att_constant + ubo.att_linear * dist_to_light + dist_to_light * ubo.att_exponent * ubo.att_exponent);
-    const vec4 diffuse = ubo.diffuse_color * ubo.diffuse_intensity * max(0.0, dot(dir_light_vec, fs_normal)) * attenuation;
-
-    outFragColor = diffuse;
+	const vec3 light_dir = normalize(-ubo.directional_light.direction);
+    float diff = max(dot(fs_normal, light_dir), 0.0);
+    vec3 diffuse = diff * ubo.directional_light.color;
+    outFragColor = vec4(diffuse, 1.0);
 }
