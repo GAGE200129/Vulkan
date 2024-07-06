@@ -60,7 +60,7 @@ namespace gage::gfx
         const std::string &get_app_name() const noexcept;
 
 
-        void set_resize(int width, int height);
+        void resize(int width, int height);
         void set_resolution_scale(float scale);
 
         const glm::mat4& get_projection() const;
@@ -97,8 +97,8 @@ namespace gage::gfx
         VkExtent2D draw_extent{};
         VkExtent2D draw_extent_temp{};
         float draw_extent_scale{1.0f};
+        bool resize_requested{};
 
-        bool swapchain_resize_requested{};
         uint32_t swapchain_image_index{};
 
         std::optional<data::Swapchain> swapchain{};

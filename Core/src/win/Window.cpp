@@ -43,7 +43,7 @@ namespace gage::win
         {
             glfwSetWindowMonitor(p_window, nullptr, 0, 0, width, height, 0);
             glfwSetWindowSize(p_window, width, height);
-            p_graphics->set_resize(width, height);
+            p_graphics->resize(width, height);
             p_graphics->set_resolution_scale(scale);
             break;
         }
@@ -52,7 +52,7 @@ namespace gage::win
             const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
             glfwSetWindowMonitor(p_window,  glfwGetPrimaryMonitor(), 0, 0, mode->width, mode->height, mode->refreshRate);
             glfwSetWindowSize(p_window, mode->width, mode->height);
-            p_graphics->set_resize(mode->width, mode->height);
+            p_graphics->resize(mode->width, mode->height);
             p_graphics->set_resolution_scale(scale);
             break;
         }
@@ -61,7 +61,7 @@ namespace gage::win
             const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
             glfwSetWindowMonitor(p_window,  glfwGetPrimaryMonitor(), 0, 0, mode->width, mode->height, mode->refreshRate);
             glfwSetWindowSize(p_window, width, height);
-            p_graphics->set_resize(width, height);
+            p_graphics->resize(width, height);
             p_graphics->set_resolution_scale(scale);
             break;
         }

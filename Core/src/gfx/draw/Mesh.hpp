@@ -41,7 +41,6 @@ namespace gage::gfx::draw
             int32_t material_index;
         };
 
-        std::unique_ptr<MeshSection[]> sections{};
-        size_t section_count{};
+        std::vector<MeshSection> sections{};
     };
 }

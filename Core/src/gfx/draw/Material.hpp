@@ -34,11 +34,13 @@ namespace gage::gfx::draw
             glm::vec4 color{1, 1, 1, 1};
             float specular_intensity{1.0};
             float specular_power{32};
-            int32_t has_albedo{}; float padding;
+            uint32_t has_albedo{};
+            uint32_t has_metalic{};
         } uniform_buffer_data{};
 
         std::optional<data::CPUBuffer> uniform_buffer;
-        std::optional<data::Image> diffuse_image;
+        std::optional<data::Image> albedo_image;
+        std::optional<data::Image> metalic_roughness_image;
         VkDescriptorSet descriptor_set{};
     };
 }

@@ -268,15 +268,15 @@ namespace gage::gfx
         ubo.view = camera.get_view();
 
         // Check for swapchain recreation
-        if (swapchain_resize_requested)
+        if (resize_requested)
         {
             vkDeviceWaitIdle(device);
             draw_extent = draw_extent_temp;
             swapchain.reset();
             swapchain.emplace(*this);
-            default_pipeline.reset();
-            default_pipeline.emplace(*this);
-            swapchain_resize_requested = false;
+            default_pipeline.value().reset_pipeline();
+
+            resize_requested = false;
         }
 
 
@@ -450,11 +450,11 @@ namespace gage::gfx
         return default_pipeline.value();
     }
 
-    void Graphics::set_resize(int width, int height)
+    void Graphics::resize(int width, int height)
     {
         draw_extent_temp.width = width;
         draw_extent_temp.height = height;
-        swapchain_resize_requested = true;
+        resize_requested = true;
     }
 
     VkExtent2D Graphics::get_scaled_draw_extent()

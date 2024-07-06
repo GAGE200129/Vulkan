@@ -96,19 +96,16 @@ namespace gage::gfx::draw
             }
         };
 
-        this->sections = std::make_unique<MeshSection[]>(mesh.primitives.size());
-        this->section_count = mesh.primitives.size();
-        for (size_t i = 0; i < section_count; i++)
+        this->sections.reserve(mesh.primitives.size());
+        for (const auto& primitive : mesh.primitives)
         {
-            const auto &primitive = mesh.primitives.at(i);
             std::vector<glm::vec3> positions{};
             std::vector<glm::vec3> normals{};
             std::vector<glm::vec2> texcoords{};
             std::vector<uint32_t> indices{};
             extract_indices_from_primitive(primitive, indices);
             extract_data_from_primitive(primitive, positions, normals, texcoords);
-
-            this->sections[i] = std::move(MeshSection{
+            MeshSection section{
                 (uint32_t)indices.size(),
                 std::make_unique<data::GPUBuffer>(gfx, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sizeof(uint32_t) * indices.size(), indices.data()),
 
@@ -116,7 +113,8 @@ namespace gage::gfx::draw
                 std::make_unique<data::GPUBuffer>(gfx, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(glm::vec3) * normals.size(), normals.data()),
                 std::make_unique<data::GPUBuffer>(gfx, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(glm::vec2) * texcoords.size(), texcoords.data()),
                 (int32_t) primitive.material
-            });
+            };
+            this->sections.push_back(std::move(section));
         }
     }
 
@@ -126,9 +124,8 @@ namespace gage::gfx::draw
 
     void Mesh::draw(VkCommandBuffer cmd) const
     {
-        for (size_t i = 0; i < section_count; i++)
+        for (const auto& section : sections)
         {
-            const auto &section = sections[i];
             if (section.material_index < 0)
                 continue;
 

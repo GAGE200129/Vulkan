@@ -37,10 +37,20 @@ namespace gage::gfx::data
 
         VkPipelineLayout get_pipeline_layout() const;
         VkDescriptorSet allocate_instance_set(size_t size_in_bytes, VkBuffer buffer,
-           VkImageView albedo_view, VkSampler albedo_sampler) const;
+           VkImageView albedo_view, VkSampler albedo_sampler,
+           VkImageView metalic_roughness_view, VkSampler metalic_roughness_sampler) const;
         void free_instance_set(VkDescriptorSet set) const;
+
+        void reset_pipeline();
     private:
         void create_default_image_sampler();
+        void destroy_default_image_sampler();
+        void create_global_uniform_buffer();
+        void destroy_global_uniform_buffer();
+        void create_pipeline();
+        void destroy_pipeline();
+        void create_pipeline_layout();
+        void destroy_pipeline_layout();
     private:
 
         Graphics& gfx;

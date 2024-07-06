@@ -56,7 +56,7 @@ namespace tinygltf
 
     bool WriteImageData(
         const std::string * /* basepath */, const std::string * /* filename */,
-        const tinygltf::Image *image, bool /* embedImages */,
+        const tinygltf::Image */*image*/, bool /* embedImages */,
         const tinygltf::FsCallbacks * /* fs_cb */, const tinygltf::URICallbacks * /* uri_cb */,
         std::string * /* out_uri */, void * /* user_pointer */)
     {

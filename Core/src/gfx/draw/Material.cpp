@@ -18,20 +18,33 @@ namespace gage::gfx::draw
         
 
         //Has albedo texture ?
-        uniform_buffer_data.has_albedo = gltf_material.pbrMetallicRoughness.baseColorTexture.index > -1;
+        const auto& albedo_texture_index = gltf_material.pbrMetallicRoughness.baseColorTexture.index;
+        uniform_buffer_data.has_albedo = albedo_texture_index > -1;
         if (uniform_buffer_data.has_albedo)
         {
-            const auto &image_src_index = model.textures.at(gltf_material.pbrMetallicRoughness.baseColorTexture.index).source;
+            const auto &image_src_index = model.textures.at(albedo_texture_index).source;
             const auto &image = model.images.at(image_src_index);
-            diffuse_image.emplace(gfx, image.image.data(), image.width, image.height);
+            albedo_image.emplace(gfx, image.image.data(), image.width, image.height);
+        }
+
+        //Has metalic roughness ?
+        const auto& metalic_roughness_texture_index = gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index;
+        uniform_buffer_data.has_metalic = metalic_roughness_texture_index > -1;
+        if (uniform_buffer_data.has_metalic)
+        {
+            const auto &image_src_index = model.textures.at(metalic_roughness_texture_index).source;
+            const auto &image = model.images.at(image_src_index);
+            metalic_roughness_image.emplace(gfx, image.image.data(), image.width, image.height);
         }
 
        
         uniform_buffer.emplace(gfx, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(UniformBuffer), &uniform_buffer_data);
         descriptor_set = gfx.get_default_pipeline().allocate_instance_set(
             sizeof(UniformBuffer), uniform_buffer.value().get_buffer_handle(),
-            diffuse_image.has_value() ? diffuse_image.value().get_image_view() : VK_NULL_HANDLE, 
-            diffuse_image.has_value() ? diffuse_image.value().get_sampler() : VK_NULL_HANDLE
+            albedo_image.has_value() ? albedo_image.value().get_image_view() : VK_NULL_HANDLE, 
+            albedo_image.has_value() ? albedo_image.value().get_sampler() : VK_NULL_HANDLE,
+            metalic_roughness_image.has_value() ? metalic_roughness_image.value().get_image_view() : VK_NULL_HANDLE,
+            metalic_roughness_image.has_value() ? metalic_roughness_image.value().get_sampler() : VK_NULL_HANDLE
         );
 
         
