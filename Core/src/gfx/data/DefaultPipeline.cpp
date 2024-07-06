@@ -4,6 +4,7 @@
 #include "../data/Swapchain.hpp"
 
 #include <Core/src/utils/FileLoader.hpp>
+#include <Core/src/utils/VulkanHelper.hpp>
 
 #include <cstring>
 
@@ -11,6 +12,7 @@ namespace gage::gfx::data
 {
     DefaultPipeline::DefaultPipeline(Graphics &gfx) : gfx(gfx)
     {
+        create_render_pass();
         create_pipeline_layout();
         create_pipeline();
         create_global_uniform_buffer();
@@ -19,17 +21,36 @@ namespace gage::gfx::data
 
     DefaultPipeline::~DefaultPipeline()
     {
+        destroy_render_pass();
         destroy_default_image_sampler();
         destroy_global_uniform_buffer();
         destroy_pipeline();
         destroy_pipeline_layout();
     }
 
-    void DefaultPipeline::bind(VkCommandBuffer cmd)
+    void DefaultPipeline::begin(VkCommandBuffer cmd)
     {
+        VkRenderPassBeginInfo render_pass_begin_info{};
+        render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        render_pass_begin_info.renderPass = render_pass;
+        render_pass_begin_info.framebuffer = frame_buffer;
+        render_pass_begin_info.renderArea.offset = {0, 0};
+        render_pass_begin_info.renderArea.extent = gfx.get_scaled_draw_extent();
+        std::array<VkClearValue, 2> clear_values{};
+        clear_values[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+        clear_values[1].depthStencil = {1.0f, 0};
+        render_pass_begin_info.clearValueCount = clear_values.size();
+        render_pass_begin_info.pClearValues = clear_values.data();
+        vkCmdBeginRenderPass(cmd, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+
         std::memcpy(global_alloc_info.pMappedData, &ubo, sizeof(GlobalUniform));
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &global_set, 0, nullptr);
+    }
+
+    void DefaultPipeline::end(VkCommandBuffer cmd)
+    {
+        vkCmdEndRenderPass(cmd);
     }
 
     VkPipelineLayout DefaultPipeline::get_pipeline_layout() const
@@ -287,7 +308,9 @@ namespace gage::gfx::data
 
     void DefaultPipeline::reset_pipeline()
     {
+        destroy_render_pass();
         destroy_pipeline();
+        create_render_pass();
         create_pipeline();
     }
 
@@ -334,6 +357,7 @@ namespace gage::gfx::data
         multisampling.alphaToOneEnable = VK_FALSE;
 
         VkPipelineDepthStencilStateCreateInfo depth_stencil{};
+        depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
         depth_stencil.depthTestEnable = VK_TRUE;
         depth_stencil.depthWriteEnable = VK_TRUE;
         depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
@@ -419,18 +443,15 @@ namespace gage::gfx::data
         dynamic_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
         dynamic_state_ci.dynamicStateCount = 0;
 
-        VkFormat color_attachment_format = gfx.get_swapchain().get_image_format();
-        VkFormat depth_attachment_format = gfx.get_swapchain().get_depth_format();
-
-        VkPipelineRenderingCreateInfo render_info{};
-        render_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-        render_info.colorAttachmentCount = 1;
-        render_info.pColorAttachmentFormats = &color_attachment_format;
-        render_info.depthAttachmentFormat = depth_attachment_format;
+        // VkPipelineRenderingCreateInfo render_info{};
+        // render_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+        // render_info.colorAttachmentCount = 1;
+        // render_info.pColorAttachmentFormats = &color_attachment_format;
+        // render_info.depthAttachmentFormat = depth_attachment_format;
 
         VkGraphicsPipelineCreateInfo pipeline_info = {};
         pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        pipeline_info.pNext = &render_info;
+        //pipeline_info.pNext = &render_info;
         pipeline_info.stageCount = (uint32_t)pipeline_shader_stages.size();
         pipeline_info.pStages = pipeline_shader_stages.data();
         pipeline_info.pVertexInputState = &vertex_input_info;
@@ -442,6 +463,7 @@ namespace gage::gfx::data
         pipeline_info.pDynamicState = &dynamic_state_ci;
         pipeline_info.pDepthStencilState = &depth_stencil;
         pipeline_info.layout = pipeline_layout;
+        pipeline_info.renderPass = render_pass;
 
         vk_check(vkCreateGraphicsPipelines(gfx.device, nullptr, 1, &pipeline_info, nullptr, &pipeline));
 
@@ -540,5 +562,191 @@ namespace gage::gfx::data
         vkDestroyPipelineLayout(gfx.device, pipeline_layout, nullptr);
         vkDestroyDescriptorSetLayout(gfx.device, global_set_layout, nullptr);
         vkDestroyDescriptorSetLayout(gfx.device, instance_set_layout, nullptr);
+    }
+
+    void DefaultPipeline::create_render_pass()
+    {
+        VkAttachmentDescription color_attachment{};
+        color_attachment.format = COLOR_FORMAT;
+        color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        color_attachment.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+        VkAttachmentDescription depth_attachment{};
+        depth_attachment.format = DEPTH_FORMAT;
+        depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        VkAttachmentReference color_attachment_ref{};
+        color_attachment_ref.attachment = 0;
+        color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        VkAttachmentReference depth_attachment_ref{};
+        depth_attachment_ref.attachment = 1;
+        depth_attachment_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        VkSubpassDescription subpass{};
+        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass.colorAttachmentCount = 1;
+        subpass.pColorAttachments = &color_attachment_ref;
+        subpass.pDepthStencilAttachment = &depth_attachment_ref;
+
+        VkSubpassDependency dependency{};
+        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        dependency.dstSubpass = 0;
+        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dependency.srcAccessMask = 0;
+        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+        std::array<VkAttachmentDescription, 2> attachments = {color_attachment, depth_attachment};
+        VkRenderPassCreateInfo render_pass_ci{};
+        render_pass_ci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        render_pass_ci.attachmentCount = attachments.size();
+        render_pass_ci.pAttachments = attachments.data();
+        render_pass_ci.subpassCount = 1;
+        render_pass_ci.pSubpasses = &subpass;
+        render_pass_ci.dependencyCount = 1;
+        render_pass_ci.pDependencies = &dependency;
+
+        vk_check(vkCreateRenderPass(gfx.device, &render_pass_ci, nullptr, &render_pass));
+
+        // Create color image and view
+        {
+            VkImageCreateInfo color_image_ci = {};
+            color_image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+            color_image_ci.imageType = VK_IMAGE_TYPE_2D;
+            color_image_ci.extent.width = gfx.get_scaled_draw_extent().width;
+            color_image_ci.extent.height = gfx.get_scaled_draw_extent().height;
+            color_image_ci.extent.depth = 1;
+            color_image_ci.mipLevels = 1;
+            color_image_ci.arrayLayers = 1;
+            color_image_ci.format = COLOR_FORMAT;
+            color_image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+            color_image_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            color_image_ci.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+            color_image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
+
+            vk_check(vkCreateImage(gfx.device, &color_image_ci, nullptr, &color_image));
+
+            VkMemoryRequirements mem_reqs{};
+            vkGetImageMemoryRequirements(gfx.device, color_image, &mem_reqs);
+            //color_image_memory_size = mem_reqs.size;
+
+            VkMemoryAllocateInfo mem_alloc_info{};
+            mem_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            mem_alloc_info.allocationSize = mem_reqs.size;
+            mem_alloc_info.memoryTypeIndex = utils::find_memory_type(gfx.physical_device, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+            vk_check(vkAllocateMemory(gfx.device, &mem_alloc_info, nullptr, &color_image_memory));
+            vk_check(vkBindImageMemory(gfx.device, color_image, color_image_memory, 0));
+
+            VkImageViewCreateInfo color_image_view_ci = {};
+            color_image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            color_image_view_ci.image = color_image;
+            color_image_view_ci.format = COLOR_FORMAT;
+            color_image_view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            color_image_view_ci.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+            color_image_view_ci.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+            color_image_view_ci.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+            color_image_view_ci.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+            color_image_view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            color_image_view_ci.subresourceRange.baseMipLevel = 0;
+            color_image_view_ci.subresourceRange.baseArrayLayer = 0;
+            color_image_view_ci.subresourceRange.layerCount = 1;
+            color_image_view_ci.subresourceRange.levelCount = 1;
+
+            vk_check(vkCreateImageView(gfx.device, &color_image_view_ci, nullptr, &color_image_view));
+        }
+        // Create depth image
+        {
+            VkImageCreateInfo depth_image_ci = {};
+            depth_image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+            depth_image_ci.imageType = VK_IMAGE_TYPE_2D;
+            depth_image_ci.extent.width = gfx.get_scaled_draw_extent().width;
+            depth_image_ci.extent.height = gfx.get_scaled_draw_extent().height;
+            depth_image_ci.extent.depth = 1;
+            depth_image_ci.mipLevels = 1;
+            depth_image_ci.arrayLayers = 1;
+            depth_image_ci.format = DEPTH_FORMAT;
+            depth_image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+            depth_image_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            depth_image_ci.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+            depth_image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
+
+            vk_check(vkCreateImage(gfx.device, &depth_image_ci, nullptr, &depth_image));
+
+            VkMemoryRequirements mem_reqs{};
+            vkGetImageMemoryRequirements(gfx.device, depth_image, &mem_reqs);
+            //depth_image_memory_size = mem_reqs.size;
+
+            VkMemoryAllocateInfo mem_alloc_info{};
+            mem_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            mem_alloc_info.allocationSize = mem_reqs.size;
+            mem_alloc_info.memoryTypeIndex = utils::find_memory_type(gfx.physical_device, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+            vk_check(vkAllocateMemory(gfx.device, &mem_alloc_info, nullptr, &depth_image_memory));
+            vk_check(vkBindImageMemory(gfx.device, depth_image, depth_image_memory, 0));
+
+            VkImageViewCreateInfo depth_image_view_ci = {};
+            depth_image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            depth_image_view_ci.image = depth_image;
+            depth_image_view_ci.format = DEPTH_FORMAT;
+            depth_image_view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            depth_image_view_ci.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+            depth_image_view_ci.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+            depth_image_view_ci.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+            depth_image_view_ci.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+            depth_image_view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            depth_image_view_ci.subresourceRange.baseMipLevel = 0;
+            depth_image_view_ci.subresourceRange.baseArrayLayer = 0;
+            depth_image_view_ci.subresourceRange.layerCount = 1;
+            depth_image_view_ci.subresourceRange.levelCount = 1;
+
+            vk_check(vkCreateImageView(gfx.device, &depth_image_view_ci, nullptr, &depth_image_view));
+        }
+        // Create frame buffer
+        {
+            std::array<VkImageView, 2> attachments = {
+                color_image_view,
+                depth_image_view
+            };
+            VkFramebufferCreateInfo frame_buffer_ci{};
+            frame_buffer_ci.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            frame_buffer_ci.renderPass = render_pass;
+            frame_buffer_ci.attachmentCount = attachments.size();
+            frame_buffer_ci.pAttachments = attachments.data();
+            frame_buffer_ci.width = gfx.draw_extent.width;
+            frame_buffer_ci.height = gfx.draw_extent.height;
+            frame_buffer_ci.layers = 1;
+            vk_check(vkCreateFramebuffer(gfx.device, &frame_buffer_ci, nullptr, &frame_buffer));
+        }
+    }
+    void DefaultPipeline::destroy_render_pass()
+    {
+        vkDestroyRenderPass(gfx.device, render_pass, nullptr);
+
+        vkDestroyImage(gfx.device, color_image, nullptr);
+        vkDestroyImageView(gfx.device, color_image_view, nullptr);
+        vkDestroyImage(gfx.device, depth_image, nullptr);
+        vkDestroyImageView(gfx.device, depth_image_view, nullptr);
+
+        vkDestroyFramebuffer(gfx.device, frame_buffer, nullptr);
+        vkFreeMemory(gfx.device, color_image_memory, nullptr);
+        vkFreeMemory(gfx.device, depth_image_memory, nullptr);
+    }
+
+    VkImage DefaultPipeline::get_color_image_handle() const
+    {
+        return color_image;
     }
 }

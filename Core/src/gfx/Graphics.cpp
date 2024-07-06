@@ -305,40 +305,40 @@ namespace gage::gfx
         vk_check(vkBeginCommandBuffer(cmd, &cmd_begin_info));
 
         // make the swapchain image into writeable mode before rendering
-        utils::transition_image(cmd, swapchain->get_color_image_handle(), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR);
-        utils::transition_image(cmd, swapchain->get_depth_image_handle(), VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR);
+        // utils::transition_image(cmd, swapchain->get_color_image_handle(), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR);
+        // utils::transition_image(cmd, swapchain->get_depth_image_handle(), VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR);
 
-        VkClearValue color_clear_value{
-            VkClearColorValue{0.1f, 0.1f, 0.1f, 1.0f}};
+        // VkClearValue color_clear_value{
+        //     VkClearColorValue{0.1f, 0.1f, 0.1f, 1.0f}};
 
-        VkClearValue depth_clear_value{
-            {1.0f, 0u}};
+        // VkClearValue depth_clear_value{
+        //     {1.0f, 0u}};
 
-        VkRenderingAttachmentInfo color_attachment = {};
-        color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-        color_attachment.clearValue = color_clear_value;
-        color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        color_attachment.imageView = swapchain->get_color_image_view(); // Link to current swap chain color image view
-        color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        // VkRenderingAttachmentInfo color_attachment = {};
+        // color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        // color_attachment.clearValue = color_clear_value;
+        // color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        // color_attachment.imageView = swapchain->get_color_image_view(); // Link to current swap chain color image view
+        // color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        // color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
-        VkRenderingAttachmentInfo depth_attachment = {};
-        depth_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-        depth_attachment.clearValue = depth_clear_value;
-        depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        depth_attachment.imageView = swapchain->get_depth_image_view(); // Link to current swap chain depth image view
-        depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        // VkRenderingAttachmentInfo depth_attachment = {};
+        // depth_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        // depth_attachment.clearValue = depth_clear_value;
+        // depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        // depth_attachment.imageView = swapchain->get_depth_image_view(); // Link to current swap chain depth image view
+        // depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        // depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
-        VkRenderingInfo render_info = {};
-        render_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-        render_info.renderArea.offset = {0, 0};
-        render_info.renderArea.extent = get_scaled_draw_extent();
-        render_info.colorAttachmentCount = 1;
-        render_info.pColorAttachments = &color_attachment;
-        render_info.pDepthAttachment = &depth_attachment;
-        render_info.layerCount = 1;
-        vkCmdBeginRendering(cmd, &render_info);
+        // VkRenderingInfo render_info = {};
+        // render_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+        // render_info.renderArea.offset = {0, 0};
+        // render_info.renderArea.extent = get_scaled_draw_extent();
+        // render_info.colorAttachmentCount = 1;
+        // render_info.pColorAttachments = &color_attachment;
+        // render_info.pDepthAttachment = &depth_attachment;
+        // render_info.layerCount = 1;
+        // vkCmdBeginRendering(cmd, &render_info);
 
         return frame_datas[frame_index].cmd;
     }
@@ -350,10 +350,7 @@ namespace gage::gfx
         VkFence &render_fence = frame_datas[frame_index].render_fence;
         VkCommandBuffer &cmd = frame_datas[frame_index].cmd;
 
-        vkCmdEndRendering(cmd);
-
-        // Blit swapchain color image to swapchain image
-        utils::transition_image(cmd, swapchain->get_color_image_handle(), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        // // Blit swapchain color image to swapchain image
         utils::transition_image(cmd, swapchain->at(swapchain_image_index), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
         VkImageBlit region{};
@@ -378,9 +375,9 @@ namespace gage::gfx
         region.dstOffsets[1].y = draw_extent.height;
         region.dstOffsets[1].z = 1;
 
-        vkCmdBlitImage(cmd, swapchain->get_color_image_handle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        vkCmdBlitImage(cmd, default_pipeline->get_color_image_handle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                        swapchain->at(swapchain_image_index), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                       1, &region, VK_FILTER_NEAREST);
+                       1, &region, VK_FILTER_LINEAR);
         utils::transition_image(cmd, swapchain->at(swapchain_image_index), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
         vk_check(vkEndCommandBuffer(cmd));
 

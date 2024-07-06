@@ -46,12 +46,12 @@ namespace gage::win
         ImGui::StyleColorsDark();
         ImGui_ImplOpenGL3_Init();
         ImGui_ImplGlfw_InitForOpenGL(p_window, true);
-        create_viewport(gfx);
+        //create_viewport(gfx);
         
     }
     ImguiWindow::~ImguiWindow()
     {
-        destroy_viewport();
+        //destroy_viewport();
 
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();
@@ -122,8 +122,8 @@ namespace gage::win
 
             if (ImGui::Button("Reload viewport"))
             {
-                destroy_viewport();
-                create_viewport(window.get_graphics());
+                //destroy_viewport();
+                //create_viewport(window.get_graphics());
             }
         }
         ImGui::End();
@@ -135,16 +135,16 @@ namespace gage::win
         }
         ImGui::End();
 
-        if (ImGui::Begin("Viewport-Color"))
-        {
-            ImGui::Image((ImTextureID)gfx_color_texture, ImGui::GetContentRegionMax());
-        }
-        ImGui::End();
-        if (ImGui::Begin("Viewport-Depth"))
-        {
-            ImGui::Image((ImTextureID)gfx_depth_texture, ImGui::GetContentRegionMax());
-        }
-        ImGui::End();
+        //if (ImGui::Begin("Viewport-Color"))
+        //{
+        //    ImGui::Image((ImTextureID)gfx_color_texture, ImGui::GetContentRegionMax());
+        //}
+        //ImGui::End();
+        //if (ImGui::Begin("Viewport-Depth"))
+        //{
+        //    ImGui::Image((ImTextureID)gfx_depth_texture, ImGui::GetContentRegionMax());
+        //}
+        //ImGui::End();
 
         if (ImGui::Begin("Lightning"))
         {
@@ -157,43 +157,43 @@ namespace gage::win
         ImGui::End();
     }
 
-    void ImguiWindow::create_viewport(gfx::Graphics &gfx)
-    {
-        const auto [color_fd, color_size] = gfx.get_swapchain().get_color_image_external();
-        const auto [depth_fd, depth_size] = gfx.get_swapchain().get_depth_image_external();
-        VkExtent2D extent = gfx.get_scaled_draw_extent();
-
-        glCreateMemoryObjectsEXT(1, &gfx_color_texture_mem);
-        glImportMemoryFdEXT(gfx_color_texture_mem, color_size, GL_HANDLE_TYPE_OPAQUE_FD_EXT, color_fd);
-        glCreateTextures(GL_TEXTURE_2D, 1, &gfx_color_texture);
-
-        GLint color_swizzle[4] = { //Vulkan using BGRA8 not RGBA8
-            GL_BLUE,
-            GL_GREEN,
-            GL_RED,
-            GL_ALPHA
-        };
-        glTextureParameteriv(gfx_color_texture, GL_TEXTURE_SWIZZLE_RGBA, color_swizzle);
-        glTextureStorageMem2DEXT(gfx_color_texture, 1, GL_RGBA8, extent.width, extent.height, gfx_color_texture_mem, 0);
-
-        glCreateMemoryObjectsEXT(1, &gfx_depth_texture_mem);
-        glImportMemoryFdEXT(gfx_depth_texture_mem, depth_size, GL_HANDLE_TYPE_OPAQUE_FD_EXT, depth_fd);
-        glCreateTextures(GL_TEXTURE_2D, 1, &gfx_depth_texture);
-
-        GLint swizzle[4] = {
-            GL_RED,
-            GL_RED,
-            GL_RED,
-            GL_ONE};
-        glTextureParameteriv(gfx_depth_texture, GL_TEXTURE_SWIZZLE_RGBA, swizzle);
-        glTextureStorageMem2DEXT(gfx_depth_texture, 1, GL_DEPTH_COMPONENT32, extent.width, extent.height, gfx_depth_texture_mem, 0);
-    }
-    void ImguiWindow::destroy_viewport()
-    {
-        glDeleteTextures(1, &gfx_color_texture);
-        glDeleteMemoryObjectsEXT(1, &gfx_color_texture_mem);
-
-        glDeleteTextures(1, &gfx_depth_texture);
-        glDeleteMemoryObjectsEXT(1, &gfx_depth_texture_mem);
-    }
+   // void ImguiWindow::create_viewport(gfx::Graphics &gfx)
+   // {
+   //     const auto [color_fd, color_size] = gfx.get_swapchain().get_color_image_external();
+   //     const auto [depth_fd, depth_size] = gfx.get_swapchain().get_depth_image_external();
+   //     VkExtent2D extent = gfx.get_scaled_draw_extent();
+//
+   //     glCreateMemoryObjectsEXT(1, &gfx_color_texture_mem);
+   //     glImportMemoryFdEXT(gfx_color_texture_mem, color_size, GL_HANDLE_TYPE_OPAQUE_FD_EXT, color_fd);
+   //     glCreateTextures(GL_TEXTURE_2D, 1, &gfx_color_texture);
+//
+   //     GLint color_swizzle[4] = { //Vulkan using BGRA8 not RGBA8
+   //         GL_BLUE,
+   //         GL_GREEN,
+   //         GL_RED,
+   //         GL_ALPHA
+   //     };
+   //     glTextureParameteriv(gfx_color_texture, GL_TEXTURE_SWIZZLE_RGBA, color_swizzle);
+   //     glTextureStorageMem2DEXT(gfx_color_texture, 1, GL_RGBA8, extent.width, extent.height, gfx_color_texture_mem, 0);
+//
+   //     glCreateMemoryObjectsEXT(1, &gfx_depth_texture_mem);
+   //     glImportMemoryFdEXT(gfx_depth_texture_mem, depth_size, GL_HANDLE_TYPE_OPAQUE_FD_EXT, depth_fd);
+   //     glCreateTextures(GL_TEXTURE_2D, 1, &gfx_depth_texture);
+//
+   //     GLint swizzle[4] = {
+   //         GL_RED,
+   //         GL_RED,
+   //         GL_RED,
+   //         GL_ONE};
+   //     glTextureParameteriv(gfx_depth_texture, GL_TEXTURE_SWIZZLE_RGBA, swizzle);
+   //     glTextureStorageMem2DEXT(gfx_depth_texture, 1, GL_DEPTH_COMPONENT32, extent.width, extent.height, gfx_depth_texture_mem, 0);
+   // }
+   // void ImguiWindow::destroy_viewport()
+   // {
+   //     glDeleteTextures(1, &gfx_color_texture);
+   //     glDeleteMemoryObjectsEXT(1, &gfx_color_texture_mem);
+//
+   //     glDeleteTextures(1, &gfx_depth_texture);
+   //     glDeleteMemoryObjectsEXT(1, &gfx_depth_texture_mem);
+   // }
 }

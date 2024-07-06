@@ -28,6 +28,7 @@ layout(set = 1, binding = 0) uniform Material
     float specular_intensity;
     float specular_power;
     bool has_albedo;
+    bool has_metalic_roughness;
 } material;
 
 layout(set = 1, binding = 1) uniform sampler2D textures[2];
@@ -42,6 +43,4 @@ void main()
     const vec4 diffuse = ubo.diffuse_color * ubo.diffuse_intensity * max(0.0, dot(dir_light_vec, fs_normal)) * attenuation;
 
     outFragColor = diffuse;
-    if(material.has_albedo)
-        outFragColor *= texture(textures[0], fs_uvs);
 }

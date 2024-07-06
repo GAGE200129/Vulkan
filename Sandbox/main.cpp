@@ -41,10 +41,11 @@ int main()
                 static constexpr int64_t NS_PER_FRAME = (1.0 / 30.0) * 1000000000;
                 auto start = std::chrono::high_resolution_clock::now();
                 auto cmd = graphics.clear(camera);
-                graphics.get_default_pipeline().bind(cmd);
+                graphics.get_default_pipeline().begin(cmd);
                 model.value().draw(cmd);
                 //model2.value().draw(cmd);
                 model3.value().draw(cmd);
+                graphics.get_default_pipeline().end(cmd);
 
                 graphics.end_frame();
 

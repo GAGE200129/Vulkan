@@ -32,7 +32,9 @@ namespace gage::gfx::data
         DefaultPipeline(Graphics& gfx);
         ~DefaultPipeline();
 
-        void bind(VkCommandBuffer cmd);
+
+        void begin(VkCommandBuffer cmd);
+        void end(VkCommandBuffer cmd);
         void set_push_constant(VkCommandBuffer cmd, const glm::mat4x4& transform);
 
         VkPipelineLayout get_pipeline_layout() const;
@@ -42,6 +44,8 @@ namespace gage::gfx::data
         void free_instance_set(VkDescriptorSet set) const;
 
         void reset_pipeline();
+
+        VkImage get_color_image_handle() const;
     private:
         void create_default_image_sampler();
         void destroy_default_image_sampler();
@@ -51,7 +55,11 @@ namespace gage::gfx::data
         void destroy_pipeline();
         void create_pipeline_layout();
         void destroy_pipeline_layout();
+        void create_render_pass();
+        void destroy_render_pass();
     private:
+        static constexpr VkFormat COLOR_FORMAT = {VK_FORMAT_B8G8R8A8_UNORM};
+        static constexpr VkFormat DEPTH_FORMAT = {VK_FORMAT_D32_SFLOAT};
 
         Graphics& gfx;
         VkPipelineLayout pipeline_layout{};
@@ -68,5 +76,16 @@ namespace gage::gfx::data
         VkImageView default_image_view{};
         VmaAllocation default_image_alloc{};
         VkSampler default_sampler{};
+
+        VkRenderPass render_pass{};
+        VkFramebuffer frame_buffer{};
+        VkDeviceMemory depth_image_memory{};
+        VkImage depth_image{};
+        VkImageView depth_image_view{};
+
+        VkDeviceMemory color_image_memory{};
+        VkImage color_image{};
+        VkImageView color_image_view{};
+
     };
 }
