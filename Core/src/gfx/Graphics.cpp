@@ -255,7 +255,7 @@ namespace gage::gfx
 
     // }
 
-    VkCommandBuffer Graphics::clear(const data::Camera &camera)
+    VkCommandBuffer Graphics::clear()
     {
         uploading_mutex.lock();
 

@@ -3,6 +3,7 @@
 #include "Model.hpp"
 #include "Mesh.hpp"
 #include "../Graphics.hpp"
+#include "../data/DefaultPipeline.hpp"
 
 namespace gage::gfx::draw
 {

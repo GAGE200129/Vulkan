@@ -32,13 +32,13 @@ namespace gage::gfx::data
 
     void DefaultPipeline::begin(VkCommandBuffer cmd, const data::Camera &camera)
     {
-        //Update global ubo
+        // Update global ubo
         ubo.camera_position = camera.get_position();
         ubo.projection = glm::perspectiveFovRH_ZO(glm::radians(camera.get_field_of_view()),
-                                                   (float)gfx.draw_extent.width, (float)gfx.draw_extent.height, camera.get_near(), camera.get_far());
+                                                  (float)gfx.draw_extent.width, (float)gfx.draw_extent.height, camera.get_near(), camera.get_far());
         ubo.projection[1][1] *= -1;
         ubo.view = camera.get_view();
-        std::memcpy(global_alloc_info.pMappedData, &ubo, sizeof(GlobalUniform));
+        std::memcpy(global_alloc_info[gfx.frame_index].pMappedData, &ubo, sizeof(GlobalUniform));
 
         VkRenderPassBeginInfo render_pass_begin_info{};
         render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -53,9 +53,8 @@ namespace gage::gfx::data
         render_pass_begin_info.pClearValues = clear_values.data();
         vkCmdBeginRenderPass(cmd, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
-        
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &global_set, 0, nullptr);
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &global_set[gfx.frame_index], 0, nullptr);
     }
 
     void DefaultPipeline::end(VkCommandBuffer cmd)
@@ -76,7 +75,7 @@ namespace gage::gfx::data
     VkDescriptorSet DefaultPipeline::allocate_instance_set(size_t size_in_bytes, VkBuffer buffer,
                                                            VkImageView albedo_view, VkSampler albedo_sampler,
                                                            VkImageView metalic_roughness_view, VkSampler metalic_roughness_sampler,
-                                                            VkImageView normal_view, VkSampler normal_sampler) const
+                                                           VkImageView normal_view, VkSampler normal_sampler) const
     {
         gfx.uploading_mutex.lock();
         VkDescriptorSet res{};
@@ -137,7 +136,7 @@ namespace gage::gfx::data
         descriptor_write.pTexelBufferView = nullptr;
         vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
 
-        //Normal map texture
+        // Normal map texture
         VkDescriptorImageInfo normal_img_info{};
         normal_img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         normal_img_info.imageView = normal_view ? normal_view : default_image_view;
@@ -344,9 +343,9 @@ namespace gage::gfx::data
     void DefaultPipeline::create_pipeline()
     {
         std::vector<VkVertexInputBindingDescription> vertex_bindings{
-            {.binding = 0, .stride = (sizeof(float) * 3), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}, //position
-            {.binding = 1, .stride = (sizeof(float) * 3), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}, //Normal
-            {.binding = 2, .stride = (sizeof(float) * 2), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}, //Texcoord
+            {.binding = 0, .stride = (sizeof(float) * 3), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}, // position
+            {.binding = 1, .stride = (sizeof(float) * 3), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}, // Normal
+            {.binding = 2, .stride = (sizeof(float) * 2), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}, // Texcoord
         };
 
         std::vector<VkVertexInputAttributeDescription> vertex_attributes{
@@ -452,8 +451,7 @@ namespace gage::gfx::data
         VkPipelineShaderStageCreateInfo shader_stage_ci = {};
         shader_stage_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 
-
-        //Vertex shader
+        // Vertex shader
         shader_module_ci.codeSize = vertex_binary.size();
         shader_module_ci.pCode = (uint32_t *)vertex_binary.data();
         vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &vertex_shader));
@@ -462,7 +460,7 @@ namespace gage::gfx::data
         shader_stage_ci.stage = VK_SHADER_STAGE_VERTEX_BIT;
         pipeline_shader_stages.push_back(shader_stage_ci);
 
-        //Geometry shader
+        // Geometry shader
         shader_module_ci.codeSize = geometry_binary.size();
         shader_module_ci.pCode = (uint32_t *)geometry_binary.data();
         vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &geometry_shader));
@@ -471,7 +469,7 @@ namespace gage::gfx::data
         shader_stage_ci.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
         pipeline_shader_stages.push_back(shader_stage_ci);
 
-        //Fragment shader
+        // Fragment shader
         shader_module_ci.codeSize = fragment_binary.size();
         shader_module_ci.pCode = (uint32_t *)fragment_binary.data();
         vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &fragment_shader));
@@ -492,7 +490,7 @@ namespace gage::gfx::data
 
         VkGraphicsPipelineCreateInfo pipeline_info = {};
         pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        //pipeline_info.pNext = &render_info;
+        // pipeline_info.pNext = &render_info;
         pipeline_info.stageCount = (uint32_t)pipeline_shader_stages.size();
         pipeline_info.pStages = pipeline_shader_stages.data();
         pipeline_info.pVertexInputState = &vertex_input_info;
@@ -519,44 +517,51 @@ namespace gage::gfx::data
 
     void DefaultPipeline::create_global_uniform_buffer()
     {
-        VkBufferCreateInfo buffer_ci = {};
-        buffer_ci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        buffer_ci.size = sizeof(GlobalUniform);
-        buffer_ci.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        for (int i = 0; i < Graphics::FRAMES_IN_FLIGHT; i++)
+        {
 
-        VmaAllocationCreateInfo alloc_ci = {};
-        alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
-        alloc_ci.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
-        vk_check(vmaCreateBuffer(gfx.allocator, &buffer_ci, &alloc_ci, &global_buffer, &global_alloc, &global_alloc_info));
+            VkBufferCreateInfo buffer_ci = {};
+            buffer_ci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            buffer_ci.size = sizeof(GlobalUniform);
+            buffer_ci.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 
-        // Update descriptor set
-        VkDescriptorSetAllocateInfo global_set_alloc_info{};
-        global_set_alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        global_set_alloc_info.descriptorPool = gfx.desc_pool;
-        global_set_alloc_info.descriptorSetCount = 1;
-        global_set_alloc_info.pSetLayouts = &global_set_layout;
-        vkAllocateDescriptorSets(gfx.device, &global_set_alloc_info, &global_set);
+            VmaAllocationCreateInfo alloc_ci = {};
+            alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
+            alloc_ci.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+            vk_check(vmaCreateBuffer(gfx.allocator, &buffer_ci, &alloc_ci, &global_buffer[i], &global_alloc[i], &global_alloc_info[i]));
 
-        VkDescriptorBufferInfo buffer_info{};
-        buffer_info.buffer = global_buffer;
-        buffer_info.offset = 0;
-        buffer_info.range = sizeof(GlobalUniform);
+            // Update descriptor set
+            VkDescriptorSetAllocateInfo global_set_alloc_info{};
+            global_set_alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+            global_set_alloc_info.descriptorPool = gfx.desc_pool;
+            global_set_alloc_info.descriptorSetCount = 1;
+            global_set_alloc_info.pSetLayouts = &global_set_layout;
+            vkAllocateDescriptorSets(gfx.device, &global_set_alloc_info, &global_set[i]);
 
-        VkWriteDescriptorSet descriptor_write{};
-        descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptor_write.descriptorCount = 1;
-        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptor_write.dstBinding = 0;
-        descriptor_write.dstSet = global_set;
-        descriptor_write.pBufferInfo = &buffer_info;
+            VkDescriptorBufferInfo buffer_info{};
+            buffer_info.buffer = global_buffer[i];
+            buffer_info.offset = 0;
+            buffer_info.range = sizeof(GlobalUniform);
 
-        vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
+            VkWriteDescriptorSet descriptor_write{};
+            descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptor_write.descriptorCount = 1;
+            descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptor_write.dstBinding = 0;
+            descriptor_write.dstSet = global_set[i];
+            descriptor_write.pBufferInfo = &buffer_info;
+
+            vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
+        }
     }
 
     void DefaultPipeline::destroy_global_uniform_buffer()
     {
-        vmaDestroyBuffer(gfx.allocator, global_buffer, global_alloc);
-        vkFreeDescriptorSets(gfx.device, gfx.desc_pool, 1, &global_set);
+        for (int i = 0; i < Graphics::FRAMES_IN_FLIGHT; i++)
+        {
+            vmaDestroyBuffer(gfx.allocator, global_buffer[i], global_alloc[i]);
+            vkFreeDescriptorSets(gfx.device, gfx.desc_pool, 1, &global_set[i]);
+        }
     }
     void DefaultPipeline::create_pipeline_layout()
     {
@@ -682,7 +687,7 @@ namespace gage::gfx::data
 
             VkMemoryRequirements mem_reqs{};
             vkGetImageMemoryRequirements(gfx.device, color_image, &mem_reqs);
-            //color_image_memory_size = mem_reqs.size;
+            // color_image_memory_size = mem_reqs.size;
 
             VkMemoryAllocateInfo mem_alloc_info{};
             mem_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -729,7 +734,7 @@ namespace gage::gfx::data
 
             VkMemoryRequirements mem_reqs{};
             vkGetImageMemoryRequirements(gfx.device, depth_image, &mem_reqs);
-            //depth_image_memory_size = mem_reqs.size;
+            // depth_image_memory_size = mem_reqs.size;
 
             VkMemoryAllocateInfo mem_alloc_info{};
             mem_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -760,8 +765,7 @@ namespace gage::gfx::data
         {
             std::array<VkImageView, 2> attachments = {
                 color_image_view,
-                depth_image_view
-            };
+                depth_image_view};
             VkFramebufferCreateInfo frame_buffer_ci{};
             frame_buffer_ci.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
             frame_buffer_ci.renderPass = render_pass;

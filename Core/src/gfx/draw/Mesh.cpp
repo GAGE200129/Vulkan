@@ -2,6 +2,7 @@
 
 #include "../Exception.hpp"
 #include "../Graphics.hpp"
+#include "../data/DefaultPipeline.hpp"
 
 #include "Model.hpp"
 

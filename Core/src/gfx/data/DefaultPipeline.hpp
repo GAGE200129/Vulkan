@@ -68,12 +68,12 @@ namespace gage::gfx::data
         VkPipelineLayout pipeline_layout{};
         VkPipeline pipeline{};
         VkDescriptorSetLayout global_set_layout{};
-        VkDescriptorSet global_set{};
         VkDescriptorSetLayout instance_set_layout{};
+        VkDescriptorSet global_set[Graphics::FRAMES_IN_FLIGHT]{};
 
-        VkBuffer global_buffer{};
-        VmaAllocation global_alloc{};
-        VmaAllocationInfo global_alloc_info{};
+        VkBuffer global_buffer[Graphics::FRAMES_IN_FLIGHT]{};
+        VmaAllocation global_alloc[Graphics::FRAMES_IN_FLIGHT]{};
+        VmaAllocationInfo global_alloc_info[Graphics::FRAMES_IN_FLIGHT]{};
 
         VkImage default_image{};
         VkImageView default_image_view{};

@@ -7,6 +7,7 @@
 #include <Core/src/utils/FileLoader.hpp>
 #include <Core/src/gfx/data/Camera.hpp>
 #include <Core/src/gfx/draw/Model.hpp>
+#include <Core/src/gfx/data/DefaultPipeline.hpp>
 
 #include <thread>
 
@@ -39,8 +40,8 @@ int main()
                 win::update();
                
                 auto start = std::chrono::high_resolution_clock::now();
-                auto cmd = graphics.clear(camera);
-                graphics.get_default_pipeline().begin(cmd);
+                auto cmd = graphics.clear();
+                graphics.get_default_pipeline().begin(cmd, camera);
                 model.value().draw(cmd);
                 model3.value().draw(cmd);
                 graphics.get_default_pipeline().end(cmd);

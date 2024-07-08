@@ -52,7 +52,7 @@ namespace gage::gfx
         ~Graphics();
 
         void wait();
-        VkCommandBuffer clear(const data::Camera& camera);
+        VkCommandBuffer clear();
         void end_frame();
 
 
