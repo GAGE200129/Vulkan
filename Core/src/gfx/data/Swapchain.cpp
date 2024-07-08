@@ -20,7 +20,7 @@ namespace gage::gfx::data
                           // use vsync present mode
                           .set_desired_present_mode(PRESENT_MODE)
                           .set_desired_extent(gfx.draw_extent.width, gfx.draw_extent.height)
-                          .set_desired_min_image_count(vkb::SwapchainBuilder::BufferMode::SINGLE_BUFFERING)
+                          .set_desired_min_image_count(vkb::SwapchainBuilder::BufferMode::DOUBLE_BUFFERING)
                           .add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
                           .build();
         vkb_check(result, "Failed to create swapchain: ");

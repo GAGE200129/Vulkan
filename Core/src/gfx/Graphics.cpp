@@ -3,8 +3,6 @@
 #include <GLFW/glfw3.h>
 #include <string>
 #include <sstream>
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/gtc/matrix_transform.hpp>
 #include <VkBootstrap.h>
 #include <Core/src/log/Log.hpp>
 #include <Core/src/utils/VulkanHelper.hpp>
@@ -12,6 +10,7 @@
 #include "Exception.hpp"
 
 #include "data/Camera.hpp"
+#include "data/DefaultPipeline.hpp"
 
 
 using namespace std::string_literals;
@@ -234,7 +233,7 @@ namespace gage::gfx
                 vkDestroySemaphore(device, render_semaphore, nullptr); });
         }
 
-        default_pipeline.emplace(*this);
+        default_pipeline = std::make_unique<data::DefaultPipeline>(*this);
         delete_stack.push([this]()
                           { default_pipeline.reset(); });
     }
@@ -260,14 +259,6 @@ namespace gage::gfx
     {
         uploading_mutex.lock();
 
-        //Update global ubo
-        auto& ubo = default_pipeline->ubo;
-        ubo.camera_position = camera.get_position();
-        ubo.projection = glm::perspectiveFovRH_ZO(glm::radians(camera.get_field_of_view()),
-                                                   (float)draw_extent.width, (float)draw_extent.height, camera.get_near(), camera.get_far());
-        ubo.projection[1][1] *= -1;
-        ubo.view = camera.get_view();
-
         // Check for swapchain recreation
         if (resize_requested)
         {
@@ -275,7 +266,7 @@ namespace gage::gfx
             draw_extent = draw_extent_temp;
             swapchain.reset();
             swapchain.emplace(*this);
-            default_pipeline.value().reset_pipeline();
+            default_pipeline->reset_pipeline();
 
             resize_requested = false;
         }
@@ -403,12 +394,12 @@ namespace gage::gfx
 
     const data::DefaultPipeline &Graphics::get_default_pipeline() const
     {
-        return default_pipeline.value();
+        return *default_pipeline;
     }
 
     data::DefaultPipeline &Graphics::get_default_pipeline()
     {
-        return default_pipeline.value();
+        return *default_pipeline;
     }
 
     void Graphics::resize(int width, int height)

@@ -1,11 +1,13 @@
 #include "DefaultPipeline.hpp"
 
 #include "../Graphics.hpp"
-#include "../data/Swapchain.hpp"
+#include "Camera.hpp"
 
 #include <Core/src/utils/FileLoader.hpp>
 #include <Core/src/utils/VulkanHelper.hpp>
 
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/gtc/matrix_transform.hpp>
 #include <cstring>
 
 namespace gage::gfx::data
@@ -28,8 +30,16 @@ namespace gage::gfx::data
         destroy_pipeline_layout();
     }
 
-    void DefaultPipeline::begin(VkCommandBuffer cmd)
+    void DefaultPipeline::begin(VkCommandBuffer cmd, const data::Camera &camera)
     {
+        //Update global ubo
+        ubo.camera_position = camera.get_position();
+        ubo.projection = glm::perspectiveFovRH_ZO(glm::radians(camera.get_field_of_view()),
+                                                   (float)gfx.draw_extent.width, (float)gfx.draw_extent.height, camera.get_near(), camera.get_far());
+        ubo.projection[1][1] *= -1;
+        ubo.view = camera.get_view();
+        std::memcpy(global_alloc_info.pMappedData, &ubo, sizeof(GlobalUniform));
+
         VkRenderPassBeginInfo render_pass_begin_info{};
         render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         render_pass_begin_info.renderPass = render_pass;
@@ -43,7 +53,7 @@ namespace gage::gfx::data
         render_pass_begin_info.pClearValues = clear_values.data();
         vkCmdBeginRenderPass(cmd, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
-        std::memcpy(global_alloc_info.pMappedData, &ubo, sizeof(GlobalUniform));
+        
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &global_set, 0, nullptr);
     }

@@ -86,7 +86,7 @@ namespace gage::win
         static int resolutions[] = {1600, 900};
         ImGui::ShowDemoWindow();
 
-        if (ImGui::Begin("Window system"))
+        if (ImGui::Begin("Rendering system"))
         {
             const char *window_modes[] =
                 {
@@ -119,12 +119,10 @@ namespace gage::win
             {
                 window.resize((win::WindowMode)selected_window_mode, resolutions[0], resolutions[1], (float)resolution_scale / 100.0f);
             }
-
-            if (ImGui::Button("Reload viewport"))
-            {
-                //destroy_viewport();
-                //create_viewport(window.get_graphics());
-            }
+            ImGui::Separator();
+             static float arr[] = { 0.6f, 0.1f, 1.0f, 0.5f, 0.92f, 0.1f, 0.2f };
+            ImGui::Text("Frame time: %f ms", stats.frame_time);
+            
         }
         ImGui::End();
 

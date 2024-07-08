@@ -30,35 +30,40 @@ int main()
 
             std::optional<gfx::draw::Model> model, model2, model3;
             model.emplace(graphics, "res/models/sponza.glb", gfx::draw::Model::Mode::Binary);
-            //model2.emplace(graphics, "res/models/box_textured.glb", gfx::draw::Model::Mode::Binary);
             model3.emplace(graphics, "res/models/DamagedHelmet.gltf", gfx::draw::Model::Mode::ASCII);
 
 
             gfx::data::Camera camera{};
             while (!window.is_closing())
             {
-
-                static constexpr int64_t NS_PER_FRAME = (1.0 / 60.0) * 1000000000;
+                win::update();
+               
                 auto start = std::chrono::high_resolution_clock::now();
                 auto cmd = graphics.clear(camera);
                 graphics.get_default_pipeline().begin(cmd);
                 model.value().draw(cmd);
-                //model2.value().draw(cmd);
                 model3.value().draw(cmd);
                 graphics.get_default_pipeline().end(cmd);
 
                 graphics.end_frame();
 
+               
+               
+                auto finish = std::chrono::high_resolution_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(finish - start).count();
+                
+                imgui_window.stats.frame_time = duration / 1000000.0;
                 imgui_window.clear();
                 imgui_window.draw(camera, window);
                 imgui_window.end_frame();
-                win::update();
-                auto finish = std::chrono::high_resolution_clock::now();
-                auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(start - finish).count();
+                //finish = std::chrono::high_resolution_clock::now();
+                //duration = std::chrono::duration_cast<std::chrono::nanoseconds>(finish - start).count();
 
-                int64_t delay = NS_PER_FRAME - duration;
-                if (delay > 0)
-                    std::this_thread::sleep_for(std::chrono::nanoseconds(delay));
+
+                // static constexpr int64_t NS_PER_FRAME = (1.0 / 60.0) * 1000000000;
+                // int64_t delay = NS_PER_FRAME - duration;
+                // if (delay > 0)
+                //     std::this_thread::sleep_for(std::chrono::nanoseconds(delay));
             }
 
             graphics.wait();

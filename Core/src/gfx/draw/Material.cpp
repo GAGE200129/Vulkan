@@ -1,6 +1,7 @@
 #include "Material.hpp"
 
 #include "../Graphics.hpp"
+#include "../data/DefaultPipeline.hpp"
 
 #include <tiny_gltf.h>
 

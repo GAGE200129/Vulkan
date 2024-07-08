@@ -19,6 +19,12 @@ namespace gage::win
     class ImguiWindow
     {
     public:
+        struct Stats
+        {
+            float frame_time{};
+            float imgui_frame_time{};
+        } stats;
+    public:
         ImguiWindow(gfx::Graphics &gfx);
         ~ImguiWindow();
 
@@ -26,15 +32,10 @@ namespace gage::win
 
         void clear();
         void end_frame();
-    private:
-        //void create_viewport(gfx::Graphics& gfx);
-        //void destroy_viewport();
+
+
+
     private:
         GLFWwindow *p_window{};
-       //uint32_t gfx_color_texture_mem{};
-       //uint32_t gfx_color_texture{};
-
-       //uint32_t gfx_depth_texture_mem{};
-       //uint32_t gfx_depth_texture{};
     };
 };

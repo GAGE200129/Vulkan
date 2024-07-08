@@ -5,6 +5,8 @@
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 
+#include "../Graphics.hpp"
+
 namespace gage::gfx
 {
     class Graphics;
@@ -12,6 +14,7 @@ namespace gage::gfx
 
 namespace gage::gfx::data
 {
+    class Camera;
     class DefaultPipeline
     {
     public:
@@ -32,7 +35,7 @@ namespace gage::gfx::data
         ~DefaultPipeline();
 
 
-        void begin(VkCommandBuffer cmd);
+        void begin(VkCommandBuffer cmd, const data::Camera &camera);
         void end(VkCommandBuffer cmd);
         void set_push_constant(VkCommandBuffer cmd, const glm::mat4x4& transform);
 
@@ -77,6 +80,7 @@ namespace gage::gfx::data
         VmaAllocation default_image_alloc{};
         VkSampler default_sampler{};
 
+        //Main pass
         VkRenderPass render_pass{};
         VkFramebuffer frame_buffer{};
         VkDeviceMemory depth_image_memory{};
@@ -86,6 +90,9 @@ namespace gage::gfx::data
         VkDeviceMemory color_image_memory{};
         VkImage color_image{};
         VkImageView color_image_view{};
+
+        //Shadow pass
+        
 
     };
 }

@@ -11,7 +11,6 @@
 
 #include "Exception.hpp"
 #include "data/Swapchain.hpp"
-#include "data/DefaultPipeline.hpp"
 
 namespace vkb
 {
@@ -31,6 +30,7 @@ namespace gage::gfx::data
     class CPUBuffer;
     class DescriptorSet;
     class Image;
+    class DefaultPipeline;
 }
 
 struct GLFWwindow;
@@ -109,7 +109,7 @@ namespace gage::gfx
         VkQueue queue{};
         uint32_t queue_family{};
 
-        static constexpr int FRAMES_IN_FLIGHT = 1;
+        static constexpr int FRAMES_IN_FLIGHT = 2;
         struct FrameData
         {
             VkSemaphore present_semaphore{};
@@ -122,6 +122,6 @@ namespace gage::gfx
         VmaAllocator allocator{};
 
         //Pipelines
-        std::optional<data::DefaultPipeline> default_pipeline{};
+        std::unique_ptr<data::DefaultPipeline> default_pipeline{};
     };
 }
