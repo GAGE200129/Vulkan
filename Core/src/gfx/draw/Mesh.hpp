@@ -37,6 +37,7 @@ namespace gage::gfx::draw
             std::unique_ptr<data::GPUBuffer> index_buffer; 
             std::unique_ptr<data::GPUBuffer> position_buffer; 
             std::unique_ptr<data::GPUBuffer> normal_buffer; 
+            std::unique_ptr<data::GPUBuffer> tangent_buffer; 
             std::unique_ptr<data::GPUBuffer> texcoord_buffer;
             int32_t material_index;
         };

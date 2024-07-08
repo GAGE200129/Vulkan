@@ -65,7 +65,8 @@ namespace gage::gfx::data
 
     VkDescriptorSet DefaultPipeline::allocate_instance_set(size_t size_in_bytes, VkBuffer buffer,
                                                            VkImageView albedo_view, VkSampler albedo_sampler,
-                                                           VkImageView metalic_roughness_view, VkSampler metalic_roughness_sampler) const
+                                                           VkImageView metalic_roughness_view, VkSampler metalic_roughness_sampler,
+                                                            VkImageView normal_view, VkSampler normal_sampler) const
     {
         gfx.uploading_mutex.lock();
         VkDescriptorSet res{};
@@ -126,6 +127,22 @@ namespace gage::gfx::data
         descriptor_write.pTexelBufferView = nullptr;
         vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
 
+        //Normal map texture
+        VkDescriptorImageInfo normal_img_info{};
+        normal_img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        normal_img_info.imageView = normal_view ? normal_view : default_image_view;
+        normal_img_info.sampler = normal_sampler ? normal_sampler : default_sampler;
+
+        descriptor_write.dstSet = res;
+        descriptor_write.dstBinding = 1;
+        descriptor_write.dstArrayElement = 2; // Array index 1
+        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptor_write.descriptorCount = 1;
+        descriptor_write.pBufferInfo = nullptr;
+        descriptor_write.pImageInfo = &normal_img_info;
+        descriptor_write.pTexelBufferView = nullptr;
+        vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
+
         gfx.uploading_mutex.unlock();
 
         return res;
@@ -163,8 +180,8 @@ namespace gage::gfx::data
 
         unsigned char image_data[] =
             {
-                0, 255, 0, 255, 255, 0, 0, 255,
-                255, 255, 0, 255, 255, 0, 255, 255};
+                255, 255, 255, 255, 255, 255, 255, 255, 255,
+                255, 255, 255, 255, 255, 255, 255, 255};
         VkImageCreateInfo img_ci = {};
         img_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         img_ci.imageType = VK_IMAGE_TYPE_2D;
@@ -317,14 +334,18 @@ namespace gage::gfx::data
     void DefaultPipeline::create_pipeline()
     {
         std::vector<VkVertexInputBindingDescription> vertex_bindings{
-            {.binding = 0, .stride = (sizeof(float) * 3), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX},
-            {.binding = 1, .stride = (sizeof(float) * 3), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX},
-            {.binding = 2, .stride = (sizeof(float) * 2), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}};
+            {.binding = 0, .stride = (sizeof(float) * 3), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}, //position
+            {.binding = 1, .stride = (sizeof(float) * 3), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}, //Normal
+            {.binding = 2, .stride = (sizeof(float) * 2), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}, //Texcoord
+            {.binding = 3, .stride = (sizeof(float) * 4), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}  //Tangent
+        };
 
         std::vector<VkVertexInputAttributeDescription> vertex_attributes{
             {.location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0},
             {.location = 1, .binding = 1, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0},
-            {.location = 2, .binding = 2, .format = VK_FORMAT_R32G32_SFLOAT, .offset = 0}};
+            {.location = 2, .binding = 2, .format = VK_FORMAT_R32G32_SFLOAT, .offset = 0},
+            {.location = 3, .binding = 3, .format = VK_FORMAT_R32G32B32A32_SFLOAT, .offset = 0}
+        };
 
         VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
         vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -535,7 +556,7 @@ namespace gage::gfx::data
         // PER INSTANCE SET LAYOUT
         std::vector<VkDescriptorSetLayoutBinding> instance_bindings{
             {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
-            {.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 2, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
+            {.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 3, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
         };
 
         layout_ci.bindingCount = instance_bindings.size();
@@ -725,8 +746,8 @@ namespace gage::gfx::data
             frame_buffer_ci.renderPass = render_pass;
             frame_buffer_ci.attachmentCount = attachments.size();
             frame_buffer_ci.pAttachments = attachments.data();
-            frame_buffer_ci.width = gfx.draw_extent.width;
-            frame_buffer_ci.height = gfx.draw_extent.height;
+            frame_buffer_ci.width = gfx.get_scaled_draw_extent().width;
+            frame_buffer_ci.height = gfx.get_scaled_draw_extent().height;
             frame_buffer_ci.layers = 1;
             vk_check(vkCreateFramebuffer(gfx.device, &frame_buffer_ci, nullptr, &frame_buffer));
         }

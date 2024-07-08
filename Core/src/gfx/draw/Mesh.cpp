@@ -6,6 +6,8 @@
 #include "Model.hpp"
 
 #include <tiny_gltf.h>
+#include <iostream>
+#include <glm/gtx/string_cast.hpp>
 
 namespace gage::gfx::draw
 {
@@ -70,6 +72,7 @@ namespace gage::gfx::draw
             const auto &normal_accessor = gltf_model.accessors.at(primitive.attributes.at("NORMAL"));
             auto normal_buffer = extract_buffer_from_accessor(normal_accessor);
 
+
             const auto &texcoord_accessor = gltf_model.accessors.at(primitive.attributes.at("TEXCOORD_0"));
             auto texcoord_buffer = extract_buffer_from_accessor(texcoord_accessor);
 
@@ -85,6 +88,7 @@ namespace gage::gfx::draw
             for (uint32_t i = 0; i < position_accessor.count; i++)
             {
                 glm::vec3 position{};
+                glm::vec4 tangent{};
                 glm::vec3 normal{};
                 glm::vec2 uv{};
                 std::memcpy(&position.x, position_buffer.data() + i * sizeof(glm::vec3), sizeof(glm::vec3));
@@ -96,21 +100,75 @@ namespace gage::gfx::draw
             }
         };
 
+        auto generate_tangent = [](std::vector<glm::vec4>& out_tangents,
+         const std::vector<uint32_t>& indices,
+         const std::vector<glm::vec3>& positions,
+         const std::vector<glm::vec2>& texcoords,
+         const std::vector<glm::vec3>& normals)
+        {
+            out_tangents.reserve(positions.size());
+
+            for(size_t i = 0; i < indices.size(); i+= 3)
+            {
+            
+                glm::vec3 pos[3] = {
+                    positions.at(indices.at(i)),
+                    positions.at(indices.at(i + 1)),
+                    positions.at(indices.at(i + 2)),
+                };
+
+                glm::vec2 tc[3] = {
+                    texcoords.at(indices.at(i)),
+                    texcoords.at(indices.at(i + 1)),
+                    texcoords.at(indices.at(i + 2)),
+                };
+
+                glm::vec3 n{};
+                n += normals.at(indices.at(i));
+                n += normals.at(indices.at(i + 1));
+                n += normals.at(indices.at(i + 2));
+                n /= 3.0;
+
+
+                glm::vec3 edge1 = pos[1] - pos[0];
+                glm::vec3 edge2 = pos[2] - pos[0];
+                glm::vec2 deltaUV1 = tc[1] - tc[0];
+                glm::vec2 deltaUV2 = tc[2] - tc[0];  
+
+                float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+                glm::vec3 tangent{};
+                tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+                tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+                tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+                tangent = glm::normalize(tangent);
+               
+
+                out_tangents.push_back(glm::vec4(tangent, -1.0));
+                out_tangents.push_back(glm::vec4(tangent, -1.0));
+                out_tangents.push_back(glm::vec4(tangent, -1.0));
+
+            }
+        };
+
         this->sections.reserve(mesh.primitives.size());
         for (const auto& primitive : mesh.primitives)
         {
             std::vector<glm::vec3> positions{};
             std::vector<glm::vec3> normals{};
+            std::vector<glm::vec4> tangents{};
             std::vector<glm::vec2> texcoords{};
             std::vector<uint32_t> indices{};
             extract_indices_from_primitive(primitive, indices);
             extract_data_from_primitive(primitive, positions, normals, texcoords);
+            generate_tangent(tangents, indices, positions, texcoords, normals);
+
             MeshSection section{
                 (uint32_t)indices.size(),
                 std::make_unique<data::GPUBuffer>(gfx, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sizeof(uint32_t) * indices.size(), indices.data()),
 
                 std::make_unique<data::GPUBuffer>(gfx, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(glm::vec3) * positions.size(), positions.data()),
                 std::make_unique<data::GPUBuffer>(gfx, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(glm::vec3) * normals.size(), normals.data()),
+                std::make_unique<data::GPUBuffer>(gfx, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(glm::vec4) * tangents.size(), tangents.data()),
                 std::make_unique<data::GPUBuffer>(gfx, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(glm::vec2) * texcoords.size(), texcoords.data()),
                 (int32_t) primitive.material
             };
@@ -134,9 +192,10 @@ namespace gage::gfx::draw
                     section.position_buffer->get_buffer_handle(),
                     section.normal_buffer->get_buffer_handle(),
                     section.texcoord_buffer->get_buffer_handle(),
+                    section.tangent_buffer->get_buffer_handle(),
                 };
             VkDeviceSize offsets[] =
-                {0, 0, 0};
+                {0, 0, 0, 0};
 
             VkDescriptorSet desc_set = model.materials.at(section.material_index)->get_desc_set();
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,

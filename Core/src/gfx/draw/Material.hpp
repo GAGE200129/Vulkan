@@ -36,11 +36,13 @@ namespace gage::gfx::draw
             float specular_power{32};
             uint32_t has_albedo{};
             uint32_t has_metalic{};
+            uint32_t has_normal{};
         } uniform_buffer_data{};
 
         std::optional<data::CPUBuffer> uniform_buffer;
         std::optional<data::Image> albedo_image;
         std::optional<data::Image> metalic_roughness_image;
+        std::optional<data::Image> normal_image;
         VkDescriptorSet descriptor_set{};
     };
 }
