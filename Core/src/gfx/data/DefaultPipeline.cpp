@@ -60,7 +60,7 @@ namespace gage::gfx::data
 
     void DefaultPipeline::set_push_constant(VkCommandBuffer cmd, const glm::mat4x4 &transform)
     {
-        vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4x4), &transform);
+        vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), &transform);
     }
 
     VkDescriptorSet DefaultPipeline::allocate_instance_set(size_t size_in_bytes, VkBuffer buffer,
@@ -337,14 +337,12 @@ namespace gage::gfx::data
             {.binding = 0, .stride = (sizeof(float) * 3), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}, //position
             {.binding = 1, .stride = (sizeof(float) * 3), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}, //Normal
             {.binding = 2, .stride = (sizeof(float) * 2), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}, //Texcoord
-            {.binding = 3, .stride = (sizeof(float) * 4), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}  //Tangent
         };
 
         std::vector<VkVertexInputAttributeDescription> vertex_attributes{
             {.location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0},
             {.location = 1, .binding = 1, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0},
             {.location = 2, .binding = 2, .format = VK_FORMAT_R32G32_SFLOAT, .offset = 0},
-            {.location = 3, .binding = 3, .format = VK_FORMAT_R32G32B32A32_SFLOAT, .offset = 0}
         };
 
         VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
@@ -433,28 +431,40 @@ namespace gage::gfx::data
 
         std::vector<VkPipelineShaderStageCreateInfo> pipeline_shader_stages{};
         VkShaderModule vertex_shader{};
+        VkShaderModule geometry_shader{};
         VkShaderModule fragment_shader{};
-        auto vertex_binary = utils::file_path_to_binary("Core/shaders/compiled/colored_triangle.vert.spv");
-        auto fragment_binary = utils::file_path_to_binary("Core/shaders/compiled/colored_triangle.frag.spv");
+        auto vertex_binary = utils::file_path_to_binary("Core/shaders/compiled/default_pbr.vert.spv");
+        auto geometry_binary = utils::file_path_to_binary("Core/shaders/compiled/default_pbr.geom.spv");
+        auto fragment_binary = utils::file_path_to_binary("Core/shaders/compiled/default_pbr.frag.spv");
 
-        VkShaderModuleCreateInfo vertex_shader_module_ci = {};
-        vertex_shader_module_ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        vertex_shader_module_ci.codeSize = vertex_binary.size();
-        vertex_shader_module_ci.pCode = (uint32_t *)vertex_binary.data();
-        vk_check(vkCreateShaderModule(gfx.device, &vertex_shader_module_ci, nullptr, &vertex_shader));
-        VkShaderModuleCreateInfo fragment_shader_module_ci = {};
-        fragment_shader_module_ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        fragment_shader_module_ci.codeSize = fragment_binary.size();
-        fragment_shader_module_ci.pCode = (uint32_t *)fragment_binary.data();
-        vk_check(vkCreateShaderModule(gfx.device, &fragment_shader_module_ci, nullptr, &fragment_shader));
-
+        VkShaderModuleCreateInfo shader_module_ci = {};
+        shader_module_ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         VkPipelineShaderStageCreateInfo shader_stage_ci = {};
         shader_stage_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+
+
+        //Vertex shader
+        shader_module_ci.codeSize = vertex_binary.size();
+        shader_module_ci.pCode = (uint32_t *)vertex_binary.data();
+        vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &vertex_shader));
         shader_stage_ci.module = vertex_shader;
         shader_stage_ci.pName = "main";
         shader_stage_ci.stage = VK_SHADER_STAGE_VERTEX_BIT;
         pipeline_shader_stages.push_back(shader_stage_ci);
 
+        //Geometry shader
+        shader_module_ci.codeSize = geometry_binary.size();
+        shader_module_ci.pCode = (uint32_t *)geometry_binary.data();
+        vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &geometry_shader));
+        shader_stage_ci.module = geometry_shader;
+        shader_stage_ci.pName = "main";
+        shader_stage_ci.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
+        pipeline_shader_stages.push_back(shader_stage_ci);
+
+        //Fragment shader
+        shader_module_ci.codeSize = fragment_binary.size();
+        shader_module_ci.pCode = (uint32_t *)fragment_binary.data();
+        vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &fragment_shader));
         shader_stage_ci.module = fragment_shader;
         shader_stage_ci.pName = "main";
         shader_stage_ci.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -489,6 +499,7 @@ namespace gage::gfx::data
         vk_check(vkCreateGraphicsPipelines(gfx.device, nullptr, 1, &pipeline_info, nullptr, &pipeline));
 
         vkDestroyShaderModule(gfx.device, vertex_shader, nullptr);
+        vkDestroyShaderModule(gfx.device, geometry_shader, nullptr);
         vkDestroyShaderModule(gfx.device, fragment_shader, nullptr);
     }
     void DefaultPipeline::destroy_pipeline()
@@ -565,7 +576,7 @@ namespace gage::gfx::data
         vk_check(vkCreateDescriptorSetLayout(gfx.device, &layout_ci, nullptr, &instance_set_layout));
         std::vector<VkPushConstantRange> push_constants{
             VkPushConstantRange{
-                VK_SHADER_STAGE_VERTEX_BIT,
+                VK_SHADER_STAGE_ALL,
                 0,
                 sizeof(glm::mat4x4)}};
 

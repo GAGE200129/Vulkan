@@ -104,6 +104,9 @@ namespace gage::gfx
         // features12.ver
 
         // vulkan 1.3 features
+        VkPhysicalDeviceFeatures features{};
+        features.geometryShader = true;
+        
         VkPhysicalDeviceVulkan13Features features13 = {};
         features13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
         features13.dynamicRendering = true;
@@ -113,6 +116,7 @@ namespace gage::gfx
         vkb::PhysicalDeviceSelector selector{vkb_inst};
         auto physical_device_result = selector
                                           .set_minimum_version(1, 3)
+                                          .set_required_features(features)
                                           .set_required_features_13(features13)
                                           .add_required_extensions(sizeof(ENABLED_DEVICE_EXTENSIONS) / sizeof(ENABLED_DEVICE_EXTENSIONS[0]), ENABLED_DEVICE_EXTENSIONS)
                                           .set_surface(surface)
@@ -251,10 +255,7 @@ namespace gage::gfx
     }
 
     // }
-    void Graphics::draw_indexed(uint32_t vertex_count)
-    {
-        vkCmdDrawIndexed(frame_datas[frame_index].cmd, vertex_count, 1, 0, 0, 0);
-    }
+
     VkCommandBuffer Graphics::clear(const data::Camera &camera)
     {
         uploading_mutex.lock();
@@ -378,8 +379,7 @@ namespace gage::gfx
             throw GraphicsException{};
         }
 
-        frame_index++;
-        frame_index = frame_index % FRAMES_IN_FLIGHT;
+        frame_index = (frame_index + 1) % FRAMES_IN_FLIGHT;
 
         uploading_mutex.unlock();
     }

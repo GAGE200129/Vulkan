@@ -38,7 +38,7 @@ int main()
             while (!window.is_closing())
             {
 
-                static constexpr int64_t NS_PER_FRAME = (1.0 / 30.0) * 1000000000;
+                static constexpr int64_t NS_PER_FRAME = (1.0 / 60.0) * 1000000000;
                 auto start = std::chrono::high_resolution_clock::now();
                 auto cmd = graphics.clear(camera);
                 graphics.get_default_pipeline().begin(cmd);
@@ -56,7 +56,7 @@ int main()
                 auto finish = std::chrono::high_resolution_clock::now();
                 auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(start - finish).count();
 
-                int64_t delay = duration + NS_PER_FRAME;
+                int64_t delay = NS_PER_FRAME - duration;
                 if (delay > 0)
                     std::this_thread::sleep_for(std::chrono::nanoseconds(delay));
             }
@@ -72,6 +72,10 @@ int main()
     catch (gfx::GraphicsException &e)
     {
         logger.error("Graphics exception caught: " + std::string(e.what()));
+    }
+    catch (utils::FileLoaderException &e)
+    {
+        logger.error("Utils exception caught: " + std::string(e.what()));
     }
     catch (...)
     {

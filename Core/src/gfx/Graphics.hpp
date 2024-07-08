@@ -53,7 +53,6 @@ namespace gage::gfx
 
         void wait();
         VkCommandBuffer clear(const data::Camera& camera);
-        void draw_indexed(uint32_t vertex_count);
         void end_frame();
 
 
@@ -110,7 +109,7 @@ namespace gage::gfx
         VkQueue queue{};
         uint32_t queue_family{};
 
-        static constexpr int FRAMES_IN_FLIGHT = 2;
+        static constexpr int FRAMES_IN_FLIGHT = 1;
         struct FrameData
         {
             VkSemaphore present_semaphore{};

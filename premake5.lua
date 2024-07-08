@@ -27,6 +27,7 @@ project "Core"
       "%{prj.location}/ThirdParty/**.cpp",
       "%{prj.location}/ThirdParty/**.c",
       "%{prj.location}/shaders/**.vert",
+      "%{prj.location}/shaders/**.geom",
       "%{prj.location}/shaders/**.frag",
    }
    links { "glfw", "vulkan", "luajit-5.1", "bfd", "GL"}
@@ -38,6 +39,13 @@ project "Core"
    --Shader compiling--
    filter {"files:**.vert"}
       buildmessage "Compiling vertex shader %{file.relpath}"
+      buildcommands {
+         "glslc %{file.relpath} -o %{file.directory}/compiled/%{file.name}.spv"
+      }
+      buildoutputs { "%{file.directory}/compiled/%{file.name}.spv" }
+
+   filter {"files:**.geom"}
+      buildmessage "Compiling geometry shader %{file.relpath}"
       buildcommands {
          "glslc %{file.relpath} -o %{file.directory}/compiled/%{file.name}.spv"
       }
