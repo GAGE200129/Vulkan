@@ -462,9 +462,10 @@ namespace gage::gfx
 
         VkSubmitInfo submit = {};
         submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-        submit.pWaitDstStageMask = &waitStage;
+        VkPipelineStageFlags wait_stages[] = {
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+        };
 
         std::array<VkSemaphore, 2> wait_semaphores = {
             present_semaphore,
@@ -472,6 +473,7 @@ namespace gage::gfx
         };
         submit.waitSemaphoreCount = wait_semaphores.size();
         submit.pWaitSemaphores = wait_semaphores.data();
+        submit.pWaitDstStageMask = wait_stages;
 
         submit.signalSemaphoreCount = 1;
         submit.pSignalSemaphores = &render_semaphore;
