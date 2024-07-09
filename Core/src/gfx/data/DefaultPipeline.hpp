@@ -35,7 +35,7 @@ namespace gage::gfx::data
         ~DefaultPipeline();
 
 
-        void begin(VkCommandBuffer cmd, const data::Camera &camera);
+        VkCommandBuffer begin(const data::Camera &camera);
         void end(VkCommandBuffer cmd);
         void set_push_constant(VkCommandBuffer cmd, const glm::mat4x4& transform);
 
@@ -49,6 +49,7 @@ namespace gage::gfx::data
         void reset_pipeline();
 
         VkImage get_color_image_handle() const;
+        VkSemaphore get_render_finished_semaphore() const;
     private:
         void create_default_image_sampler();
         void destroy_default_image_sampler();
@@ -60,11 +61,17 @@ namespace gage::gfx::data
         void destroy_pipeline_layout();
         void create_render_pass();
         void destroy_render_pass();
+
+        void allocate_cmd();
+        void free_cmd();
     private:
         static constexpr VkFormat COLOR_FORMAT = {VK_FORMAT_B8G8R8A8_UNORM};
         static constexpr VkFormat DEPTH_FORMAT = {VK_FORMAT_D32_SFLOAT};
 
         Graphics& gfx;
+        VkCommandBuffer cmd{};
+        VkSemaphore render_finished_semaphore{};
+
         VkPipelineLayout pipeline_layout{};
         VkPipeline pipeline{};
         VkDescriptorSetLayout global_set_layout{};

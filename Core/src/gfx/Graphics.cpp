@@ -74,7 +74,7 @@ namespace gage::gfx
                                        .request_validation_layers(true)
                                        .set_debug_callback(debugCallback)
                                        .set_debug_callback_user_data_pointer(this)
-                                       .enable_extensions(sizeof(ENABLED_INSTANCE_EXTENSIONS) / sizeof(ENABLED_INSTANCE_EXTENSIONS[0]), ENABLED_INSTANCE_EXTENSIONS)
+                                       .enable_extensions(ENABLED_INSTANCE_EXTENSIONS.size(), ENABLED_INSTANCE_EXTENSIONS.data())
                                        .require_api_version(1, 3, 0)
                                        .build();
 
@@ -117,7 +117,7 @@ namespace gage::gfx
                                           .set_minimum_version(1, 3)
                                           .set_required_features(features)
                                           .set_required_features_13(features13)
-                                          .add_required_extensions(sizeof(ENABLED_DEVICE_EXTENSIONS) / sizeof(ENABLED_DEVICE_EXTENSIONS[0]), ENABLED_DEVICE_EXTENSIONS)
+                                          .add_required_extensions(ENABLED_DEVICE_EXTENSIONS.size(), ENABLED_DEVICE_EXTENSIONS.data())
                                           .set_surface(surface)
                                           .select();
 
@@ -255,7 +255,7 @@ namespace gage::gfx
 
     // }
 
-    VkCommandBuffer Graphics::clear()
+    void Graphics::clear()
     {
         uploading_mutex.lock();
 
@@ -274,7 +274,6 @@ namespace gage::gfx
 
         VkSemaphore &present_semaphore = frame_datas[frame_index].present_semaphore;
         VkFence &render_fence = frame_datas[frame_index].render_fence;
-        VkCommandBuffer &cmd = frame_datas[frame_index].cmd;
 
         // wait until the GPU has finished rendering the last frame. Timeout of 1 second
         vk_check(vkWaitForFences(device, 1, &render_fence, true, 1000000000));
@@ -287,29 +286,51 @@ namespace gage::gfx
             throw GraphicsException{};
         }
 
+    }
+
+    void Graphics::end_frame()
+    {
+
+        VkSemaphore &present_semaphore = frame_datas[frame_index].present_semaphore;
+        VkSemaphore &render_semaphore = frame_datas[frame_index].render_semaphore;
+        VkFence &render_fence = frame_datas[frame_index].render_fence;
+        VkCommandBuffer &cmd = frame_datas[frame_index].cmd;
+        
+        VkImageBlit region{};
+        VkImageMemoryBarrier swapchain_memory_barrier{};
+        swapchain_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+
         // reset the command buffer
         vk_check(vkResetCommandBuffer(cmd, 0));
-        // begin the command buffer recording. We will use this command buffer exactly once, so we want to let Vulkan know that
         VkCommandBufferBeginInfo cmd_begin_info = {};
         cmd_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         cmd_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
         vk_check(vkBeginCommandBuffer(cmd, &cmd_begin_info));
 
-        return frame_datas[frame_index].cmd;
-    }
 
-    void Graphics::end_frame()
-    {
-        VkSemaphore &present_semaphore = frame_datas[frame_index].present_semaphore;
-        VkSemaphore &render_semaphore = frame_datas[frame_index].render_semaphore;
-        VkFence &render_fence = frame_datas[frame_index].render_fence;
-        VkCommandBuffer &cmd = frame_datas[frame_index].cmd;
+        //Blit swapchain color image to swapchain image and wait for color result
+        swapchain_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        swapchain_memory_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        swapchain_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        swapchain_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-        // // Blit swapchain color image to swapchain image
-        utils::transition_image(cmd, swapchain->at(swapchain_image_index), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        swapchain_memory_barrier.image = swapchain->at(swapchain_image_index);
+        swapchain_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        swapchain_memory_barrier.subresourceRange.baseMipLevel = 0;
+        swapchain_memory_barrier.subresourceRange.levelCount = 1;
+        swapchain_memory_barrier.subresourceRange.baseArrayLayer = 0;
+        swapchain_memory_barrier.subresourceRange.layerCount = 1;
 
-        VkImageBlit region{};
+        vkCmdPipelineBarrier(
+            cmd,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            0,
+            0, nullptr,
+            0, nullptr,
+            1, &swapchain_memory_barrier
+        );
+
         region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         region.srcSubresource.mipLevel = 0;
         region.srcSubresource.baseArrayLayer = 0;
@@ -334,8 +355,30 @@ namespace gage::gfx
         vkCmdBlitImage(cmd, default_pipeline->get_color_image_handle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                        swapchain->at(swapchain_image_index), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                        1, &region, VK_FILTER_LINEAR);
-        utils::transition_image(cmd, swapchain->at(swapchain_image_index), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+        swapchain_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        swapchain_memory_barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+        swapchain_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        swapchain_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+        swapchain_memory_barrier.image = swapchain->at(swapchain_image_index);
+        swapchain_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        swapchain_memory_barrier.subresourceRange.baseMipLevel = 0;
+        swapchain_memory_barrier.subresourceRange.levelCount = 1;
+        swapchain_memory_barrier.subresourceRange.baseArrayLayer = 0;
+        swapchain_memory_barrier.subresourceRange.layerCount = 1;
+
+        vkCmdPipelineBarrier(
+            cmd,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            0,
+            0, nullptr,
+            0, nullptr,
+            1, &swapchain_memory_barrier
+        );
         vk_check(vkEndCommandBuffer(cmd));
+
 
         VkSubmitInfo submit = {};
         submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -343,8 +386,12 @@ namespace gage::gfx
 
         submit.pWaitDstStageMask = &waitStage;
 
-        submit.waitSemaphoreCount = 1;
-        submit.pWaitSemaphores = &present_semaphore;
+        std::array<VkSemaphore, 2> wait_semaphores = {
+            present_semaphore,
+            default_pipeline->get_render_finished_semaphore()
+        };
+        submit.waitSemaphoreCount = wait_semaphores.size();
+        submit.pWaitSemaphores = wait_semaphores.data();
 
         submit.signalSemaphoreCount = 1;
         submit.pSignalSemaphores = &render_semaphore;

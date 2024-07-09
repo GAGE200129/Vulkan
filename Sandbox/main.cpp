@@ -40,12 +40,15 @@ int main()
                 win::update();
                
                 auto start = std::chrono::high_resolution_clock::now();
-                auto cmd = graphics.clear();
-                graphics.get_default_pipeline().begin(cmd, camera);
-                model.value().draw(cmd);
-                model3.value().draw(cmd);
-                graphics.get_default_pipeline().end(cmd);
+                graphics.clear();
+                
+                auto default_cmd = graphics.get_default_pipeline().begin(camera);
+                model.value().draw(default_cmd);
+                model3.value().draw(default_cmd);
+                graphics.get_default_pipeline().end(default_cmd);
+                
 
+                
                 graphics.end_frame();
 
                

@@ -19,10 +19,12 @@ namespace gage::gfx::data
         create_pipeline();
         create_global_uniform_buffer();
         create_default_image_sampler();
+        allocate_cmd();
     }
 
     DefaultPipeline::~DefaultPipeline()
     {
+        free_cmd();
         destroy_render_pass();
         destroy_default_image_sampler();
         destroy_global_uniform_buffer();
@@ -30,8 +32,19 @@ namespace gage::gfx::data
         destroy_pipeline_layout();
     }
 
-    void DefaultPipeline::begin(VkCommandBuffer cmd, const data::Camera &camera)
+    VkCommandBuffer DefaultPipeline::begin(const data::Camera &camera)
     {
+        
+         // reset the command buffer
+        vk_check(vkResetCommandBuffer(cmd, 0));
+        // begin the command buffer recording. We will use this command buffer exactly once, so we want to let Vulkan know that
+        VkCommandBufferBeginInfo cmd_begin_info = {};
+        cmd_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        cmd_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        vk_check(vkBeginCommandBuffer(cmd, &cmd_begin_info));
+
+
         // Update global ubo
         ubo.camera_position = camera.get_position();
         ubo.projection = glm::perspectiveFovRH_ZO(glm::radians(camera.get_field_of_view()),
@@ -55,21 +68,59 @@ namespace gage::gfx::data
 
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &global_set[gfx.frame_index], 0, nullptr);
+
+        return cmd;
     }
 
     void DefaultPipeline::end(VkCommandBuffer cmd)
     {
         vkCmdEndRenderPass(cmd);
+        vkEndCommandBuffer(cmd);
+
+        VkSubmitInfo submit = {};
+        submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit.signalSemaphoreCount = 1;
+        submit.pSignalSemaphores = &render_finished_semaphore;
+
+        submit.commandBufferCount = 1;
+        submit.pCommandBuffers = &cmd;
+
+        vk_check(vkQueueSubmit(gfx.queue, 1, &submit, VK_NULL_HANDLE));
     }
 
     VkPipelineLayout DefaultPipeline::get_pipeline_layout() const
     {
         return pipeline_layout;
     }
-
+    VkSemaphore DefaultPipeline::get_render_finished_semaphore() const
+    {
+        return render_finished_semaphore;
+    }
     void DefaultPipeline::set_push_constant(VkCommandBuffer cmd, const glm::mat4x4 &transform)
     {
         vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), &transform);
+    }
+
+    void DefaultPipeline::allocate_cmd()
+    {
+        VkCommandBufferAllocateInfo alloc_info{};
+        alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        alloc_info.commandPool = gfx.cmd_pool;
+        alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        alloc_info.commandBufferCount = 1;
+        vk_check(vkAllocateCommandBuffers(gfx.device, &alloc_info, &cmd));
+
+        //Create semaphore
+        VkSemaphoreCreateInfo sem_ci{};
+        sem_ci.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+        sem_ci.flags = VK_SEMAPHORE_TYPE_BINARY;
+
+        vkCreateSemaphore(gfx.device, &sem_ci, nullptr, &render_finished_semaphore);
+    }
+    void DefaultPipeline::free_cmd()
+    {
+        vkDestroySemaphore(gfx.device, render_finished_semaphore, nullptr);
+        vkFreeCommandBuffers(gfx.device, gfx.cmd_pool, 1, &cmd);
     }
 
     VkDescriptorSet DefaultPipeline::allocate_instance_set(size_t size_in_bytes, VkBuffer buffer,

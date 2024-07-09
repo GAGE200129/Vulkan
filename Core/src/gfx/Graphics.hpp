@@ -8,6 +8,7 @@
 #include <optional>
 #include <mutex>
 #include <glm/mat4x4.hpp>
+#include <span>
 
 #include "Exception.hpp"
 #include "data/Swapchain.hpp"
@@ -52,7 +53,7 @@ namespace gage::gfx
         ~Graphics();
 
         void wait();
-        VkCommandBuffer clear();
+        void clear();
         void end_frame();
 
 
@@ -76,15 +77,13 @@ namespace gage::gfx
         std::string app_name{};
         std::stack<std::function<void()>> delete_stack{};
 
-        static constexpr const char* ENABLED_INSTANCE_EXTENSIONS[] = 
+        const std::vector<const char*> ENABLED_INSTANCE_EXTENSIONS
         {
-            "VK_KHR_external_memory_capabilities"
+            
         };
-        static constexpr const char* ENABLED_DEVICE_EXTENSIONS[] = 
+        const std::vector<const char*> ENABLED_DEVICE_EXTENSIONS 
         {
-            "VK_EXT_extended_dynamic_state3",
-            "VK_KHR_external_memory",
-            "VK_KHR_external_memory_fd"
+            
         };
         VkInstance instance{};
         VkDebugUtilsMessengerEXT debug_messenger{};
@@ -109,7 +108,7 @@ namespace gage::gfx
         VkQueue queue{};
         uint32_t queue_family{};
 
-        static constexpr int FRAMES_IN_FLIGHT = 2;
+        static constexpr int FRAMES_IN_FLIGHT = 1;
         struct FrameData
         {
             VkSemaphore present_semaphore{};
