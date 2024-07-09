@@ -146,7 +146,7 @@ namespace gage::win
 
         if (ImGui::Begin("Lightning"))
         {
-            auto& ubo = window.get_graphics().get_default_pipeline().ubo;
+            auto& ubo = window.get_graphics().get_global_uniform();
             ImGui::Text("Directional light");
             if(ImGui::DragFloat3("Direction", &ubo.directional_light.direction.x, 0.01f, -1, 1))
             {

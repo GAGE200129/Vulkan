@@ -6,6 +6,8 @@
 #include <VkBootstrap.h>
 #include <Core/src/log/Log.hpp>
 #include <Core/src/utils/VulkanHelper.hpp>
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "Exception.hpp"
 
@@ -164,6 +166,8 @@ namespace gage::gfx
             {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1024},
         };
 
+
+        //Create descriptor pool
         VkDescriptorPoolCreateInfo desc_pool_ci{};
         desc_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         desc_pool_ci.maxSets = 4;
@@ -173,6 +177,25 @@ namespace gage::gfx
         vkCreateDescriptorPool(device, &desc_pool_ci, nullptr, &desc_pool);
         delete_stack.push([this]()
                           { vkDestroyDescriptorPool(device, desc_pool, nullptr); });
+
+        //Define a global set layout
+        // GLOBAL SET LAYOUT
+        VkDescriptorSetLayoutBinding global_binding{};
+        global_binding.binding = 0;
+        global_binding.descriptorCount = 1;
+        global_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        global_binding.stageFlags = VK_SHADER_STAGE_ALL;
+
+        VkDescriptorSetLayoutCreateInfo layout_ci{};
+        layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layout_ci.bindingCount = 1;
+        layout_ci.pBindings = &global_binding;
+        layout_ci.flags = 0;
+        vk_check(vkCreateDescriptorSetLayout(device, &layout_ci, nullptr, &global_set_layout));
+        delete_stack.push([this]()
+        {
+            vkDestroyDescriptorSetLayout(device, global_set_layout, nullptr);
+        });
 
 
         // use vkbootstrap to get a Graphics queue family
@@ -191,7 +214,7 @@ namespace gage::gfx
         delete_stack.push([this]()
                           { vkDestroyCommandPool(device, cmd_pool, nullptr); });
 
-        // Create sync structures
+        // Create Frame datas
         for (int i = 0; i < FRAMES_IN_FLIGHT; i++)
         {
             FrameData &data = frame_datas[i];
@@ -199,6 +222,10 @@ namespace gage::gfx
             VkSemaphore &present_semaphore = data.present_semaphore;
             VkSemaphore &render_semaphore = data.render_semaphore;
             VkCommandBuffer &cmd = data.cmd;
+            VkDescriptorSet& global_set = data.global_set;
+            VkBuffer& global_buffer = data.global_buffer;
+            VmaAllocation& global_alloc = data.global_alloc;
+            VmaAllocationInfo& global_alloc_info = data.global_alloc_info;
 
             VkFenceCreateInfo fenceCreateInfo = {};
             fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -231,6 +258,49 @@ namespace gage::gfx
                               {
                 vkDestroySemaphore(device, present_semaphore, nullptr);
                 vkDestroySemaphore(device, render_semaphore, nullptr); });
+
+            //Create global uniform buffer
+            VkBufferCreateInfo buffer_ci = {};
+            buffer_ci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            buffer_ci.size = sizeof(GlobalUniform);
+            buffer_ci.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+            VmaAllocationCreateInfo alloc_ci = {};
+            alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
+            alloc_ci.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+            vk_check(vmaCreateBuffer(allocator, &buffer_ci, &alloc_ci, &global_buffer, &global_alloc, &global_alloc_info));
+
+            delete_stack.push([&]()
+            {
+                vmaDestroyBuffer(allocator, global_buffer, global_alloc);
+            });
+
+            // Allocate descriptor set
+            VkDescriptorSetAllocateInfo global_set_alloc_info{};
+            global_set_alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+            global_set_alloc_info.descriptorPool = desc_pool;
+            global_set_alloc_info.descriptorSetCount = 1;
+            global_set_alloc_info.pSetLayouts = &global_set_layout;
+            vkAllocateDescriptorSets(device, &global_set_alloc_info, &global_set);
+            delete_stack.push([&, this]()
+            {
+                vkFreeDescriptorSets(device, desc_pool, 1, &global_set);
+            });
+
+            VkDescriptorBufferInfo buffer_info{};
+            buffer_info.buffer = global_buffer;
+            buffer_info.offset = 0;
+            buffer_info.range = sizeof(GlobalUniform);
+
+            VkWriteDescriptorSet descriptor_write{};
+            descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptor_write.descriptorCount = 1;
+            descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptor_write.dstBinding = 0;
+            descriptor_write.dstSet = global_set;
+            descriptor_write.pBufferInfo = &buffer_info;
+
+            vkUpdateDescriptorSets(device, 1, &descriptor_write, 0, nullptr);
         }
 
         default_pipeline = std::make_unique<data::DefaultPipeline>(*this);
@@ -255,9 +325,10 @@ namespace gage::gfx
 
     // }
 
-    void Graphics::clear()
+    void Graphics::clear(const data::Camera &camera)
     {
         uploading_mutex.lock();
+        
 
         // Check for swapchain recreation
         if (resize_requested)
@@ -274,6 +345,15 @@ namespace gage::gfx
 
         VkSemaphore &present_semaphore = frame_datas[frame_index].present_semaphore;
         VkFence &render_fence = frame_datas[frame_index].render_fence;
+        VmaAllocationInfo& global_alloc_info = frame_datas[frame_index].global_alloc_info;
+
+        //Update global set of currnet frame
+        global_uniform.camera_position = camera.get_position();
+        global_uniform.projection = glm::perspectiveFovRH_ZO(glm::radians(camera.get_field_of_view()),
+                                                  (float)draw_extent.width, (float)draw_extent.height, camera.get_near(), camera.get_far());
+        global_uniform.projection[1][1] *= -1;
+        global_uniform.view = camera.get_view();
+        std::memcpy(global_alloc_info.pMappedData, &global_uniform, sizeof(GlobalUniform));
 
         // wait until the GPU has finished rendering the last frame. Timeout of 1 second
         vk_check(vkWaitForFences(device, 1, &render_fence, true, 1000000000));
@@ -388,7 +468,7 @@ namespace gage::gfx
 
         std::array<VkSemaphore, 2> wait_semaphores = {
             present_semaphore,
-            default_pipeline->get_render_finished_semaphore()
+            default_pipeline->get_render_finished_semaphore(this->frame_index)
         };
         submit.waitSemaphoreCount = wait_semaphores.size();
         submit.pWaitSemaphores = wait_semaphores.data();
@@ -420,6 +500,11 @@ namespace gage::gfx
         frame_index = (frame_index + 1) % FRAMES_IN_FLIGHT;
 
         uploading_mutex.unlock();
+    }
+
+    Graphics::GlobalUniform& Graphics::get_global_uniform()
+    {
+        return global_uniform;
     }
 
 

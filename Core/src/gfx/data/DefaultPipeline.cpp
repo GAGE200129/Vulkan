@@ -6,8 +6,6 @@
 #include <Core/src/utils/FileLoader.hpp>
 #include <Core/src/utils/VulkanHelper.hpp>
 
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/gtc/matrix_transform.hpp>
 #include <cstring>
 
 namespace gage::gfx::data
@@ -17,7 +15,6 @@ namespace gage::gfx::data
         create_render_pass();
         create_pipeline_layout();
         create_pipeline();
-        create_global_uniform_buffer();
         create_default_image_sampler();
         allocate_cmd();
     }
@@ -27,15 +24,14 @@ namespace gage::gfx::data
         free_cmd();
         destroy_render_pass();
         destroy_default_image_sampler();
-        destroy_global_uniform_buffer();
         destroy_pipeline();
         destroy_pipeline_layout();
     }
 
-    VkCommandBuffer DefaultPipeline::begin(const data::Camera &camera)
+    VkCommandBuffer DefaultPipeline::begin()
     {
-        
-         // reset the command buffer
+        auto &cmd = cmds[gfx.frame_index];
+        // reset the command buffer
         vk_check(vkResetCommandBuffer(cmd, 0));
         // begin the command buffer recording. We will use this command buffer exactly once, so we want to let Vulkan know that
         VkCommandBufferBeginInfo cmd_begin_info = {};
@@ -44,14 +40,8 @@ namespace gage::gfx::data
 
         vk_check(vkBeginCommandBuffer(cmd, &cmd_begin_info));
 
-
-        // Update global ubo
-        ubo.camera_position = camera.get_position();
-        ubo.projection = glm::perspectiveFovRH_ZO(glm::radians(camera.get_field_of_view()),
-                                                  (float)gfx.draw_extent.width, (float)gfx.draw_extent.height, camera.get_near(), camera.get_far());
-        ubo.projection[1][1] *= -1;
-        ubo.view = camera.get_view();
-        std::memcpy(global_alloc_info[gfx.frame_index].pMappedData, &ubo, sizeof(GlobalUniform));
+        // Bind global set of graphics
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &gfx.frame_datas[gfx.frame_index].global_set, 0, nullptr);
 
         VkRenderPassBeginInfo render_pass_begin_info{};
         render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -67,7 +57,6 @@ namespace gage::gfx::data
         vkCmdBeginRenderPass(cmd, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &global_set[gfx.frame_index], 0, nullptr);
 
         return cmd;
     }
@@ -80,7 +69,7 @@ namespace gage::gfx::data
         VkSubmitInfo submit = {};
         submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit.signalSemaphoreCount = 1;
-        submit.pSignalSemaphores = &render_finished_semaphore;
+        submit.pSignalSemaphores = &render_finished_semaphores[gfx.frame_index];
 
         submit.commandBufferCount = 1;
         submit.pCommandBuffers = &cmd;
@@ -92,9 +81,9 @@ namespace gage::gfx::data
     {
         return pipeline_layout;
     }
-    VkSemaphore DefaultPipeline::get_render_finished_semaphore() const
+    VkSemaphore DefaultPipeline::get_render_finished_semaphore(uint32_t i) const
     {
-        return render_finished_semaphore;
+        return render_finished_semaphores[i];
     }
     void DefaultPipeline::set_push_constant(VkCommandBuffer cmd, const glm::mat4x4 &transform)
     {
@@ -103,24 +92,32 @@ namespace gage::gfx::data
 
     void DefaultPipeline::allocate_cmd()
     {
-        VkCommandBufferAllocateInfo alloc_info{};
-        alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        alloc_info.commandPool = gfx.cmd_pool;
-        alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        alloc_info.commandBufferCount = 1;
-        vk_check(vkAllocateCommandBuffers(gfx.device, &alloc_info, &cmd));
+        for (int i = 0; i < Graphics::FRAMES_IN_FLIGHT; i++)
+        {
 
-        //Create semaphore
-        VkSemaphoreCreateInfo sem_ci{};
-        sem_ci.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-        sem_ci.flags = VK_SEMAPHORE_TYPE_BINARY;
+            VkCommandBufferAllocateInfo alloc_info{};
+            alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            alloc_info.commandPool = gfx.cmd_pool;
+            alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            alloc_info.commandBufferCount = 1;
+            vk_check(vkAllocateCommandBuffers(gfx.device, &alloc_info, &cmds[i]));
 
-        vkCreateSemaphore(gfx.device, &sem_ci, nullptr, &render_finished_semaphore);
+            // Create semaphore
+            VkSemaphoreCreateInfo sem_ci{};
+            sem_ci.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+            sem_ci.flags = VK_SEMAPHORE_TYPE_BINARY;
+
+            vkCreateSemaphore(gfx.device, &sem_ci, nullptr, &render_finished_semaphores[i]);
+        }
     }
     void DefaultPipeline::free_cmd()
     {
-        vkDestroySemaphore(gfx.device, render_finished_semaphore, nullptr);
-        vkFreeCommandBuffers(gfx.device, gfx.cmd_pool, 1, &cmd);
+        for (int i = 0; i < Graphics::FRAMES_IN_FLIGHT; i++)
+        {
+
+            vkDestroySemaphore(gfx.device, render_finished_semaphores[i], nullptr);
+            vkFreeCommandBuffers(gfx.device, gfx.cmd_pool, 1, &cmds[i]);
+        }
     }
 
     VkDescriptorSet DefaultPipeline::allocate_instance_set(size_t size_in_bytes, VkBuffer buffer,
@@ -566,76 +563,16 @@ namespace gage::gfx::data
         vkDestroyPipeline(gfx.device, pipeline, nullptr);
     }
 
-    void DefaultPipeline::create_global_uniform_buffer()
-    {
-        for (int i = 0; i < Graphics::FRAMES_IN_FLIGHT; i++)
-        {
-
-            VkBufferCreateInfo buffer_ci = {};
-            buffer_ci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-            buffer_ci.size = sizeof(GlobalUniform);
-            buffer_ci.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-
-            VmaAllocationCreateInfo alloc_ci = {};
-            alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
-            alloc_ci.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
-            vk_check(vmaCreateBuffer(gfx.allocator, &buffer_ci, &alloc_ci, &global_buffer[i], &global_alloc[i], &global_alloc_info[i]));
-
-            // Update descriptor set
-            VkDescriptorSetAllocateInfo global_set_alloc_info{};
-            global_set_alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-            global_set_alloc_info.descriptorPool = gfx.desc_pool;
-            global_set_alloc_info.descriptorSetCount = 1;
-            global_set_alloc_info.pSetLayouts = &global_set_layout;
-            vkAllocateDescriptorSets(gfx.device, &global_set_alloc_info, &global_set[i]);
-
-            VkDescriptorBufferInfo buffer_info{};
-            buffer_info.buffer = global_buffer[i];
-            buffer_info.offset = 0;
-            buffer_info.range = sizeof(GlobalUniform);
-
-            VkWriteDescriptorSet descriptor_write{};
-            descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptor_write.descriptorCount = 1;
-            descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptor_write.dstBinding = 0;
-            descriptor_write.dstSet = global_set[i];
-            descriptor_write.pBufferInfo = &buffer_info;
-
-            vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
-        }
-    }
-
-    void DefaultPipeline::destroy_global_uniform_buffer()
-    {
-        for (int i = 0; i < Graphics::FRAMES_IN_FLIGHT; i++)
-        {
-            vmaDestroyBuffer(gfx.allocator, global_buffer[i], global_alloc[i]);
-            vkFreeDescriptorSets(gfx.device, gfx.desc_pool, 1, &global_set[i]);
-        }
-    }
     void DefaultPipeline::create_pipeline_layout()
     {
-        // GLOBAL SET LAYOUT
-        VkDescriptorSetLayoutBinding global_binding{};
-        global_binding.binding = 0;
-        global_binding.descriptorCount = 1;
-        global_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        global_binding.stageFlags = VK_SHADER_STAGE_ALL;
-
-        VkDescriptorSetLayoutCreateInfo layout_ci{};
-        layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layout_ci.bindingCount = 1;
-        layout_ci.pBindings = &global_binding;
-        layout_ci.flags = 0;
-        vk_check(vkCreateDescriptorSetLayout(gfx.device, &layout_ci, nullptr, &global_set_layout));
-
         // PER INSTANCE SET LAYOUT
         std::vector<VkDescriptorSetLayoutBinding> instance_bindings{
             {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
             {.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 3, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
         };
 
+        VkDescriptorSetLayoutCreateInfo layout_ci{};
+        layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         layout_ci.bindingCount = instance_bindings.size();
         layout_ci.pBindings = instance_bindings.data();
         layout_ci.flags = 0;
@@ -646,7 +583,7 @@ namespace gage::gfx::data
                 0,
                 sizeof(glm::mat4x4)}};
 
-        std::vector<VkDescriptorSetLayout> layouts = {global_set_layout, instance_set_layout};
+        std::vector<VkDescriptorSetLayout> layouts = {gfx.global_set_layout, instance_set_layout};
         VkPipelineLayoutCreateInfo pipeline_layout_info = {};
         pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipeline_layout_info.pushConstantRangeCount = push_constants.size();
@@ -658,7 +595,6 @@ namespace gage::gfx::data
     void DefaultPipeline::destroy_pipeline_layout()
     {
         vkDestroyPipelineLayout(gfx.device, pipeline_layout, nullptr);
-        vkDestroyDescriptorSetLayout(gfx.device, global_set_layout, nullptr);
         vkDestroyDescriptorSetLayout(gfx.device, instance_set_layout, nullptr);
     }
 

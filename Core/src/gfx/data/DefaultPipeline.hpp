@@ -18,24 +18,11 @@ namespace gage::gfx::data
     class DefaultPipeline
     {
     public:
-        struct DirectionalLight
-        {
-            glm::vec3 direction{0, -1, 0}; float _padding;
-            glm::vec3 color{1, 1, 1}; float _padding2;
-        };
-        struct GlobalUniform
-        {
-            glm::mat4x4 projection{};
-            glm::mat4x4 view{};
-            glm::vec3 camera_position{}; float _padding{};
-            DirectionalLight directional_light{};
-        } ubo;
-    public:
         DefaultPipeline(Graphics& gfx);
         ~DefaultPipeline();
 
 
-        VkCommandBuffer begin(const data::Camera &camera);
+        VkCommandBuffer begin();
         void end(VkCommandBuffer cmd);
         void set_push_constant(VkCommandBuffer cmd, const glm::mat4x4& transform);
 
@@ -49,12 +36,10 @@ namespace gage::gfx::data
         void reset_pipeline();
 
         VkImage get_color_image_handle() const;
-        VkSemaphore get_render_finished_semaphore() const;
+        VkSemaphore get_render_finished_semaphore(uint32_t i) const;
     private:
         void create_default_image_sampler();
         void destroy_default_image_sampler();
-        void create_global_uniform_buffer();
-        void destroy_global_uniform_buffer();
         void create_pipeline();
         void destroy_pipeline();
         void create_pipeline_layout();
@@ -69,18 +54,12 @@ namespace gage::gfx::data
         static constexpr VkFormat DEPTH_FORMAT = {VK_FORMAT_D32_SFLOAT};
 
         Graphics& gfx;
-        VkCommandBuffer cmd{};
-        VkSemaphore render_finished_semaphore{};
+        VkCommandBuffer cmds[Graphics::FRAMES_IN_FLIGHT]{};
+        VkSemaphore render_finished_semaphores[Graphics::FRAMES_IN_FLIGHT]{};
 
         VkPipelineLayout pipeline_layout{};
         VkPipeline pipeline{};
-        VkDescriptorSetLayout global_set_layout{};
         VkDescriptorSetLayout instance_set_layout{};
-        VkDescriptorSet global_set[Graphics::FRAMES_IN_FLIGHT]{};
-
-        VkBuffer global_buffer[Graphics::FRAMES_IN_FLIGHT]{};
-        VmaAllocation global_alloc[Graphics::FRAMES_IN_FLIGHT]{};
-        VmaAllocationInfo global_alloc_info[Graphics::FRAMES_IN_FLIGHT]{};
 
         VkImage default_image{};
         VkImageView default_image_view{};
