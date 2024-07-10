@@ -19,6 +19,9 @@ project "Core"
    targetdir "bin/%{prj.name}/%{cfg.buildcfg}"
    objdir "obj/%{prj.name}/%{cfg.buildcfg}"
 
+   
+   pchheader "pch.hpp"
+
    files {
       "%{prj.location}/src/**.hpp",
       "%{prj.location}/src/**.cpp",
@@ -30,12 +33,19 @@ project "Core"
       "%{prj.location}/shaders/**.geom",
       "%{prj.location}/shaders/**.frag",
    }
+   
+   
    links { "glfw", "vulkan", "luajit-5.1", "bfd", "GL"}
    includedirs { 
       "%{prj.location}/src",
       "%{prj.location}/ThirdParty",
       "%{wks.location}"
    }
+
+   
+   filter { "files:**.c" }
+      compileas "C++"
+
    --Shader compiling--
    filter {"files:**.vert"}
       buildmessage "Compiling vertex shader %{file.relpath}"
@@ -66,6 +76,8 @@ project "Core"
       {
          "-Wall -Wextra -Wpedantic"
       }
+
+   
 
 
 project "Sandbox"

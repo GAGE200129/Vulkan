@@ -1,9 +1,9 @@
+#include <pch.hpp>
 #include "StdoutDriver.hpp"
 
 #include "Entry.hpp"
 
-#include <iostream>
-#include <vulkan/vk_enum_string_helper.h>
+
 
 
 namespace gage::log

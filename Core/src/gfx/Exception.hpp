@@ -2,9 +2,7 @@
 
 #include <Core/src/utils/Exception.hpp>
 #include <Core/src/log/Log.hpp>
-#include <vulkan/vulkan.h>
-#include <sstream>
-#include <string>
+
 
 #ifndef NDEBUG
 #define vk_check(x, ...) {VkResult result = x; if (result != VK_SUCCESS) { logger.fatal(__VA_ARGS__).vk_result(result); throw GraphicsException{}; } }

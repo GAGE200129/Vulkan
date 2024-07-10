@@ -2,6 +2,7 @@
 #extension GL_ARB_shading_language_include : require
 
 #include "global_uniform_buffer.inc"
+#include "material.inc"
 
 layout(location = 0) in FSOutput
 {
@@ -10,23 +11,11 @@ layout(location = 0) in FSOutput
     vec3 world_pos;
     mat3 TBN;
 } fs_in;
+ 
 
 
 //output write
 layout (location = 0) out vec4 outFragColor;
-
-
-layout(set = 1, binding = 0) uniform Material
-{
-    vec4 color;
-    float specular_intensity;
-    float specular_power;
-    bool has_albedo;
-    bool has_metalic_roughness;
-    bool has_normal;
-} material;
-
-layout(set = 1, binding = 1) uniform sampler2D textures[3];
 
 void main() 
 {
@@ -49,11 +38,12 @@ void main()
     vec3 n = normalize(fs_in.normal);
     if(material.has_normal)
     {
-        n = texture(textures[2], fs_in.uv).rgb;
-        n = n * 2.0 - 1.0;
-        n = normalize(fs_in.TBN * n);
+       n = texture(textures[2], fs_in.uv).rgb;
+       n = n * 2.0 - 1.0;
+       n = normalize(fs_in.TBN * n);
     }
 
-    //outFragColor = vec4(n, 1.0);
+    //outFragColor = vec4(n, 1);
 	outFragColor = calculate_directional_light_pbr(ubo.directional_light, n, to_cam_dir, albedo, metalic, roughness, 1.0);
+    //outFragColor = vec4(calculate_directional_light_phong(ubo.directional_light, n, to_cam_dir, albedo), 1.0);
 }

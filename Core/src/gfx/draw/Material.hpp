@@ -3,9 +3,6 @@
 #include "../data/CPUBuffer.hpp"
 #include "../data/Image.hpp"
 
-#include <glm/vec4.hpp>
-#include <optional>
-
 namespace tinygltf
 {
     class Material;

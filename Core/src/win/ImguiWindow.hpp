@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cstdint>
-
 namespace gage::gfx
 {
     class Graphics;

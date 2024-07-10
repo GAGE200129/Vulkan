@@ -1,3 +1,4 @@
+#include <pch.hpp>
 #include "DefaultPipeline.hpp"
 
 #include "../Graphics.hpp"
@@ -6,7 +7,6 @@
 #include <Core/src/utils/FileLoader.hpp>
 #include <Core/src/utils/VulkanHelper.hpp>
 
-#include <cstring>
 
 namespace gage::gfx::data
 {

@@ -1,3 +1,5 @@
+#ifndef PBR_FUNCTIONS
+#define PBR_FUNCTIONS
 
 #define PI 3.1415926178
 
@@ -38,3 +40,5 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 	
     return ggx1 * ggx2;
 }
+
+#endif

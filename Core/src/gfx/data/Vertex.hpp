@@ -1,11 +1,7 @@
 #pragma once
 
-#include <cstddef>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
-#include <vector>
-#include <vulkan/vulkan.h>
+
+
 
 namespace gage::gfx::data
 {

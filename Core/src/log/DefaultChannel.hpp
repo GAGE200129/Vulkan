@@ -2,8 +2,6 @@
 
 #include "IChannel.hpp"
 
-#include <vector>
-#include <memory>
 
 namespace gage::log
 {

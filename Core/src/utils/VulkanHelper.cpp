@@ -1,3 +1,4 @@
+#include <pch.hpp>
 #include "VulkanHelper.hpp"
 
 #include <Core/src/gfx/Exception.hpp>

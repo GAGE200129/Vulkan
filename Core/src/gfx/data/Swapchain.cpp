@@ -1,11 +1,9 @@
+#include <pch.hpp>
 #include "Swapchain.hpp"
 
 #include <Core/src/utils/VulkanHelper.hpp>
 
 #include "../Graphics.hpp"
-
-#include <VkBootstrap.h>
-#include <tuple>
 
 namespace gage::gfx::data
 {

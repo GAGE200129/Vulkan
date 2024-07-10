@@ -1,8 +1,9 @@
+#include <pch.hpp>
 #include "DefaultFileDriver.hpp"
 
 #include "Entry.hpp"
 
-#include <vulkan/vk_enum_string_helper.h>
+
 
 namespace gage::log
 {

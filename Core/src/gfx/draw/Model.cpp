@@ -1,3 +1,4 @@
+#include <pch.hpp>
 #include "Model.hpp"
 
 #include "../Graphics.hpp"
@@ -5,9 +6,7 @@
 
 #include "Mesh.hpp"
 
-#include <tiny_gltf.h>
-#include <stb_image.h>
-#include <iostream>
+
 
 namespace tinygltf
 {

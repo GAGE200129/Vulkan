@@ -1,3 +1,6 @@
+#ifndef GLOBAL_UNIFORM_BUFFER
+#define GLOBAL_UNIFORM_BUFFER
+
 #include "directional_light.inc"
 
 layout(set = 0, binding = 0) uniform UniformBuffer
@@ -8,3 +11,5 @@ layout(set = 0, binding = 0) uniform UniformBuffer
     DirectionalLight directional_light;
     
 } ubo;
+
+#endif

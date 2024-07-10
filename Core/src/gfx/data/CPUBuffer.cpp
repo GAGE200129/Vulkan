@@ -1,8 +1,9 @@
+#include <pch.hpp>
 #include "CPUBuffer.hpp"
 
 #include "../Graphics.hpp"
 
-#include <cstring>
+
 
 namespace gage::gfx::data
 {

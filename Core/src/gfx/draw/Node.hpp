@@ -1,9 +1,7 @@
 #pragma once
 
-#include <glm/vec3.hpp>
+#include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include <vector>
-#include <vulkan/vulkan.hpp>
 
 namespace gage::gfx
 {

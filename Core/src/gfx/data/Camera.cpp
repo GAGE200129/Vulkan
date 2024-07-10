@@ -1,6 +1,6 @@
+#include <pch.hpp>
 #include "Camera.hpp"
 
-#include <glm/gtc/matrix_transform.hpp>
 
 namespace gage::gfx::data
 {

@@ -1,13 +1,9 @@
+#include <pch.hpp>
 #include "Graphics.hpp"
 
-#include <GLFW/glfw3.h>
-#include <string>
-#include <sstream>
-#include <VkBootstrap.h>
 #include <Core/src/log/Log.hpp>
 #include <Core/src/utils/VulkanHelper.hpp>
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/gtc/matrix_transform.hpp>
+
 
 #include "Exception.hpp"
 

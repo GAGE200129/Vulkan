@@ -1,3 +1,4 @@
+#include <pch.hpp>
 #include "ImguiWindow.hpp"
 
 #include "Exception.hpp"
@@ -11,9 +12,6 @@
 #include <Core/src/gfx/data/Swapchain.hpp>
 #include <Core/src/gfx/data/DefaultPipeline.hpp>
 
-#include <glad/glad.h>
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
 
 #include "Window.hpp"
 

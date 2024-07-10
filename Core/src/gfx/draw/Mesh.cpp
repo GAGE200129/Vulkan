@@ -1,3 +1,4 @@
+#include <pch.hpp>
 #include "Mesh.hpp"
 
 #include "../Exception.hpp"
@@ -6,9 +7,7 @@
 
 #include "Model.hpp"
 
-#include <tiny_gltf.h>
-#include <iostream>
-#include <glm/gtx/string_cast.hpp>
+
 
 namespace gage::gfx::draw
 {
@@ -100,57 +99,6 @@ namespace gage::gfx::draw
                 texcoords.push_back(uv);
             }
         };
-
-        // auto generate_tangent = [](std::vector<glm::vec3>& tangent_bitangents,
-        //  const std::vector<uint32_t>& indices,
-        //  const std::vector<glm::vec3>& positions,
-        //  const std::vector<glm::vec2>& texcoords)
-        // {
-        //     tangent_bitangents.reserve(positions.size() * 2);
-
-        //     for(size_t i = 0; i < indices.size(); i+= 3)
-        //     {
-            
-        //         glm::vec3 pos[3] = {
-        //             positions.at(indices.at(i)),
-        //             positions.at(indices.at(i + 1)),
-        //             positions.at(indices.at(i + 2)),
-        //         };
-
-        //         glm::vec2 tc[3] = {
-        //             texcoords.at(indices.at(i)),
-        //             texcoords.at(indices.at(i + 1)),
-        //             texcoords.at(indices.at(i + 2)),
-        //         };
-
-
-
-        //         glm::vec3 edge1 = pos[1] - pos[0];
-        //         glm::vec3 edge2 = pos[2] - pos[0];
-        //         glm::vec2 deltaUV1 = tc[1] - tc[0];
-        //         glm::vec2 deltaUV2 = tc[2] - tc[0];  
-
-        //         float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
-        //         glm::vec3 tangent{}, bitangent{};
-        //         tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
-        //         tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
-        //         tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
-        //         tangent = glm::normalize(tangent);
-
-        //         bitangent.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
-        //         bitangent.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
-        //         bitangent.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
-               
-
-        //         tangent_bitangents.push_back(tangent);
-        //         tangent_bitangents.push_back(bitangent);
-        //         tangent_bitangents.push_back(tangent);
-        //         tangent_bitangents.push_back(bitangent);
-        //         tangent_bitangents.push_back(tangent);
-        //         tangent_bitangents.push_back(bitangent);
-
-        //     }
-        // };
 
         this->sections.reserve(mesh.primitives.size());
         for (const auto& primitive : mesh.primitives)

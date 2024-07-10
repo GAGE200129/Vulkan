@@ -1,8 +1,7 @@
 #pragma once
 
-#include <string>
-#include <memory>
-#include <optional>
+#include <vulkan/vulkan.h>
+#include <glm/glm.hpp>
 #include <Core/src/gfx/Graphics.hpp>
 
 namespace gage::gfx

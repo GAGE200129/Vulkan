@@ -1,3 +1,4 @@
+#include <pch.hpp>
 #include "Exception.hpp"
 
 namespace  gage::utils

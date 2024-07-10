@@ -1,8 +1,8 @@
+#include <pch.hpp>
 #include "Image.hpp"
 
 #include "../Graphics.hpp"
 
-#include <cstring>
 
 namespace gage::gfx::data
 {

@@ -1,11 +1,9 @@
+#include <pch.hpp>
 #include "FileLoader.hpp"
 
 #include "Exception.hpp"
 
-#include <fstream>
-#include <stb_image.h>
-#include <cstring>
-#include <cassert>
+
 
 namespace gage::utils
 {

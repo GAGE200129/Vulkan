@@ -1,14 +1,12 @@
 #pragma once
 
-#include <string>
-#include <vector>
-#include <vk_mem_alloc.h>
-#include <functional>
 #include <stack>
+#include <vk_mem_alloc.h>
+#include <vector>
+#include <functional>
 #include <optional>
-#include <mutex>
-#include <glm/mat4x4.hpp>
-#include <span>
+
+
 
 #include "Exception.hpp"
 #include "data/Swapchain.hpp"

@@ -1,12 +1,9 @@
+#include <pch.hpp>
 #include "Window.hpp"
 
 #include "Exception.hpp"
 
 #include <Core/src/log/Log.hpp>
-
-#define GLFW_NO_API
-#include <GLFW/glfw3.h>
-
 
 namespace gage::win
 {

@@ -1,11 +1,7 @@
 #pragma once
 
-#include <glm/vec4.hpp>
-#include <string>
-#include <vector>
-#include <vulkan/vulkan.h>
-#include <memory>
 #include <thread>
+#include <mutex>
 #include <optional>
 
 #include "Mesh.hpp"

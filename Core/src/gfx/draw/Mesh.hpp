@@ -1,10 +1,5 @@
 #pragma once
 
-#include <vector>
-#include <glm/vec3.hpp>
-#include <glm/vec2.hpp>
-#include <memory>
-
 #include "../data/GPUBuffer.hpp"
 
 namespace tinygltf

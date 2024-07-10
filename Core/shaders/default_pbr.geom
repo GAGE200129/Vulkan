@@ -35,8 +35,7 @@ void main() {
 
     const vec3 T = normalize(vec3(model_transform * vec4(tangent, 0)));
     const vec3 B = normalize(vec3(model_transform * vec4(bitangent, 0)));
-    const vec3 N = normalize(vec3(model_transform * vec4(cross(edge1, edge0), 0)));
-    fs_out.TBN = mat3(T, B, N);
+    
 
     for(int i = 0; i < 3; i++)
     {
@@ -44,6 +43,7 @@ void main() {
         fs_out.normal = vs_in[i].normal;
         fs_out.uv = vs_in[i].uv;
         fs_out.world_pos = vs_in[i].world_pos;
+        fs_out.TBN = mat3(T, B, normalize(vs_in[i].normal));
         EmitVertex();
     }
     

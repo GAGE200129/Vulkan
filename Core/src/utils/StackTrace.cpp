@@ -1,3 +1,4 @@
+#include <pch.hpp>
 #include "StackTrace.hpp"
 
 #define BACKWARD_HAS_BFD 1
