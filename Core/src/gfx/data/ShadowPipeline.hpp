@@ -18,12 +18,7 @@ namespace gage::gfx::data
         void begin(VkCommandBuffer cmd);
         void end(VkCommandBuffer cmd);
 
-        void transition_to_shader_optimal(VkCommandBuffer cmd);
-
-        uint32_t get_shadow_map_resolution() const;
-        void set_shadow_map_resolution(uint32_t resolution);
-
-        VkSemaphore get_render_finished_semaphore(uint32_t i);
+        void reset();
     private:
         void create_pipeline_layout();
         void destroy_pipeline_layout();
@@ -50,7 +45,6 @@ namespace gage::gfx::data
         VkPipelineLayout pipeline_layout{};
         VkPipeline pipeline{};
 
-        uint32_t shadow_map_resolution{1024};
         VkRenderPass render_pass{};
         VkFramebuffer frame_buffer{};
         VkDeviceMemory depth_image_memory{};

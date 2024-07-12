@@ -20,7 +20,7 @@ namespace gage::gfx::data
         float get_field_of_view() const;
         float get_near() const;
         float get_far() const;
-    private:
+    public:
         glm::vec3 position{};
         glm::vec3 rotation{};
         

@@ -5,6 +5,7 @@
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 #include <glad/glad.h>
 #define GLFW_INCLUDE_VULKAN
@@ -39,6 +40,7 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <limits>
 
 
 

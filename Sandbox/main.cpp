@@ -35,6 +35,7 @@ int main()
 
 
             gfx::data::Camera camera{};
+            camera.far = 100.0f;
             while (!window.is_closing())
             {
                 win::update();

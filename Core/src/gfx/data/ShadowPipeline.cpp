@@ -28,19 +28,8 @@ namespace gage::gfx::data
         destroy_pipeline_layout();
     }
 
-
     void ShadowPipeline::begin(VkCommandBuffer cmd)
     {
-        if (shadow_map_need_resize)
-        {
-            destroy_framebuffer();
-            destroy_depth_image();
-            create_depth_image();
-            create_framebuffer();
-            link_depth_to_global_set();
-            shadow_map_need_resize = false;
-        }
-
         // Bind global set of graphics
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &gfx.frame_datas[gfx.frame_index].global_set, 0, nullptr);
 
@@ -49,7 +38,7 @@ namespace gage::gfx::data
         render_pass_begin_info.renderPass = render_pass;
         render_pass_begin_info.framebuffer = frame_buffer;
         render_pass_begin_info.renderArea.offset = {0, 0};
-        render_pass_begin_info.renderArea.extent = VkExtent2D{shadow_map_resolution, shadow_map_resolution};
+        render_pass_begin_info.renderArea.extent = VkExtent2D{gfx.directional_light_shadow_map_resolution, gfx.directional_light_shadow_map_resolution};
         std::array<VkClearValue, 1> clear_values{};
         clear_values[0].depthStencil = {1.0, 0};
         render_pass_begin_info.clearValueCount = clear_values.size();
@@ -57,35 +46,21 @@ namespace gage::gfx::data
         vkCmdBeginRenderPass(cmd, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-
     }
     void ShadowPipeline::end(VkCommandBuffer cmd)
     {
         vkCmdEndRenderPass(cmd);
+    }
 
-        // VkImageMemoryBarrier memory_barrier{};
-        // memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        // memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        // memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        // memory_barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        // memory_barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-        // memory_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        // memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        // memory_barrier.image = depth_image;
-        // memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        // memory_barrier.subresourceRange.baseMipLevel = 0;
-        // memory_barrier.subresourceRange.levelCount = 1;
-        // memory_barrier.subresourceRange.baseArrayLayer = 0;
-        // memory_barrier.subresourceRange.layerCount = 1;
-
-        // vkCmdPipelineBarrier(
-        //     cmd,
-        //     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        //     0,
-        //     0, nullptr,
-        //     0, nullptr,
-        //     1, &memory_barrier
-        // );
+    void ShadowPipeline::reset()
+    {
+        destroy_framebuffer();
+        destroy_depth_image();
+        destroy_pipeline();
+        create_depth_image();
+        create_framebuffer();
+        create_pipeline();
+        link_depth_to_global_set();
     }
 
     void ShadowPipeline::create_pipeline_layout()
@@ -134,7 +109,7 @@ namespace gage::gfx::data
         rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth = 1.f;
-        rasterizer.cullMode = VK_CULL_MODE_NONE;
+        rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
         rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
         VkPipelineMultisampleStateCreateInfo multisampling{};
@@ -164,16 +139,16 @@ namespace gage::gfx::data
         VkViewport viewport = {};
         viewport.x = 0;
         viewport.y = 0;
-        viewport.width = shadow_map_resolution;
-        viewport.height = shadow_map_resolution;
+        viewport.width = gfx.directional_light_shadow_map_resolution;
+        viewport.height = gfx.directional_light_shadow_map_resolution;
         viewport.minDepth = 0.f;
         viewport.maxDepth = 1.f;
 
         VkRect2D scissor = {};
         scissor.offset.x = 0;
         scissor.offset.y = 0;
-        scissor.extent.width = shadow_map_resolution;
-        scissor.extent.height = shadow_map_resolution;
+        scissor.extent.width = gfx.directional_light_shadow_map_resolution;
+        scissor.extent.height = gfx.directional_light_shadow_map_resolution;
 
         VkPipelineViewportStateCreateInfo viewport_state{};
         viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -268,7 +243,7 @@ namespace gage::gfx::data
         depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
-        //Subpass
+        // Subpass
 
         VkAttachmentReference depth_attachment_ref{};
         depth_attachment_ref.attachment = 0;
@@ -282,21 +257,20 @@ namespace gage::gfx::data
         std::array<VkSubpassDependency, 2> dependencies;
 
         dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-		dependencies[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		dependencies[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-		dependencies[0].dstSubpass = 0;
-		dependencies[0].dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-		dependencies[0].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-		dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+        dependencies[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        dependencies[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        dependencies[0].dstSubpass = 0;
+        dependencies[0].dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dependencies[0].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
-		dependencies[1].srcSubpass = 0;
-		dependencies[1].srcStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-		dependencies[1].srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-		dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-		dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-		dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
+        dependencies[1].srcSubpass = 0;
+        dependencies[1].srcStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        dependencies[1].srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+        dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
         VkRenderPassCreateInfo render_pass_ci{};
         render_pass_ci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -316,12 +290,12 @@ namespace gage::gfx::data
 
     void ShadowPipeline::create_depth_image()
     {
-        
+
         VkImageCreateInfo depth_image_ci = {};
         depth_image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         depth_image_ci.imageType = VK_IMAGE_TYPE_2D;
-        depth_image_ci.extent.width = shadow_map_resolution;
-        depth_image_ci.extent.height = shadow_map_resolution;
+        depth_image_ci.extent.width = gfx.directional_light_shadow_map_resolution;
+        depth_image_ci.extent.height = gfx.directional_light_shadow_map_resolution;
         depth_image_ci.extent.depth = 1;
         depth_image_ci.mipLevels = 1;
         depth_image_ci.arrayLayers = 1;
@@ -399,8 +373,8 @@ namespace gage::gfx::data
         frame_buffer_ci.renderPass = render_pass;
         frame_buffer_ci.attachmentCount = 1;
         frame_buffer_ci.pAttachments = &depth_image_view;
-        frame_buffer_ci.width = shadow_map_resolution;
-        frame_buffer_ci.height = shadow_map_resolution;
+        frame_buffer_ci.width = gfx.directional_light_shadow_map_resolution;
+        frame_buffer_ci.height = gfx.directional_light_shadow_map_resolution;
         frame_buffer_ci.layers = 1;
         vk_check(vkCreateFramebuffer(gfx.device, &frame_buffer_ci, nullptr, &frame_buffer));
     }
@@ -408,19 +382,6 @@ namespace gage::gfx::data
     {
         vkDestroyFramebuffer(gfx.device, frame_buffer, nullptr);
     }
-
-   
-
-    uint32_t ShadowPipeline::get_shadow_map_resolution() const
-    {
-        return shadow_map_resolution;
-    }
-    void ShadowPipeline::set_shadow_map_resolution(uint32_t resolution)
-    {
-        shadow_map_need_resize = true;
-        shadow_map_resolution = resolution;
-    }
-
 
     void ShadowPipeline::link_depth_to_global_set()
     {

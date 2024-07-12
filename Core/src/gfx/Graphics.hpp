@@ -72,9 +72,13 @@ namespace gage::gfx
 
         const std::string &get_app_name() const noexcept;
 
-
+        //Swapchain size
         void resize(int width, int height);
         void set_resolution_scale(float scale);
+
+        //Shadowmap size
+        void resize_shadow_map(uint32_t shadow_map_size);
+        void set_shadow_distance(float distance);
 
         const glm::mat4& get_projection() const;
         const glm::mat4& get_view() const;
@@ -87,6 +91,8 @@ namespace gage::gfx
 
         //void set_exclusive_mode(bool enabled);
         VkExtent2D get_scaled_draw_extent();
+    private:
+        glm::mat4x4 calculate_directional_light_proj_view(const data::Camera& camera);
     private:
         std::mutex uploading_mutex{};
         std::string app_name{};
@@ -148,6 +154,10 @@ namespace gage::gfx
         VmaAllocator allocator{};
 
         //Pipelines
+        uint32_t directional_light_shadow_map_resolution{2048};
+        float directional_light_shadow_map_distance{50.0f};
+        uint32_t directional_light_shadow_map_resolution_temp{2048};
+        bool directional_light_shadow_map_resize_requested{};
         std::unique_ptr<data::DefaultPipeline> default_pipeline{};
     };
 }

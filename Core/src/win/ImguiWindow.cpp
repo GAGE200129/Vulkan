@@ -144,6 +144,8 @@ namespace gage::win
 
         if (ImGui::Begin("Lightning"))
         {
+            static int resolution = 1024;
+            static float distance = 50.0f;
             auto& ubo = window.get_graphics().get_global_uniform();
             ImGui::Text("Directional light");
             if(ImGui::DragFloat3("Direction", &ubo.directional_light.direction.x, 0.01f, -1, 1))
@@ -151,6 +153,14 @@ namespace gage::win
                 ubo.directional_light.direction = glm::normalize(ubo.directional_light.direction);
             }
             ImGui::ColorEdit3("Color", &ubo.directional_light.color.x);
+            if(ImGui::DragInt("Shadow map resolution", &resolution, 1.0f, 512, 4096))
+            {
+                window.get_graphics().resize_shadow_map(resolution);
+            }
+            if(ImGui::DragFloat("Shadow map distance", &distance, 0.1f, 10.0f, 2048.0f))
+            {
+                window.get_graphics().set_shadow_distance(distance);
+            }
 
             ImGui::Separator();
         }

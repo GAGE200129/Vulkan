@@ -96,7 +96,10 @@ namespace gage::gfx::data
     {
         return pipeline_layout;
     }
-
+    ShadowPipeline& DefaultPipeline::get_shadow_pipeline()
+    {
+        return shadow_pipeline;
+    }
     VkPipelineLayout DefaultPipeline::get_shadow_pipeline_layout() const
     {
         return shadow_pipeline.pipeline_layout;

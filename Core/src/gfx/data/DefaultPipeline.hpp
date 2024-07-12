@@ -33,6 +33,8 @@ namespace gage::gfx::data
 
         VkImage get_color_image_handle() const;
         VkSemaphore get_render_finished_semaphore(uint32_t i) const;
+
+        ShadowPipeline& get_shadow_pipeline();
     private:
         void create_default_image_sampler();
         void destroy_default_image_sampler();
