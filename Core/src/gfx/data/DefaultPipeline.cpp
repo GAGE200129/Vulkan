@@ -7,10 +7,9 @@
 #include <Core/src/utils/FileLoader.hpp>
 #include <Core/src/utils/VulkanHelper.hpp>
 
-
 namespace gage::gfx::data
 {
-    DefaultPipeline::DefaultPipeline(Graphics &gfx) : gfx(gfx)
+    DefaultPipeline::DefaultPipeline(Graphics &gfx) : gfx(gfx), shadow_pipeline(gfx)
     {
         create_render_pass();
         create_pipeline_layout();
@@ -28,18 +27,17 @@ namespace gage::gfx::data
         destroy_pipeline_layout();
     }
 
-    VkCommandBuffer DefaultPipeline::begin()
+    void DefaultPipeline::begin_shadow(VkCommandBuffer cmd)
     {
-        auto &cmd = cmds[gfx.frame_index];
-        // reset the command buffer
-        vk_check(vkResetCommandBuffer(cmd, 0));
-        // begin the command buffer recording. We will use this command buffer exactly once, so we want to let Vulkan know that
-        VkCommandBufferBeginInfo cmd_begin_info = {};
-        cmd_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        cmd_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        shadow_pipeline.begin(cmd);
+    }
+    void DefaultPipeline::end_shadow(VkCommandBuffer cmd)
+    {
+        shadow_pipeline.end(cmd);
+    }
 
-        vk_check(vkBeginCommandBuffer(cmd, &cmd_begin_info));
-
+    void DefaultPipeline::begin(VkCommandBuffer cmd)
+    {
         // Bind global set of graphics
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &gfx.frame_datas[gfx.frame_index].global_set, 0, nullptr);
 
@@ -57,19 +55,36 @@ namespace gage::gfx::data
         vkCmdBeginRenderPass(cmd, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    }
+    void DefaultPipeline::end(VkCommandBuffer cmd)
+    {
+        vkCmdEndRenderPass(cmd);
+    }
+    VkCommandBuffer DefaultPipeline::begin_cmd()
+    {
+        auto &cmd = cmds[gfx.frame_index];
+        // reset the command buffer
+        vk_check(vkResetCommandBuffer(cmd, 0));
+        // begin the command buffer recording. We will use this command buffer exactly once, so we want to let Vulkan know that
+        VkCommandBufferBeginInfo cmd_begin_info = {};
+        cmd_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        cmd_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        vk_check(vkBeginCommandBuffer(cmd, &cmd_begin_info));
 
         return cmd;
     }
 
-    void DefaultPipeline::end(VkCommandBuffer cmd)
+    void DefaultPipeline::end_cmd(VkCommandBuffer cmd)
     {
-        vkCmdEndRenderPass(cmd);
+
         vkEndCommandBuffer(cmd);
 
         VkSubmitInfo submit = {};
         submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit.signalSemaphoreCount = 1;
         submit.pSignalSemaphores = &render_finished_semaphores[gfx.frame_index];
+
 
         submit.commandBufferCount = 1;
         submit.pCommandBuffers = &cmd;
@@ -80,6 +95,11 @@ namespace gage::gfx::data
     VkPipelineLayout DefaultPipeline::get_pipeline_layout() const
     {
         return pipeline_layout;
+    }
+
+    VkPipelineLayout DefaultPipeline::get_shadow_pipeline_layout() const
+    {
+        return shadow_pipeline.pipeline_layout;
     }
     VkSemaphore DefaultPipeline::get_render_finished_semaphore(uint32_t i) const
     {
@@ -418,7 +438,7 @@ namespace gage::gfx::data
         rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth = 1.f;
-        rasterizer.cullMode = VK_CULL_MODE_NONE;
+        rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
         rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
         VkPipelineMultisampleStateCreateInfo multisampling{};
@@ -634,13 +654,24 @@ namespace gage::gfx::data
         subpass.pColorAttachments = &color_attachment_ref;
         subpass.pDepthStencilAttachment = &depth_attachment_ref;
 
-        VkSubpassDependency dependency{};
-        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass = 0;
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        // Subpass dependencies for layout transitions
+        std::array<VkSubpassDependency, 2> dependencies;
+
+        dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+        dependencies[0].dstSubpass = 0;
+        dependencies[0].srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        dependencies[0].dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        dependencies[0].srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        dependencies[0].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+        dependencies[0].dependencyFlags = 0;
+
+        dependencies[1].srcSubpass = VK_SUBPASS_EXTERNAL;
+        dependencies[1].dstSubpass = 0;
+        dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependencies[1].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependencies[1].srcAccessMask = 0;
+        dependencies[1].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+        dependencies[1].dependencyFlags = 0;
 
         std::array<VkAttachmentDescription, 2> attachments = {color_attachment, depth_attachment};
         VkRenderPassCreateInfo render_pass_ci{};
@@ -649,8 +680,8 @@ namespace gage::gfx::data
         render_pass_ci.pAttachments = attachments.data();
         render_pass_ci.subpassCount = 1;
         render_pass_ci.pSubpasses = &subpass;
-        render_pass_ci.dependencyCount = 1;
-        render_pass_ci.pDependencies = &dependency;
+        render_pass_ci.dependencyCount = dependencies.size();
+        render_pass_ci.pDependencies = dependencies.data();
 
         vk_check(vkCreateRenderPass(gfx.device, &render_pass_ci, nullptr, &render_pass));
 

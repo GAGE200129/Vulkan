@@ -1,29 +1,28 @@
 #pragma once
-
-
-
 #include "../Graphics.hpp"
 
-namespace gage::gfx
-{
-    class Graphics;
-}
+#include "ShadowPipeline.hpp"
 
 namespace gage::gfx::data
 {
-    class Camera;
     class DefaultPipeline
     {
     public:
         DefaultPipeline(Graphics& gfx);
         ~DefaultPipeline();
 
+        void begin_shadow(VkCommandBuffer cmd);
+        void end_shadow(VkCommandBuffer cmd);
 
-        VkCommandBuffer begin();
+        void begin(VkCommandBuffer cmd);
         void end(VkCommandBuffer cmd);
+
+        VkCommandBuffer begin_cmd();
+        void end_cmd(VkCommandBuffer cmd);
         void set_push_constant(VkCommandBuffer cmd, const glm::mat4x4& transform);
 
         VkPipelineLayout get_pipeline_layout() const;
+        VkPipelineLayout get_shadow_pipeline_layout() const;
         VkDescriptorSet allocate_instance_set(size_t size_in_bytes, VkBuffer buffer,
            VkImageView albedo_view, VkSampler albedo_sampler,
            VkImageView metalic_roughness_view, VkSampler metalic_roughness_sampler,
@@ -51,6 +50,8 @@ namespace gage::gfx::data
         static constexpr VkFormat DEPTH_FORMAT = {VK_FORMAT_D32_SFLOAT};
 
         Graphics& gfx;
+        ShadowPipeline shadow_pipeline;
+
         VkCommandBuffer cmds[Graphics::FRAMES_IN_FLIGHT]{};
         VkSemaphore render_finished_semaphores[Graphics::FRAMES_IN_FLIGHT]{};
 
@@ -73,9 +74,5 @@ namespace gage::gfx::data
         VkDeviceMemory color_image_memory{};
         VkImage color_image{};
         VkImageView color_image_view{};
-
-        //Shadow pass
-        
-
     };
 }

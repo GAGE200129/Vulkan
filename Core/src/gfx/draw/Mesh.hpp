@@ -22,7 +22,7 @@ namespace gage::gfx::draw
         Mesh(Graphics &gfx, Model& model, const tinygltf::Model& gltf_model, const tinygltf::Mesh &mesh);
        ~Mesh();
 
-        void draw(VkCommandBuffer cmd) const;
+        void draw(VkCommandBuffer cmd, VkPipelineLayout layout, const glm::mat4x4& transform) const;
     private:
         Graphics& gfx;
         Model& model;

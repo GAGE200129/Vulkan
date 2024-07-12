@@ -72,11 +72,11 @@ namespace gage::gfx::draw
         thread.emplace(&Model::load_async, this, file_path);
     }
 
-    void Model::draw(VkCommandBuffer cmd) const
+    void Model::draw(VkCommandBuffer cmd, VkPipelineLayout layout) const
     {
         if (!ready)
             return;
-        nodes.at(root_node)->draw(cmd);
+        nodes.at(root_node)->draw(cmd, layout);
     }
 
     Model::~Model()

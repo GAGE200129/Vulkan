@@ -21,7 +21,7 @@ namespace gage::gfx::draw
             int32_t mesh
         );
 
-        void draw(VkCommandBuffer cmd) const;
+        void draw(VkCommandBuffer cmd, VkPipelineLayout layout) const;
 
     private:
         Graphics &gfx;

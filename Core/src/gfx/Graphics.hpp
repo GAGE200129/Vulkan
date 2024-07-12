@@ -6,8 +6,6 @@
 #include <functional>
 #include <optional>
 
-
-
 #include "Exception.hpp"
 #include "data/Swapchain.hpp"
 
@@ -30,6 +28,7 @@ namespace gage::gfx::data
     class DescriptorSet;
     class Image;
     class DefaultPipeline;
+    class ShadowPipeline;
 }
 
 struct GLFWwindow;
@@ -54,10 +53,12 @@ namespace gage::gfx
         friend class bind::IBindable;
         friend class data::Swapchain;
         friend class data::DefaultPipeline;
+        friend class data::ShadowPipeline;
         friend class data::GPUBuffer;
         friend class data::CPUBuffer;
         friend class data::DescriptorSet;
         friend class data::Image;
+        
     public:
         Graphics(GLFWwindow *window, std::string app_name);
         Graphics(const Graphics &) = delete;
@@ -80,6 +81,8 @@ namespace gage::gfx
         const data::Swapchain& get_swapchain() const;
         const data::DefaultPipeline& get_default_pipeline() const;
         data::DefaultPipeline& get_default_pipeline();
+
+
         GlobalUniform& get_global_uniform();
 
         //void set_exclusive_mode(bool enabled);
@@ -138,6 +141,7 @@ namespace gage::gfx
             glm::mat4x4 view{};
             glm::vec3 camera_position{}; float _padding{};
             DirectionalLight directional_light{};
+            glm::mat4x4 directional_light_proj_view{};
         } global_uniform;
         uint32_t frame_index{};
 

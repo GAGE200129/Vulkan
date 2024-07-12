@@ -7,7 +7,7 @@
 
 #include "Model.hpp"
 
-
+#include <glm/gtc/type_ptr.hpp>
 
 namespace gage::gfx::draw
 {
@@ -128,7 +128,7 @@ namespace gage::gfx::draw
     {
     }
 
-    void Mesh::draw(VkCommandBuffer cmd) const
+    void Mesh::draw(VkCommandBuffer cmd, VkPipelineLayout layout, const glm::mat4x4& transform) const
     {
         for (const auto& section : sections)
         {
@@ -145,6 +145,7 @@ namespace gage::gfx::draw
                 {0, 0, 0};
 
             VkDescriptorSet desc_set = model.materials.at(section.material_index)->get_desc_set();
+            vkCmdPushConstants(cmd, layout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), glm::value_ptr(transform));
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                     gfx.get_default_pipeline().get_pipeline_layout(),
                                     1,

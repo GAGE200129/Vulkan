@@ -24,11 +24,11 @@ namespace gage::gfx::draw
     {
     }
 
-    void Node::draw(VkCommandBuffer cmd) const
+    void Node::draw(VkCommandBuffer cmd, VkPipelineLayout layout) const
     {
         for(const auto& child : children)
         {
-            model.nodes.at(child)->draw(cmd);
+            model.nodes.at(child)->draw(cmd, layout);
         }
 
 
@@ -39,9 +39,9 @@ namespace gage::gfx::draw
         transform *= glm::mat4x4(rotation);
         transform = glm::translate(transform, position);
         const auto& mesh_instance = model.meshes.at(mesh);
-        gfx.get_default_pipeline().set_push_constant(cmd, transform);
         
-        mesh_instance->draw(cmd);
+        
+        mesh_instance->draw(cmd, layout, transform);
 
 
     }

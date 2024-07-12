@@ -28,7 +28,7 @@ namespace gage::gfx::draw
         Model(Graphics& gfx, const std::string& file_path, Mode mode = Mode::Binary);
         ~Model();
 
-        void draw(VkCommandBuffer cmd) const;
+        void draw(VkCommandBuffer cmd, VkPipelineLayout layout) const;
     private:
         void load_async(const std::string& file_path);
     private:

@@ -29,7 +29,7 @@ int main()
             win::ImguiWindow imgui_window{graphics};
 
 
-            std::optional<gfx::draw::Model> model, model2, model3;
+            std::optional<gfx::draw::Model> model, model3;
             model.emplace(graphics, "res/models/sponza.glb", gfx::draw::Model::Mode::Binary);
             model3.emplace(graphics, "res/models/DamagedHelmet.gltf", gfx::draw::Model::Mode::ASCII);
 
@@ -46,11 +46,20 @@ int main()
                
                 auto start = std::chrono::high_resolution_clock::now();
                 graphics.clear(camera);
+
+                auto cmd = graphics.get_default_pipeline().begin_cmd();
+
+                graphics.get_default_pipeline().begin_shadow(cmd);
+                model.value().draw(cmd, graphics.get_default_pipeline().get_shadow_pipeline_layout());
+                model3.value().draw(cmd, graphics.get_default_pipeline().get_shadow_pipeline_layout());
+                graphics.get_default_pipeline().end_shadow(cmd);
                 
-                auto cmd = graphics.get_default_pipeline().begin();
-                model.value().draw(cmd);
-                model3.value().draw(cmd);
+                graphics.get_default_pipeline().begin(cmd);
+                model.value().draw(cmd, graphics.get_default_pipeline().get_pipeline_layout());
+                model3.value().draw(cmd, graphics.get_default_pipeline().get_pipeline_layout());
                 graphics.get_default_pipeline().end(cmd);
+
+                graphics.get_default_pipeline().end_cmd(cmd);
                 
                 graphics.end_frame();
 
