@@ -158,6 +158,7 @@ namespace gage::gfx
         float directional_light_shadow_map_distance{50.0f};
         uint32_t directional_light_shadow_map_resolution_temp{2048};
         bool directional_light_shadow_map_resize_requested{};
+        uint32_t cascade_count{3};
         std::unique_ptr<data::DefaultPipeline> default_pipeline{};
     };
 }

@@ -26,7 +26,7 @@ vec3 calculate_directional_light_phong(in DirectionalLight light, in vec3 n, in 
     return diffuse_result * albedo;
 }
 
-vec4 calculate_directional_light_pbr(in DirectionalLight light,
+/*vec4 calculate_directional_light_pbr(in DirectionalLight light,
     in vec4 frag_pos_light_space,
     in sampler2D light_depth_map,
     in vec3 n,
@@ -47,20 +47,12 @@ vec4 calculate_directional_light_pbr(in DirectionalLight light,
     
     //proj_coords.y = -proj_coords.y;
     float current_depth = proj_coords.z;
+    float sampled_depth = texture(light_depth_map, proj_coords.xy).r; 
 
     vec3 ambient = vec3(0.3) * albedo * ao;
 
-    float shadow = 0.0;
-    vec2 texel_size = 1.0 / textureSize(light_depth_map, 0);
-    for(int x = -1; x <= 1; ++x)
-    {
-        for(int y = -1; y <= 1; ++y)
-        {
-            float pcf_depth = texture(light_depth_map, proj_coords.xy + vec2(x, y) * texel_size).r; 
-            shadow += current_depth - bias > pcf_depth ? 1.0 : 0.0;        
-        }    
-    }
-    shadow /= 9.0;
+    float shadow = current_depth - bias < sampled_depth ? 1.0 : 0.0;
+
 
 
     //Main pbr
@@ -88,8 +80,8 @@ vec4 calculate_directional_light_pbr(in DirectionalLight light,
     } 
     
 
-    return vec4(Lo * (1.0 - shadow) + ambient, 1);
-}
+    return vec4(Lo * shadow + ambient, 1);
+}*/
 
 
 

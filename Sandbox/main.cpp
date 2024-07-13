@@ -8,17 +8,21 @@
 #include <Core/src/gfx/data/Camera.hpp>
 #include <Core/src/gfx/draw/Model.hpp>
 #include <Core/src/gfx/data/DefaultPipeline.hpp>
+#include <Core/src/utils/Cvar.hpp>
 
 #include <thread>
+#include <iostream>
 
 #include <Core/ThirdParty/imgui/imgui.h>
 
 using namespace gage;
 using namespace std::chrono_literals;
 
+
 int main()
 {
 
+    
     try
     {
         log::init();

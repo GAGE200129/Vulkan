@@ -1,8 +1,8 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
+
 #include <glm/glm.hpp>
-#include <Core/src/gfx/Graphics.hpp>
+
 
 namespace gage::gfx
 {
@@ -31,7 +31,7 @@ namespace gage::win
         gfx::Graphics& get_graphics();
     private:
         GLFWwindow* p_window{};
-        std::optional<gfx::Graphics> p_graphics{};
+        std::unique_ptr<gfx::Graphics> p_graphics{};
     };
 
     void init();

@@ -3,11 +3,13 @@
 
 #include "Exception.hpp"
 
+#include <Core/src/utils/Cvar.hpp>
 #include <Core/src/log/Log.hpp>
+#include <Core/src/gfx/Graphics.hpp>
 
 namespace gage::win
 {
- 
+    
     Window::Window(int width, int height, std::string title)
     {
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
@@ -19,7 +21,7 @@ namespace gage::win
             throw WindowException{ "Failed to create window !" };
         }
 
-        p_graphics.emplace(p_window, title);
+        p_graphics = std::make_unique<gfx::Graphics>(p_window, title);
     }
     Window::~Window()
     {
@@ -69,7 +71,7 @@ namespace gage::win
 
     gfx::Graphics& Window::get_graphics()
     {
-        return p_graphics.value();
+        return *p_graphics;
     }
 
     void init()

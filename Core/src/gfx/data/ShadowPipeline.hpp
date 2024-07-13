@@ -40,8 +40,6 @@ namespace gage::gfx::data
         static constexpr VkFormat DEPTH_FORMAT = {VK_FORMAT_D32_SFLOAT};
 
         Graphics& gfx;
-        bool shadow_map_need_resize{};
-
         VkPipelineLayout pipeline_layout{};
         VkPipeline pipeline{};
 

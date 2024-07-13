@@ -527,10 +527,9 @@ namespace gage::gfx
                                                              (float)draw_extent.width, (float)draw_extent.height, camera.get_near(), directional_light_shadow_map_distance);
         cam_proj[1][1] *= -1;
 
-        float shadow_step = 1.0 / (float)directional_light_shadow_map_resolution;
         glm::mat4x4 inv_proj = glm::inverse(cam_proj * global_uniform.view);
 
-        glm::vec3 center{};
+        glm::vec3 center{}, eye{};
         for(size_t i = 0; i < 8; i++)
         {
             frustum_corners[i] =  inv_proj *  frustum_corners[i];
@@ -538,10 +537,10 @@ namespace gage::gfx
             center += glm::vec3(frustum_corners[i]);
         }
         center /= 8.0;
+        eye = center - global_uniform.directional_light.direction;
 
-        
 
-        glm::mat4 light_view = glm::lookAt(center - global_uniform.directional_light.direction,
+        glm::mat4 light_view = glm::lookAt(eye,
                                            center,
                                            glm::vec3(0.0f, 1.0f, 0.0f));
 
@@ -552,9 +551,9 @@ namespace gage::gfx
         };
 
         glm::vec3 max{
-            std::numeric_limits<float>::lowest(),
-            std::numeric_limits<float>::lowest(),
-            std::numeric_limits<float>::lowest()
+            std::numeric_limits<float>::min(),
+            std::numeric_limits<float>::min(),
+            std::numeric_limits<float>::min()
         };
         for(size_t i = 0; i < 8; i++)
         {
@@ -568,21 +567,7 @@ namespace gage::gfx
             max.z = glm::max(max.z, frustum_corner.z);
         }
 
-        //min.z < 0.0f ? min.z *= 10.0f : min.z /= 10.0f;
-        //max.z < 0.0f ? max.z /= 10.0f : max.z *= 10.0f;
-        
-        min.x = std::round(min.x/ shadow_step ) * shadow_step;
-        min.y = std::round(min.y/ shadow_step ) * shadow_step;
-        min.z = std::round(min.z/ shadow_step ) * shadow_step;
-
-        max.x = std::round(max.x/ shadow_step ) * shadow_step;
-        max.y = std::round(max.y/ shadow_step ) * shadow_step;
-        max.z = std::round(max.z/ shadow_step ) * shadow_step;
-
-            
-        glm::mat4 light_projection = glm::orthoRH_ZO(min.x, max.x, min.y, max.y, min.z, max.z);
-
-        return light_projection * light_view;
+        return glm::orthoRH_ZO(min.x, max.x, min.y, max.y, min.z, max.z) * light_view;
     }
 
             
