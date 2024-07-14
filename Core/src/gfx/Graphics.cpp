@@ -313,7 +313,7 @@ namespace gage::gfx
 
     // }
 
-    void Graphics::clear(const data::Camera &camera)
+    VkCommandBuffer Graphics::clear(const data::Camera &camera)
     {
         uploading_mutex.lock();
 
@@ -365,29 +365,34 @@ namespace gage::gfx
             logger.fatal("Failed to acquire next image: ").vk_result(result);
             throw GraphicsException{};
         }
+
+        auto &cmd = frame_datas[frame_index].cmd;
+        // reset the command buffer
+        vk_check(vkResetCommandBuffer(cmd, 0));
+        // begin the command buffer recording. We will use this command buffer exactly once, so we want to let Vulkan know that
+        VkCommandBufferBeginInfo cmd_begin_info = {};
+        cmd_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        cmd_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        vk_check(vkBeginCommandBuffer(cmd, &cmd_begin_info));
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, default_pipeline->get_layout(), 0, 1, &frame_datas[frame_index].global_set, 0, nullptr);
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, default_pipeline->get_shadow_pipeline().get_layout(), 0, 1, &frame_datas[frame_index].global_set, 0, nullptr);
+
+        return cmd;
     }
 
-    void Graphics::end_frame()
+    void Graphics::end_frame(VkCommandBuffer cmd)
     {
 
         VkSemaphore &present_semaphore = frame_datas[frame_index].present_semaphore;
         VkSemaphore &render_semaphore = frame_datas[frame_index].render_semaphore;
         VkFence &render_fence = frame_datas[frame_index].render_fence;
-        VkCommandBuffer &cmd = frame_datas[frame_index].cmd;
 
         VkImageBlit region{};
         VkImageMemoryBarrier swapchain_memory_barrier{};
         swapchain_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         swapchain_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         swapchain_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-        // reset the command buffer
-        vk_check(vkResetCommandBuffer(cmd, 0));
-        VkCommandBufferBeginInfo cmd_begin_info = {};
-        cmd_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        cmd_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-        vk_check(vkBeginCommandBuffer(cmd, &cmd_begin_info));
 
         // Blit swapchain color image to swapchain image and wait for color result
         swapchain_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -457,12 +462,12 @@ namespace gage::gfx
         VkSubmitInfo submit = {};
         submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         VkPipelineStageFlags wait_stages[] = {
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+        };
 
-        std::array<VkSemaphore, 2> wait_semaphores = {
-            present_semaphore,
-            default_pipeline->get_render_finished_semaphore(this->frame_index)};
+        std::array<VkSemaphore, 1> wait_semaphores = {
+            present_semaphore
+        };
         submit.waitSemaphoreCount = wait_semaphores.size();
         submit.pWaitSemaphores = wait_semaphores.data();
         submit.pWaitDstStageMask = wait_stages;

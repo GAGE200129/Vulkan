@@ -110,12 +110,16 @@ namespace gage::win
             }
             ImGui::InputInt2("Resoltuion", resolutions);
 
-            static int resolution_scale = 100;
-            ImGui::DragInt("Resolution scale", &resolution_scale, 1, 20, 200);
+            static float resolution_scale = 1.0f;
+            if(ImGui::DragFloat("Resolution scale", &resolution_scale, 0.01f, 0.1f, 1.0f))
+            {
+                window.get_graphics().set_resolution_scale(resolution_scale);
+            }
+            
 
             if (ImGui::Button("Apply"))
             {
-                window.resize((win::WindowMode)selected_window_mode, resolutions[0], resolutions[1], (float)resolution_scale / 100.0f);
+                window.resize((win::WindowMode)selected_window_mode, resolutions[0], resolutions[1]);
             }
             ImGui::Separator();
              static float arr[] = { 0.6f, 0.1f, 1.0f, 0.5f, 0.92f, 0.1f, 0.2f };

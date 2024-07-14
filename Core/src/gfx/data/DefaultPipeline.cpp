@@ -9,38 +9,28 @@
 
 namespace gage::gfx::data
 {
-    DefaultPipeline::DefaultPipeline(Graphics &gfx) : gfx(gfx), shadow_pipeline(gfx)
+    DefaultPipeline::DefaultPipeline(Graphics &gfx) : 
+        gfx(gfx),
+        shadow_pipeline(gfx),
+        post_pipeline(gfx)
     {
         create_render_pass();
         create_pipeline_layout();
         create_pipeline();
         create_default_image_sampler();
-        allocate_cmd();
     }
 
     DefaultPipeline::~DefaultPipeline()
     {
-        free_cmd();
         destroy_render_pass();
         destroy_default_image_sampler();
         destroy_pipeline();
         destroy_pipeline_layout();
     }
 
-    void DefaultPipeline::begin_shadow(VkCommandBuffer cmd)
-    {
-        shadow_pipeline.begin(cmd);
-    }
-    void DefaultPipeline::end_shadow(VkCommandBuffer cmd)
-    {
-        shadow_pipeline.end(cmd);
-    }
 
     void DefaultPipeline::begin(VkCommandBuffer cmd)
     {
-        // Bind global set of graphics
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &gfx.frame_datas[gfx.frame_index].global_set, 0, nullptr);
-
         VkRenderPassBeginInfo render_pass_begin_info{};
         render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         render_pass_begin_info.renderPass = render_pass;
@@ -54,43 +44,24 @@ namespace gage::gfx::data
         render_pass_begin_info.pClearValues = clear_values.data();
         vkCmdBeginRenderPass(cmd, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
+
+        VkViewport viewport = {};
+        viewport.x = 0;
+        viewport.y = 0;
+        viewport.width = gfx.get_scaled_draw_extent().width;
+        viewport.height = gfx.get_scaled_draw_extent().height;
+        viewport.minDepth = 0.f;
+        viewport.maxDepth = 1.f;
+        
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+        vkCmdSetViewport(cmd, 0, 1, &viewport);
     }
     void DefaultPipeline::end(VkCommandBuffer cmd)
     {
         vkCmdEndRenderPass(cmd);
     }
-    VkCommandBuffer DefaultPipeline::begin_cmd()
-    {
-        auto &cmd = cmds[gfx.frame_index];
-        // reset the command buffer
-        vk_check(vkResetCommandBuffer(cmd, 0));
-        // begin the command buffer recording. We will use this command buffer exactly once, so we want to let Vulkan know that
-        VkCommandBufferBeginInfo cmd_begin_info = {};
-        cmd_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        cmd_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-        vk_check(vkBeginCommandBuffer(cmd, &cmd_begin_info));
-
-        return cmd;
-    }
-
-    void DefaultPipeline::end_cmd(VkCommandBuffer cmd)
-    {
-
-        vkEndCommandBuffer(cmd);
-
-        VkSubmitInfo submit = {};
-        submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit.signalSemaphoreCount = 1;
-        submit.pSignalSemaphores = &render_finished_semaphores[gfx.frame_index];
 
 
-        submit.commandBufferCount = 1;
-        submit.pCommandBuffers = &cmd;
-
-        vk_check(vkQueueSubmit(gfx.queue, 1, &submit, VK_NULL_HANDLE));
-    }
 
     VkPipelineLayout DefaultPipeline::get_layout() const
     {
@@ -100,44 +71,13 @@ namespace gage::gfx::data
     {
         return shadow_pipeline;
     }
-    VkSemaphore DefaultPipeline::get_render_finished_semaphore(uint32_t i) const
-    {
-        return render_finished_semaphores[i];
-    }
+
     void DefaultPipeline::set_push_constant(VkCommandBuffer cmd, const glm::mat4x4 &transform)
     {
         vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), &transform);
     }
 
-    void DefaultPipeline::allocate_cmd()
-    {
-        for (int i = 0; i < Graphics::FRAMES_IN_FLIGHT; i++)
-        {
 
-            VkCommandBufferAllocateInfo alloc_info{};
-            alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-            alloc_info.commandPool = gfx.cmd_pool;
-            alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-            alloc_info.commandBufferCount = 1;
-            vk_check(vkAllocateCommandBuffers(gfx.device, &alloc_info, &cmds[i]));
-
-            // Create semaphore
-            VkSemaphoreCreateInfo sem_ci{};
-            sem_ci.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-            sem_ci.flags = VK_SEMAPHORE_TYPE_BINARY;
-
-            vkCreateSemaphore(gfx.device, &sem_ci, nullptr, &render_finished_semaphores[i]);
-        }
-    }
-    void DefaultPipeline::free_cmd()
-    {
-        for (int i = 0; i < Graphics::FRAMES_IN_FLIGHT; i++)
-        {
-
-            vkDestroySemaphore(gfx.device, render_finished_semaphores[i], nullptr);
-            vkFreeCommandBuffers(gfx.device, gfx.cmd_pool, 1, &cmds[i]);
-        }
-    }
 
     VkDescriptorSet DefaultPipeline::allocate_instance_set(size_t size_in_bytes, VkBuffer buffer,
                                                            VkImageView albedo_view, VkSampler albedo_sampler,
@@ -463,7 +403,6 @@ namespace gage::gfx::data
         depth_stencil.minDepthBounds = 0.0f;
         depth_stencil.maxDepthBounds = 1.f;
 
-        // Dummy viewport state
         VkViewport viewport = {};
         viewport.x = 0;
         viewport.y = 0;
@@ -475,8 +414,8 @@ namespace gage::gfx::data
         VkRect2D scissor = {};
         scissor.offset.x = 0;
         scissor.offset.y = 0;
-        scissor.extent.width = gfx.get_scaled_draw_extent().width;
-        scissor.extent.height = gfx.get_scaled_draw_extent().height;
+        scissor.extent.width = gfx.draw_extent.width;
+        scissor.extent.height = gfx.draw_extent.height;
 
         VkPipelineViewportStateCreateInfo viewport_state{};
         viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -545,9 +484,15 @@ namespace gage::gfx::data
         shader_stage_ci.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
         pipeline_shader_stages.push_back(shader_stage_ci);
 
+        std::array<VkDynamicState, 1> dynamic_states = 
+        {
+            VK_DYNAMIC_STATE_VIEWPORT
+        };
+
         VkPipelineDynamicStateCreateInfo dynamic_state_ci{};
         dynamic_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-        dynamic_state_ci.dynamicStateCount = 0;
+        dynamic_state_ci.dynamicStateCount = dynamic_states.size();
+        dynamic_state_ci.pDynamicStates = dynamic_states.data();
 
         // VkPipelineRenderingCreateInfo render_info{};
         // render_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
@@ -664,8 +609,8 @@ namespace gage::gfx::data
         dependencies[0].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
         dependencies[0].dependencyFlags = 0;
 
-        dependencies[1].srcSubpass = VK_SUBPASS_EXTERNAL;
-        dependencies[1].dstSubpass = 0;
+        dependencies[1].srcSubpass = 0;
+        dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
         dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         dependencies[1].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         dependencies[1].srcAccessMask = 0;
@@ -689,8 +634,8 @@ namespace gage::gfx::data
             VkImageCreateInfo color_image_ci = {};
             color_image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
             color_image_ci.imageType = VK_IMAGE_TYPE_2D;
-            color_image_ci.extent.width = gfx.get_scaled_draw_extent().width;
-            color_image_ci.extent.height = gfx.get_scaled_draw_extent().height;
+            color_image_ci.extent.width = gfx.draw_extent.width;
+            color_image_ci.extent.height = gfx.draw_extent.height;
             color_image_ci.extent.depth = 1;
             color_image_ci.mipLevels = 1;
             color_image_ci.arrayLayers = 1;
@@ -736,8 +681,8 @@ namespace gage::gfx::data
             VkImageCreateInfo depth_image_ci = {};
             depth_image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
             depth_image_ci.imageType = VK_IMAGE_TYPE_2D;
-            depth_image_ci.extent.width = gfx.get_scaled_draw_extent().width;
-            depth_image_ci.extent.height = gfx.get_scaled_draw_extent().height;
+            depth_image_ci.extent.width = gfx.draw_extent.width;
+            depth_image_ci.extent.height = gfx.draw_extent.height;
             depth_image_ci.extent.depth = 1;
             depth_image_ci.mipLevels = 1;
             depth_image_ci.arrayLayers = 1;
@@ -788,8 +733,8 @@ namespace gage::gfx::data
             frame_buffer_ci.renderPass = render_pass;
             frame_buffer_ci.attachmentCount = attachments.size();
             frame_buffer_ci.pAttachments = attachments.data();
-            frame_buffer_ci.width = gfx.get_scaled_draw_extent().width;
-            frame_buffer_ci.height = gfx.get_scaled_draw_extent().height;
+            frame_buffer_ci.width = gfx.draw_extent.width;
+            frame_buffer_ci.height = gfx.draw_extent.height;
             frame_buffer_ci.layers = 1;
             vk_check(vkCreateFramebuffer(gfx.device, &frame_buffer_ci, nullptr, &frame_buffer));
         }

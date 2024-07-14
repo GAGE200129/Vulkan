@@ -46,23 +46,27 @@ vec4 calculate_directional_light_pbr(in DirectionalLight light,
     proj_coords.xy = (proj_coords.xy + 1.0) * 0.5;
 
     float current_depth = proj_coords.z;
+    float sampled_depth = texture(light_depth_map, vec3(proj_coords.xy, layer)).r; 
     
     float bias = max(0.05 * (1.0 - dot(n_unsampled, -light.direction)), 0.005);
-    float shadow = 0.0;
-    vec2 texel_size = 1.0 / textureSize(light_depth_map, 0).xy;
-    for (int x=-1 ; x <= 1 ; x++){
-        for (int y= -1 ; y <= 1 ; y++){
-            float sampled_depth = texture(light_depth_map, vec3(proj_coords.xy + vec2(x, y) * texel_size, layer)).r; 
-            if ( sampled_depth + bias <  current_depth  ){
-                shadow += 1.0;
-            } 
+   
+    // vec2 texel_size = 1.0 / textureSize(light_depth_map, 0).xy;
+    // for (int x=-1 ; x <= 1 ; x++){
+    //     for (int y= -1 ; y <= 1 ; y++){
+    //         f
+            
 
-        }
-    }
-    if(proj_coords.z > 1.0) 
-        shadow = 0.0;
-    shadow = 1.0 - (shadow / 9.0);
+    //     }
+    // }
+    // if(proj_coords.z > 1.0) 
+    //     shadow = 0.0;
+    // shadow = 1.0 - (shadow / 9.0);
     
+    float shadow = 1.0;
+    if(sampled_depth + bias < current_depth)
+    {
+        shadow = 0;
+    }
 
     //Main pbr
     vec3 Lo = vec3(0.0);

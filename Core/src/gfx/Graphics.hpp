@@ -66,8 +66,8 @@ namespace gage::gfx
         ~Graphics();
 
         void wait();
-        void clear(const data::Camera &camera);
-        void end_frame();
+        VkCommandBuffer clear(const data::Camera &camera);
+        void end_frame(VkCommandBuffer cmd);
 
 
         const std::string &get_app_name() const noexcept;

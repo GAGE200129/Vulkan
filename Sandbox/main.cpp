@@ -52,25 +52,23 @@ int main()
                 imgui_window.end_frame();
                
                 auto start = std::chrono::high_resolution_clock::now();
-                graphics.clear(camera);
 
                 auto frustum = camera.create_frustum(window.get_graphics().get_scaled_draw_extent().width, window.get_graphics().get_scaled_draw_extent().height);
 
-                auto cmd = graphics.get_default_pipeline().begin_cmd();
 
-                graphics.get_default_pipeline().begin_shadow(cmd);
+                auto cmd = graphics.clear(camera);
+                graphics.get_default_pipeline().get_shadow_pipeline().begin(cmd);
                 model.value().draw(cmd, graphics.get_default_pipeline().get_shadow_pipeline().get_layout());
                 model3.value().draw(cmd, graphics.get_default_pipeline().get_shadow_pipeline().get_layout());
-                graphics.get_default_pipeline().end_shadow(cmd);
+                graphics.get_default_pipeline().get_shadow_pipeline().end(cmd);
                 
                 graphics.get_default_pipeline().begin(cmd);
                 model.value().draw(cmd, graphics.get_default_pipeline().get_layout(), frustum);
                 model3.value().draw(cmd, graphics.get_default_pipeline().get_layout(), frustum);
                 graphics.get_default_pipeline().end(cmd);
 
-                graphics.get_default_pipeline().end_cmd(cmd);
                 
-                graphics.end_frame();
+                graphics.end_frame(cmd);
 
                
                 auto finish = std::chrono::high_resolution_clock::now();

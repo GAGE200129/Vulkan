@@ -2,6 +2,7 @@
 #include "../Graphics.hpp"
 
 #include "ShadowPipeline.hpp"
+#include "PostprocessPipeline.hpp"
 
 namespace gage::gfx::data
 {
@@ -10,9 +11,6 @@ namespace gage::gfx::data
     public:
         DefaultPipeline(Graphics& gfx);
         ~DefaultPipeline();
-
-        void begin_shadow(VkCommandBuffer cmd);
-        void end_shadow(VkCommandBuffer cmd);
 
         void begin(VkCommandBuffer cmd);
         void end(VkCommandBuffer cmd);
@@ -31,7 +29,6 @@ namespace gage::gfx::data
         void reset_pipeline();
 
         VkImage get_color_image_handle() const;
-        VkSemaphore get_render_finished_semaphore(uint32_t i) const;
 
         ShadowPipeline& get_shadow_pipeline();
     private:
@@ -44,17 +41,13 @@ namespace gage::gfx::data
         void create_render_pass();
         void destroy_render_pass();
 
-        void allocate_cmd();
-        void free_cmd();
     private:
         static constexpr VkFormat COLOR_FORMAT = {VK_FORMAT_B8G8R8A8_UNORM};
         static constexpr VkFormat DEPTH_FORMAT = {VK_FORMAT_D32_SFLOAT};
 
         Graphics& gfx;
         ShadowPipeline shadow_pipeline;
-
-        VkCommandBuffer cmds[Graphics::FRAMES_IN_FLIGHT]{};
-        VkSemaphore render_finished_semaphores[Graphics::FRAMES_IN_FLIGHT]{};
+        PostprocessPipeline post_pipeline;
 
         VkPipelineLayout pipeline_layout{};
         VkPipeline pipeline{};
