@@ -13,6 +13,8 @@
 #include <thread>
 #include <iostream>
 
+#include <glm/gtx/string_cast.hpp>
+
 #include <Core/ThirdParty/imgui/imgui.h>
 
 using namespace gage;
@@ -52,16 +54,18 @@ int main()
                 auto start = std::chrono::high_resolution_clock::now();
                 graphics.clear(camera);
 
+                auto frustum = camera.create_frustum(window.get_graphics().get_scaled_draw_extent().width, window.get_graphics().get_scaled_draw_extent().height);
+
                 auto cmd = graphics.get_default_pipeline().begin_cmd();
 
                 graphics.get_default_pipeline().begin_shadow(cmd);
-                model.value().draw(cmd, graphics.get_default_pipeline().get_shadow_pipeline_layout());
-                model3.value().draw(cmd, graphics.get_default_pipeline().get_shadow_pipeline_layout());
+                model.value().draw(cmd, graphics.get_default_pipeline().get_shadow_pipeline().get_layout());
+                model3.value().draw(cmd, graphics.get_default_pipeline().get_shadow_pipeline().get_layout());
                 graphics.get_default_pipeline().end_shadow(cmd);
                 
                 graphics.get_default_pipeline().begin(cmd);
-                model.value().draw(cmd, graphics.get_default_pipeline().get_pipeline_layout());
-                model3.value().draw(cmd, graphics.get_default_pipeline().get_pipeline_layout());
+                model.value().draw(cmd, graphics.get_default_pipeline().get_layout(), frustum);
+                model3.value().draw(cmd, graphics.get_default_pipeline().get_layout(), frustum);
                 graphics.get_default_pipeline().end(cmd);
 
                 graphics.get_default_pipeline().end_cmd(cmd);

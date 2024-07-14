@@ -78,7 +78,6 @@ namespace gage::gfx
 
         //Shadowmap size
         void resize_shadow_map(uint32_t shadow_map_size);
-        void set_shadow_distance(float distance);
 
         const glm::mat4& get_projection() const;
         const glm::mat4& get_view() const;
@@ -92,7 +91,7 @@ namespace gage::gfx
         //void set_exclusive_mode(bool enabled);
         VkExtent2D get_scaled_draw_extent();
     private:
-        glm::mat4x4 calculate_directional_light_proj_view(const data::Camera& camera);
+        glm::mat4x4 calculate_directional_light_proj_view(const data::Camera& camera, float near, float far);
     private:
         std::mutex uploading_mutex{};
         std::string app_name{};
@@ -141,24 +140,26 @@ namespace gage::gfx
             glm::vec3 direction{0, -1, 0}; float _padding;
             glm::vec3 color{1, 1, 1}; float _padding2;
         };
+        static constexpr uint32_t CASCADE_COUNT{3};
         struct GlobalUniform
         {
             glm::mat4x4 projection{};
             glm::mat4x4 view{};
             glm::vec3 camera_position{}; float _padding{};
             DirectionalLight directional_light{};
-            glm::mat4x4 directional_light_proj_view{};
-        } global_uniform;
+            glm::mat4x4 directional_light_proj_views[CASCADE_COUNT]{};
+            glm::vec4  directional_light_cascade_planes[CASCADE_COUNT]{ {10, 0, 0, 0}, {30, 0, 0, 0}, {50, 0, 0, 0} };
+        } global_uniform{};
         uint32_t frame_index{};
 
         VmaAllocator allocator{};
 
         //Pipelines
+        
         uint32_t directional_light_shadow_map_resolution{2048};
-        float directional_light_shadow_map_distance{50.0f};
         uint32_t directional_light_shadow_map_resolution_temp{2048};
+        float directional_light_shadow_map_distance{50.0f};
         bool directional_light_shadow_map_resize_requested{};
-        uint32_t cascade_count{3};
         std::unique_ptr<data::DefaultPipeline> default_pipeline{};
     };
 }

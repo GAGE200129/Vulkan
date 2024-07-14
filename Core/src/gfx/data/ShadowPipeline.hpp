@@ -19,6 +19,8 @@ namespace gage::gfx::data
         void end(VkCommandBuffer cmd);
 
         void reset();
+
+        VkPipelineLayout get_layout() const;
     private:
         void create_pipeline_layout();
         void destroy_pipeline_layout();

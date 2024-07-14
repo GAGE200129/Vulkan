@@ -347,7 +347,10 @@ namespace gage::gfx
                                                              (float)draw_extent.width, (float)draw_extent.height, camera.get_near(), camera.get_far());
         global_uniform.projection[1][1] *= -1;
         global_uniform.view = camera.get_view();
-        global_uniform.directional_light_proj_view = calculate_directional_light_proj_view(camera);
+        global_uniform.directional_light_proj_views[0] = calculate_directional_light_proj_view(camera, 0.1f, global_uniform.directional_light_cascade_planes[0].x);
+        global_uniform.directional_light_proj_views[1] = calculate_directional_light_proj_view(camera, 0.1f, global_uniform.directional_light_cascade_planes[1].x);
+        global_uniform.directional_light_proj_views[2] = calculate_directional_light_proj_view(camera, 0.1f, global_uniform.directional_light_cascade_planes[2].x);
+
         
 
         std::memcpy(global_alloc_info.pMappedData, &global_uniform, sizeof(GlobalUniform));
@@ -509,7 +512,7 @@ namespace gage::gfx
         draw_extent_scale = scale;
     }
 
-    glm::mat4x4 Graphics::calculate_directional_light_proj_view(const data::Camera& camera)
+    glm::mat4x4 Graphics::calculate_directional_light_proj_view(const data::Camera& camera, float near, float far)
     {
         glm::vec4 frustum_corners[] = 
         {
@@ -524,12 +527,12 @@ namespace gage::gfx
             {1, 1, 1, 1},
         };
         glm::mat4x4 cam_proj = glm::perspectiveFovRH_ZO(glm::radians(camera.get_field_of_view()),
-                                                             (float)draw_extent.width, (float)draw_extent.height, camera.get_near(), directional_light_shadow_map_distance);
+                                                             (float)draw_extent.width, (float)draw_extent.height, near, far);
         cam_proj[1][1] *= -1;
 
         glm::mat4x4 inv_proj = glm::inverse(cam_proj * global_uniform.view);
 
-        glm::vec3 center{}, eye{};
+        glm::vec3 center{};
         for(size_t i = 0; i < 8; i++)
         {
             frustum_corners[i] =  inv_proj *  frustum_corners[i];
@@ -537,10 +540,8 @@ namespace gage::gfx
             center += glm::vec3(frustum_corners[i]);
         }
         center /= 8.0;
-        eye = center - global_uniform.directional_light.direction;
 
-
-        glm::mat4 light_view = glm::lookAt(eye,
+        glm::mat4 light_view = glm::lookAt(center - global_uniform.directional_light.direction,
                                            center,
                                            glm::vec3(0.0f, 1.0f, 0.0f));
 
@@ -551,9 +552,9 @@ namespace gage::gfx
         };
 
         glm::vec3 max{
-            std::numeric_limits<float>::min(),
-            std::numeric_limits<float>::min(),
-            std::numeric_limits<float>::min()
+            std::numeric_limits<float>::lowest(),
+            std::numeric_limits<float>::lowest(),
+            std::numeric_limits<float>::lowest()
         };
         for(size_t i = 0; i < 8; i++)
         {
@@ -566,6 +567,25 @@ namespace gage::gfx
             max.y = glm::max(max.y, frustum_corner.y);
             max.z = glm::max(max.z, frustum_corner.z);
         }
+
+        constexpr float zMult = 5.0f;
+        if (min.z < 0)
+        {
+            min.z *= zMult;
+        }
+        else
+        {
+            min.z /= zMult;
+        }
+        if (max.z < 0)
+        {
+            max.z /= zMult;
+        }
+        else
+        {
+            max.z *= zMult;
+        }
+   
 
         return glm::orthoRH_ZO(min.x, max.x, min.y, max.y, min.z, max.z) * light_view;
     }
@@ -587,10 +607,6 @@ namespace gage::gfx
         return *default_pipeline;
     }
 
-    void Graphics::set_shadow_distance(float distance)
-    {
-        this->directional_light_shadow_map_distance = distance;
-    }
 
     void Graphics::resize(int width, int height)
     {

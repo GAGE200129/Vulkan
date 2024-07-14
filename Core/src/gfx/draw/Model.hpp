@@ -8,6 +8,8 @@
 #include "Node.hpp"
 #include "Material.hpp"
 
+#include "../data/Frustum.hpp"
+
 namespace gage::gfx
 {
     class Graphics;
@@ -28,7 +30,7 @@ namespace gage::gfx::draw
         Model(Graphics& gfx, const std::string& file_path, Mode mode = Mode::Binary);
         ~Model();
 
-        void draw(VkCommandBuffer cmd, VkPipelineLayout layout) const;
+        void draw(VkCommandBuffer cmd, VkPipelineLayout layout, data::Frustum frustum = {}) const;
     private:
         void load_async(const std::string& file_path);
     private:

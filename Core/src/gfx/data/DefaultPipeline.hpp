@@ -21,8 +21,7 @@ namespace gage::gfx::data
         void end_cmd(VkCommandBuffer cmd);
         void set_push_constant(VkCommandBuffer cmd, const glm::mat4x4& transform);
 
-        VkPipelineLayout get_pipeline_layout() const;
-        VkPipelineLayout get_shadow_pipeline_layout() const;
+        VkPipelineLayout get_layout() const;
         VkDescriptorSet allocate_instance_set(size_t size_in_bytes, VkBuffer buffer,
            VkImageView albedo_view, VkSampler albedo_sampler,
            VkImageView metalic_roughness_view, VkSampler metalic_roughness_sampler,

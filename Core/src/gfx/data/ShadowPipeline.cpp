@@ -57,6 +57,8 @@ namespace gage::gfx::data
         destroy_framebuffer();
         destroy_depth_image();
         destroy_pipeline();
+
+
         create_depth_image();
         create_framebuffer();
         create_pipeline();
@@ -175,7 +177,9 @@ namespace gage::gfx::data
         VkShaderModule vertex_shader{};
         VkShaderModule geometry_shader{};
         VkShaderModule fragment_shader{};
+        
         auto vertex_binary = utils::file_path_to_binary("Core/shaders/compiled/shadow.vert.spv");
+        auto geometry_binary = utils::file_path_to_binary("Core/shaders/compiled/shadow.geom.spv");
         auto fragment_binary = utils::file_path_to_binary("Core/shaders/compiled/shadow.frag.spv");
 
         VkShaderModuleCreateInfo shader_module_ci = {};
@@ -190,6 +194,15 @@ namespace gage::gfx::data
         shader_stage_ci.module = vertex_shader;
         shader_stage_ci.pName = "main";
         shader_stage_ci.stage = VK_SHADER_STAGE_VERTEX_BIT;
+        pipeline_shader_stages.push_back(shader_stage_ci);
+
+         // Geometry shader
+        shader_module_ci.codeSize = geometry_binary.size();
+        shader_module_ci.pCode = (uint32_t *)geometry_binary.data();
+        vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &geometry_shader));
+        shader_stage_ci.module = geometry_shader;
+        shader_stage_ci.pName = "main";
+        shader_stage_ci.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
         pipeline_shader_stages.push_back(shader_stage_ci);
 
         // Fragment shader
@@ -290,7 +303,6 @@ namespace gage::gfx::data
 
     void ShadowPipeline::create_depth_image()
     {
-
         VkImageCreateInfo depth_image_ci = {};
         depth_image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         depth_image_ci.imageType = VK_IMAGE_TYPE_2D;
@@ -298,7 +310,7 @@ namespace gage::gfx::data
         depth_image_ci.extent.height = gfx.directional_light_shadow_map_resolution;
         depth_image_ci.extent.depth = 1;
         depth_image_ci.mipLevels = 1;
-        depth_image_ci.arrayLayers = 1;
+        depth_image_ci.arrayLayers = gfx.CASCADE_COUNT; //Layers
         depth_image_ci.format = DEPTH_FORMAT;
         depth_image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
         depth_image_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -323,7 +335,7 @@ namespace gage::gfx::data
         depth_image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         depth_image_view_ci.image = depth_image;
         depth_image_view_ci.format = DEPTH_FORMAT;
-        depth_image_view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        depth_image_view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
         depth_image_view_ci.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
         depth_image_view_ci.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
         depth_image_view_ci.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -331,7 +343,7 @@ namespace gage::gfx::data
         depth_image_view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
         depth_image_view_ci.subresourceRange.baseMipLevel = 0;
         depth_image_view_ci.subresourceRange.baseArrayLayer = 0;
-        depth_image_view_ci.subresourceRange.layerCount = 1;
+        depth_image_view_ci.subresourceRange.layerCount = gfx.CASCADE_COUNT; //Layers
         depth_image_view_ci.subresourceRange.levelCount = 1;
 
         vk_check(vkCreateImageView(gfx.device, &depth_image_view_ci, nullptr, &depth_image_view));
@@ -375,7 +387,7 @@ namespace gage::gfx::data
         frame_buffer_ci.pAttachments = &depth_image_view;
         frame_buffer_ci.width = gfx.directional_light_shadow_map_resolution;
         frame_buffer_ci.height = gfx.directional_light_shadow_map_resolution;
-        frame_buffer_ci.layers = 1;
+        frame_buffer_ci.layers = gfx.CASCADE_COUNT;
         vk_check(vkCreateFramebuffer(gfx.device, &frame_buffer_ci, nullptr, &frame_buffer));
     }
     void ShadowPipeline::destroy_framebuffer()
@@ -401,5 +413,10 @@ namespace gage::gfx::data
             descriptor_write.pImageInfo = &image_info;
             vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
         }
+    }
+
+    VkPipelineLayout ShadowPipeline::get_layout() const
+    {
+        return pipeline_layout;
     }
 }

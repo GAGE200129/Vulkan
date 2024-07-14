@@ -6,6 +6,8 @@
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
+#include <glm/gtx/norm.hpp>
 
 #include <glad/glad.h>
 #define GLFW_INCLUDE_VULKAN

@@ -12,7 +12,6 @@ layout(location = 0) out VSOutput
     vec3 normal;
     vec2 uv;
     vec3 world_pos;
-    vec4 world_pos_directional_light_space;
 } vs_out;
  
 
@@ -23,9 +22,9 @@ layout(push_constant, std140) uniform PushConstant {
 void main() 
 {   
     vec4 p = model_transform * vec4(in_pos, 1.0f);
-	gl_Position = ubo.projection * ubo.view * p;
+    vec4 p_view = ubo.view * vec4(p.xyz, 1.0);
+	gl_Position = ubo.projection * p_view;
 	vs_out.normal = mat3(transpose(inverse(model_transform))) * in_normal;
 	vs_out.uv = in_uvs;
     vs_out.world_pos = p.xyz;
-    vs_out.world_pos_directional_light_space = ubo.directional_light_proj_view * p;
 }

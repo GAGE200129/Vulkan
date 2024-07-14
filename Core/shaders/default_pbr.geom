@@ -7,7 +7,6 @@ layout(location = 0) in VSOutput
     vec3 normal;
     vec2 uv;
     vec3 world_pos;
-    vec4 world_pos_directional_light_space;
 } vs_in[];
 
 layout(location = 0) out FSOutput
@@ -15,7 +14,6 @@ layout(location = 0) out FSOutput
     vec3 normal;
     vec2 uv;
     vec3 world_pos;
-    vec4 world_pos_directional_light_space;
     mat3 TBN;
 } fs_out;
 
@@ -45,7 +43,6 @@ void main() {
         fs_out.normal = vs_in[i].normal;
         fs_out.uv = vs_in[i].uv;
         fs_out.world_pos = vs_in[i].world_pos;
-        fs_out.world_pos_directional_light_space = vs_in[i].world_pos_directional_light_space;
         fs_out.TBN = mat3(T, B, normalize(vs_in[i].normal));
         EmitVertex();
     }

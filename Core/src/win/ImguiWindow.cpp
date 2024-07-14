@@ -131,21 +131,11 @@ namespace gage::win
         }
         ImGui::End();
 
-        //if (ImGui::Begin("Viewport-Color"))
-        //{
-        //    ImGui::Image((ImTextureID)gfx_color_texture, ImGui::GetContentRegionMax());
-        //}
-        //ImGui::End();
-        //if (ImGui::Begin("Viewport-Depth"))
-        //{
-        //    ImGui::Image((ImTextureID)gfx_depth_texture, ImGui::GetContentRegionMax());
-        //}
-        //ImGui::End();
 
         if (ImGui::Begin("Lightning"))
         {
             static int resolution = 1024;
-            static float distance = 50.0f;
+            static float distances[] = {10.0f, 20.0f, 50.0f};
             auto& ubo = window.get_graphics().get_global_uniform();
             ImGui::Text("Directional light");
             if(ImGui::DragFloat3("Direction", &ubo.directional_light.direction.x, 0.01f, -1, 1))
@@ -157,10 +147,16 @@ namespace gage::win
             {
                 window.get_graphics().resize_shadow_map(resolution);
             }
-            if(ImGui::DragFloat("Shadow map distance", &distance, 0.1f, 10.0f, 2048.0f))
+            bool distances_dirty = ImGui::DragFloat("Shadow map cascade distance 1", &distances[0], 0.1f, 0.1f, 2048.0f);
+            distances_dirty |= ImGui::DragFloat("Shadow map cascade distance 2", &distances[1], 0.1f, 0.1f, 2048.0f);
+            distances_dirty |= ImGui::DragFloat("Shadow map cascade distance 3", &distances[2], 0.1f, 0.1f, 2048.0f);
+            if(distances_dirty)
             {
-                window.get_graphics().set_shadow_distance(distance);
+                ubo.directional_light_cascade_planes[0].x = distances[0];
+                ubo.directional_light_cascade_planes[1].x = distances[1];
+                ubo.directional_light_cascade_planes[2].x = distances[2];
             }
+
 
             ImGui::Separator();
         }

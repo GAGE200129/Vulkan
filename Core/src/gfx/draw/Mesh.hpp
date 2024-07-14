@@ -22,6 +22,8 @@ namespace gage::gfx::draw
         Mesh(Graphics &gfx, Model& model, const tinygltf::Model& gltf_model, const tinygltf::Mesh &mesh);
        ~Mesh();
 
+
+        float get_cull_radius() const;
         void draw(VkCommandBuffer cmd, VkPipelineLayout layout, const glm::mat4x4& transform) const;
     private:
         Graphics& gfx;
@@ -35,7 +37,7 @@ namespace gage::gfx::draw
             std::unique_ptr<data::GPUBuffer> texcoord_buffer;
             int32_t material_index;
         };
-
+        float cull_radius{};
         std::vector<MeshSection> sections{};
     };
 }

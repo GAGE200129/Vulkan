@@ -1,6 +1,6 @@
 #pragma once
 
-
+#include "Frustum.hpp"
 
 namespace gage::gfx::data
 {
@@ -20,6 +20,8 @@ namespace gage::gfx::data
         float get_field_of_view() const;
         float get_near() const;
         float get_far() const;
+
+        Frustum create_frustum(uint32_t width, uint32_t height) const;
     public:
         glm::vec3 position{};
         glm::vec3 rotation{};

@@ -9,7 +9,6 @@ layout(location = 0) in FSOutput
     vec3 normal;
     vec2 uv;
     vec3 world_pos;
-    vec4 world_pos_directional_light_space;
     mat3 TBN;
 } fs_in;
   
@@ -19,43 +18,51 @@ layout(location = 0) in FSOutput
 layout (location = 0) out vec4 outFragColor;
 
 vec4 calculate_directional_light_pbr(in DirectionalLight light,
-    in vec4 frag_pos_light_space,
-    in sampler2D light_depth_map,
+    in vec3 frag_pos_world_space,
+    in vec3 frag_pos_view_space,
+    in sampler2DArray light_depth_map,
     in vec3 n,
+    in vec3 n_unsampled,
     in vec3 to_cam_dir,
     in vec3 albedo,
     in float metalic,
     in float roughness,
     in float ao)
 { 
+    float depth_value = abs(frag_pos_view_space.z);
+    int layer = CASCADE_COUNT - 1;
+    for (int i = 0; i < CASCADE_COUNT; i++)
+    {
+        if (depth_value < ubo.directional_light_cascade_planes[i])
+        {
+            layer = i;
+            break;
+        }
+    }
+    vec4 frag_pos_light_space = ubo.directional_light_proj_views[layer] * vec4(frag_pos_world_space, 1.0);
+
     //Shadow mapping
-
-    //const float bias = 0.005;
-    //Perspective divide
     vec3 proj_coords = frag_pos_light_space.xyz / frag_pos_light_space.w;
-    proj_coords.xy = (proj_coords.xy + 1.0) *0.5;
-    if(proj_coords.z > 1.0) 
-        proj_coords.z = 1.0;
-    
+    proj_coords.xy = (proj_coords.xy + 1.0) * 0.5;
+
     float current_depth = proj_coords.z;
-    float sampled_depth = texture(light_depth_map, proj_coords.xy).r; 
-
-
-    float bias = max(0.05 * (1.0 - dot(-light.direction, n)), 0.005); 
+    
+    float bias = max(0.05 * (1.0 - dot(n_unsampled, -light.direction)), 0.005);
     float shadow = 0.0;
-    vec2 texel_size = 1.0 / textureSize(light_depth_map, 0);
+    vec2 texel_size = 1.0 / textureSize(light_depth_map, 0).xy;
     for (int x=-1 ; x <= 1 ; x++){
-        for (int y= - 1 ; y <= 1 ; y++){
-            if ( texture( light_depth_map, proj_coords.xy + vec2(x, y) * texel_size).r  <  current_depth - bias ){
+        for (int y= -1 ; y <= 1 ; y++){
+            float sampled_depth = texture(light_depth_map, vec3(proj_coords.xy + vec2(x, y) * texel_size, layer)).r; 
+            if ( sampled_depth + bias <  current_depth  ){
                 shadow += 1.0;
             } 
 
         }
     }
-    shadow /= 9.0;
-    shadow = 1.0 - shadow;
-
-
+    if(proj_coords.z > 1.0) 
+        shadow = 0.0;
+    shadow = 1.0 - (shadow / 9.0);
+    
 
     //Main pbr
     vec3 Lo = vec3(0.0);
@@ -82,6 +89,7 @@ vec4 calculate_directional_light_pbr(in DirectionalLight light,
     } 
     vec3 ambient = vec3(0.3) * albedo * ao;
 
+    //return vec4(shadow, shadow, shadow, 1.0);
     return vec4(Lo * shadow + ambient, 1);
 }
 
@@ -105,7 +113,8 @@ void main()
         metalic = metalic_roughness.b;
     }
 
-    vec3 n = normalize(fs_in.normal);
+    vec3 n_unsampled = normalize(fs_in.normal);
+    vec3 n = n_unsampled;
     if(material.has_normal)
     {
        n = texture(textures[2], fs_in.uv).rgb; 
@@ -113,9 +122,12 @@ void main()
        n = normalize(fs_in.TBN * n); 
     }
 
-
-    //outFragColor = texture(directional_light_map, fs_in.uv);
-    //outFragColor = vec4(n, 1);
-	outFragColor = calculate_directional_light_pbr(ubo.directional_light, fs_in.world_pos_directional_light_space, directional_light_map, n, to_cam_dir, albedo, metalic, roughness, 1.0);
-    //outFragColor = vec4(calculate_directional_light_phong(ubo.directional_light, n, to_cam_dir, albedo), 1.0);
+	outFragColor = calculate_directional_light_pbr(ubo.directional_light,
+        fs_in.world_pos,
+        (ubo.view * vec4(fs_in.world_pos, 1.0)).xyz,
+        directional_light_map,
+        n,
+        n_unsampled,
+        to_cam_dir,
+        albedo, metalic, roughness, 1.0);
 }

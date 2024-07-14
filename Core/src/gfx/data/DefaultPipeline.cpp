@@ -92,17 +92,13 @@ namespace gage::gfx::data
         vk_check(vkQueueSubmit(gfx.queue, 1, &submit, VK_NULL_HANDLE));
     }
 
-    VkPipelineLayout DefaultPipeline::get_pipeline_layout() const
+    VkPipelineLayout DefaultPipeline::get_layout() const
     {
         return pipeline_layout;
     }
     ShadowPipeline& DefaultPipeline::get_shadow_pipeline()
     {
         return shadow_pipeline;
-    }
-    VkPipelineLayout DefaultPipeline::get_shadow_pipeline_layout() const
-    {
-        return shadow_pipeline.pipeline_layout;
     }
     VkSemaphore DefaultPipeline::get_render_finished_semaphore(uint32_t i) const
     {

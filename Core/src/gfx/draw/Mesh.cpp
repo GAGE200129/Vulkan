@@ -100,6 +100,8 @@ namespace gage::gfx::draw
             }
         };
 
+        this->cull_radius = 0.0f;
+        glm::vec3 max_pos {0, 0, 0};
         this->sections.reserve(mesh.primitives.size());
         for (const auto& primitive : mesh.primitives)
         {
@@ -109,7 +111,13 @@ namespace gage::gfx::draw
             std::vector<uint32_t> indices{};
             extract_indices_from_primitive(primitive, indices);
             extract_data_from_primitive(primitive, positions, normals, texcoords);
-            //generate_tangent(indices, positions, texcoords);
+            
+            //Calculate cull_radius
+            for(const auto& pos : positions)
+            {
+                max_pos = glm::max(max_pos, glm::abs(pos));
+                cull_radius = glm::length(max_pos);
+            }
 
             MeshSection section{
                 (uint32_t)indices.size(),
@@ -147,7 +155,7 @@ namespace gage::gfx::draw
             VkDescriptorSet desc_set = model.materials.at(section.material_index)->get_desc_set();
             vkCmdPushConstants(cmd, layout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), glm::value_ptr(transform));
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                    gfx.get_default_pipeline().get_pipeline_layout(),
+                                    gfx.get_default_pipeline().get_layout(),
                                     1,
                                     1, &desc_set, 0, nullptr);
 
@@ -155,6 +163,11 @@ namespace gage::gfx::draw
             vkCmdBindIndexBuffer(cmd, section.index_buffer->get_buffer_handle(), 0, VK_INDEX_TYPE_UINT32);
             vkCmdDrawIndexed(cmd, section.vertex_count, 1, 0, 0, 0);
         }
+    }
+
+    float Mesh::get_cull_radius() const
+    {
+        return cull_radius;
     }
 
 }

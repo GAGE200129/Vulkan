@@ -3,6 +3,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#include "../data/Frustum.hpp"
+
 namespace gage::gfx
 {
     class Graphics;
@@ -21,7 +23,7 @@ namespace gage::gfx::draw
             int32_t mesh
         );
 
-        void draw(VkCommandBuffer cmd, VkPipelineLayout layout) const;
+        void draw(VkCommandBuffer cmd, VkPipelineLayout layout, const data::Frustum& frustum) const;
 
     private:
         Graphics &gfx;
