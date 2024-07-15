@@ -1,9 +1,10 @@
 #ifndef GLOBAL_UNIFORM_BUFFER
 #define GLOBAL_UNIFORM_BUFFER
 
+#define CASCADE_COUNT 3
+
 #include "directional_light.inc"
 
-#define CASCADE_COUNT 3
 
 layout(set = 0, binding = 0) uniform UniformBuffer
 {

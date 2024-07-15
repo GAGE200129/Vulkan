@@ -29,6 +29,7 @@ namespace gage::gfx::data
     class Image;
     class DeferedPBRPipeline;
     class ShadowPipeline;
+    class GBuffer;
 }
 
 struct GLFWwindow;
@@ -38,7 +39,7 @@ namespace gage::gfx
     {
     public: 
         //Constants
-        static constexpr int FRAMES_IN_FLIGHT = 3;
+        static constexpr int FRAMES_IN_FLIGHT = 2;
 
         const std::vector<const char*> ENABLED_INSTANCE_EXTENSIONS
         {
@@ -58,6 +59,7 @@ namespace gage::gfx
         friend class data::CPUBuffer;
         friend class data::DescriptorSet;
         friend class data::Image;
+        friend class data::GBuffer;
         
     public:
         Graphics(GLFWwindow *window, std::string app_name);
@@ -84,12 +86,10 @@ namespace gage::gfx
         const data::Swapchain& get_swapchain() const;
         const data::DeferedPBRPipeline& get_defered_pbr_pipeline() const;
         data::DeferedPBRPipeline& get_defered_pbr_pipeline();
-
-
         GlobalUniform& get_global_uniform();
-
-        //void set_exclusive_mode(bool enabled);
         VkExtent2D get_scaled_draw_extent();
+
+
     private:
         glm::mat4x4 calculate_directional_light_proj_view(const data::Camera& camera, float near, float far);
     private:
@@ -155,11 +155,22 @@ namespace gage::gfx
         VmaAllocator allocator{};
 
         //Pipelines
-        
         uint32_t directional_light_shadow_map_resolution{2048};
         uint32_t directional_light_shadow_map_resolution_temp{2048};
         float directional_light_shadow_map_distance{50.0f};
         bool directional_light_shadow_map_resize_requested{};
         std::unique_ptr<data::DeferedPBRPipeline> default_pipeline{};
+
+        //Compute pipelines
+        VkDescriptorSetLayout compute_set_layout{};
+        VkDescriptorSet compute_set{};
+        VkPipelineLayout compute_layout{};
+        VkPipeline compute_pipeline{};
+
+        VkImage compute_image{};
+        VkImageView compute_image_view{};
+        VmaAllocation compute_memory{};
+    
+        
     };
 }

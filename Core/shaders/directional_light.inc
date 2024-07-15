@@ -26,34 +26,49 @@ vec3 calculate_directional_light_phong(in DirectionalLight light, in vec3 n, in 
     return diffuse_result * albedo;
 }
 
-/*vec4 calculate_directional_light_pbr(in DirectionalLight light,
-    in vec4 frag_pos_light_space,
-    in sampler2D light_depth_map,
+vec4 calculate_directional_light_pbr(in DirectionalLight light,
+    in vec3 frag_pos_world_space,
+    in vec3 frag_pos_view_space,
+    in sampler2DArray light_depth_map,
+    in float cascade_planes[CASCADE_COUNT],
+    in mat4x4 light_proj_views[CASCADE_COUNT],
     in vec3 n,
+    in vec3 n_unsampled,
     in vec3 to_cam_dir,
     in vec3 albedo,
     in float metalic,
     in float roughness,
     in float ao)
-{
+{ 
+    float depth_value = abs(frag_pos_view_space.z);
+    int layer = CASCADE_COUNT - 1;
+    for (int i = 0; i < CASCADE_COUNT; i++)
+    {
+        if (depth_value < cascade_planes[i])
+        {
+            layer = i;
+            break;
+        }
+    }
+    vec4 frag_pos_light_space = light_proj_views[layer] * vec4(frag_pos_world_space, 1.0);
+
     //Shadow mapping
-
-    const float bias = 0.005;
-    //Perspective divide
     vec3 proj_coords = frag_pos_light_space.xyz / frag_pos_light_space.w;
-    proj_coords.x += 1.0; 
-    proj_coords.y += 1.0; 
-    proj_coords.xy *= 0.5;
-    
-    //proj_coords.y = -proj_coords.y;
+    proj_coords.xy = (proj_coords.xy + 1.0) * 0.5;
+
     float current_depth = proj_coords.z;
-    float sampled_depth = texture(light_depth_map, proj_coords.xy).r; 
+    float sampled_depth = texture(light_depth_map, vec3(proj_coords.xy, layer)).r; 
+    
+    float bias = max(0.01 * (1.0 - dot(n_unsampled, -light.direction)), 0.001);
+    //bias *= 1.0 / (ubo.directional_light_cascade_planes[layer] * 0.5f);
 
-    vec3 ambient = vec3(0.3) * albedo * ao;
 
-    float shadow = current_depth - bias < sampled_depth ? 1.0 : 0.0;
-
-
+    
+    float shadow = 1.0;
+    if(sampled_depth + bias < current_depth)
+    {
+        shadow = 0;
+    }
 
     //Main pbr
     vec3 Lo = vec3(0.0);
@@ -78,11 +93,11 @@ vec3 calculate_directional_light_phong(in DirectionalLight light, in vec3 n, in 
         float NdotL = max(dot(n, L), 0.0);        
         Lo += (kD * albedo / PI + specular) * radiance * NdotL;
     } 
-    
+    vec3 ambient = vec3(0.3) * albedo * ao;
 
+    //return vec4(shadow, shadow, shadow, 1.0);
     return vec4(Lo * shadow + ambient, 1);
-}*/
-
+}
 
 
 

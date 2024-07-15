@@ -24,9 +24,13 @@ namespace gage::gfx::data
            VkImageView normal_view, VkSampler normal_sampler) const;
         void free_instance_set(VkDescriptorSet set) const;
 
-        void reset_pipeline();
+        void reset();
 
-        VkImage get_color_image_handle() const;
+        VkSampler get_default_sampler() const;
+        VkImage get_position() const;
+        VkImage get_normal() const;
+        VkImage get_uv() const;
+
 
         ShadowPipeline& get_shadow_pipeline();
         const ShadowPipeline& get_shadow_pipeline() const;
@@ -40,8 +44,13 @@ namespace gage::gfx::data
         void create_render_pass();
         void destroy_render_pass();
 
+        void create_g_buffer_images();
+        void destroy_g_buffer_images();
+
     private:
-        static constexpr VkFormat COLOR_FORMAT = {VK_FORMAT_B8G8R8A8_UNORM};
+        static constexpr VkFormat POSITION_FORMAT = {VK_FORMAT_R16G16B16_SFLOAT};
+        static constexpr VkFormat NORMAL_FORMAT = {VK_FORMAT_R16G16B16_SFLOAT};
+        static constexpr VkFormat UV_FORMAT = {VK_FORMAT_R16G16_SFLOAT};
         static constexpr VkFormat DEPTH_FORMAT = {VK_FORMAT_D32_SFLOAT};
 
         Graphics& gfx;
@@ -64,8 +73,16 @@ namespace gage::gfx::data
         VkImage depth_image{};
         VkImageView depth_image_view{};
 
-        VkDeviceMemory color_image_memory{};
-        VkImage color_image{};
-        VkImageView color_image_view{};
+        VkDeviceMemory position_memory{};
+        VkImage position{};
+        VkImageView position_view{};
+
+        VkDeviceMemory normal_memory{};
+        VkImage normal{};
+        VkImageView normal_view{};
+
+        VkDeviceMemory uv_memory{};
+        VkImage uv{};
+        VkImageView uv_view{};
     };
 }

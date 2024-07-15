@@ -32,6 +32,7 @@ project "Core"
       "%{prj.location}/shaders/**.vert",
       "%{prj.location}/shaders/**.geom",
       "%{prj.location}/shaders/**.frag",
+      "%{prj.location}/shaders/**.comp",
    }
    
    
@@ -63,6 +64,13 @@ project "Core"
 
    filter {"files:**.frag"}
       buildmessage "Compiling fragment shader %{file.relpath}"
+      buildcommands {
+         "glslc %{file.relpath} -o %{file.directory}/compiled/%{file.name}.spv"
+      }
+      buildoutputs { "%{file.directory}/compiled/%{file.name}.spv" }
+
+   filter {"files:**.comp"}
+      buildmessage "Compiling compute shader %{file.relpath}"
       buildcommands {
          "glslc %{file.relpath} -o %{file.directory}/compiled/%{file.name}.spv"
       }

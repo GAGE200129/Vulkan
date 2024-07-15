@@ -14,6 +14,7 @@ namespace gage::gfx::data
         shadow_pipeline(gfx),
         post_pipeline(gfx)
     {
+        create_g_buffer_images();
         create_render_pass();
         create_pipeline_layout();
         create_pipeline();
@@ -22,6 +23,7 @@ namespace gage::gfx::data
 
     DeferedPBRPipeline::~DeferedPBRPipeline()
     {
+        destroy_g_buffer_images();
         destroy_render_pass();
         destroy_default_image_sampler();
         destroy_pipeline();
@@ -37,9 +39,11 @@ namespace gage::gfx::data
         render_pass_begin_info.framebuffer = frame_buffer;
         render_pass_begin_info.renderArea.offset = {0, 0};
         render_pass_begin_info.renderArea.extent = gfx.get_scaled_draw_extent();
-        std::array<VkClearValue, 2> clear_values{};
-        clear_values[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-        clear_values[1].depthStencil = {1.0f, 0};
+        std::array<VkClearValue, 4> clear_values{};
+        clear_values[0].color = {{0.0f, 0.0f, 0.0f}};
+        clear_values[1].color = {{0.0f, 0.0f, 0.0f}};
+        clear_values[2].color = {{0.0f, 0.0f, 0.0f}};
+        clear_values[3].depthStencil = {1.0f, 0};
         render_pass_begin_info.clearValueCount = clear_values.size();
         render_pass_begin_info.pClearValues = clear_values.data();
         vkCmdBeginRenderPass(cmd, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
@@ -59,6 +63,8 @@ namespace gage::gfx::data
     void DeferedPBRPipeline::end(VkCommandBuffer cmd) const
     {
         vkCmdEndRenderPass(cmd);
+
+        
     }
 
 
@@ -343,10 +349,13 @@ namespace gage::gfx::data
         vmaDestroyImage(gfx.allocator, default_image, default_image_alloc);
     }
 
-    void DeferedPBRPipeline::reset_pipeline()
+    void DeferedPBRPipeline::reset()
     {
+        destroy_g_buffer_images();
         destroy_render_pass();
         destroy_pipeline();
+
+        create_g_buffer_images();
         create_render_pass();
         create_pipeline();
     }
@@ -428,11 +437,41 @@ namespace gage::gfx::data
         viewport_state.pViewports = &viewport;
         viewport_state.pScissors = &scissor;
 
-        VkPipelineColorBlendAttachmentState color_blend_attachment{};
-        // default write mask
-        color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-        // no blending
-        color_blend_attachment.blendEnable = VK_FALSE;
+        std::vector<VkPipelineColorBlendAttachmentState> blend_attachments = 
+        {
+            VkPipelineColorBlendAttachmentState {
+                .blendEnable = false,
+                .srcColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+                .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+                .colorBlendOp = VK_BLEND_OP_ADD,
+                .srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+                .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+                .alphaBlendOp = VK_BLEND_OP_ADD,
+                .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT
+            },
+
+            VkPipelineColorBlendAttachmentState {
+                .blendEnable = false,
+                .srcColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+                .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+                .colorBlendOp = VK_BLEND_OP_ADD,
+                .srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+                .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+                .alphaBlendOp = VK_BLEND_OP_ADD,
+                .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT
+            },
+
+            VkPipelineColorBlendAttachmentState {
+                .blendEnable = false,
+                .srcColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+                .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+                .colorBlendOp = VK_BLEND_OP_ADD,
+                .srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+                .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+                .alphaBlendOp = VK_BLEND_OP_ADD,
+                .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT
+            },
+        };
 
         // setup dummy color blending. We arent using transparent objects yet
         // the blending is just "no blend", but we do write to the color attachment
@@ -441,8 +480,8 @@ namespace gage::gfx::data
 
         color_blending.logicOpEnable = VK_FALSE;
         color_blending.logicOp = VK_LOGIC_OP_COPY;
-        color_blending.attachmentCount = 1;
-        color_blending.pAttachments = &color_blend_attachment;
+        color_blending.attachmentCount = blend_attachments.size();
+        color_blending.pAttachments = blend_attachments.data();
 
         // build the actual pipeline
         // we now use all of the info structs we have been writing into into this one
@@ -452,9 +491,8 @@ namespace gage::gfx::data
         VkShaderModule vertex_shader{};
         VkShaderModule geometry_shader{};
         VkShaderModule fragment_shader{};
-        auto vertex_binary = utils::file_path_to_binary("Core/shaders/compiled/default_pbr.vert.spv");
-        auto geometry_binary = utils::file_path_to_binary("Core/shaders/compiled/default_pbr.geom.spv");
-        auto fragment_binary = utils::file_path_to_binary("Core/shaders/compiled/default_pbr.frag.spv");
+        auto vertex_binary = utils::file_path_to_binary("Core/shaders/compiled/g_buffer.vert.spv");
+        auto fragment_binary = utils::file_path_to_binary("Core/shaders/compiled/g_buffer.frag.spv");
 
         VkShaderModuleCreateInfo shader_module_ci = {};
         shader_module_ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -470,14 +508,6 @@ namespace gage::gfx::data
         shader_stage_ci.stage = VK_SHADER_STAGE_VERTEX_BIT;
         pipeline_shader_stages.push_back(shader_stage_ci);
 
-        // Geometry shader
-        shader_module_ci.codeSize = geometry_binary.size();
-        shader_module_ci.pCode = (uint32_t *)geometry_binary.data();
-        vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &geometry_shader));
-        shader_stage_ci.module = geometry_shader;
-        shader_stage_ci.pName = "main";
-        shader_stage_ci.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
-        pipeline_shader_stages.push_back(shader_stage_ci);
 
         // Fragment shader
         shader_module_ci.codeSize = fragment_binary.size();
@@ -568,38 +598,73 @@ namespace gage::gfx::data
 
     void DeferedPBRPipeline::create_render_pass()
     {
-        VkAttachmentDescription color_attachment{};
-        color_attachment.format = COLOR_FORMAT;
-        color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        color_attachment.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        std::vector<VkAttachmentDescription> color_attachments = {
+            {
+                .flags = 0,
+                .format = VK_FORMAT_R16G16B16_SFLOAT,
+                .samples = VK_SAMPLE_COUNT_1_BIT,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                .finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            },
 
-        VkAttachmentDescription depth_attachment{};
-        depth_attachment.format = DEPTH_FORMAT;
-        depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            {
+                .flags = 0,
+                .format = VK_FORMAT_R16G16B16_SFLOAT,
+                .samples = VK_SAMPLE_COUNT_1_BIT,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                .finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            },
 
-        VkAttachmentReference color_attachment_ref{};
-        color_attachment_ref.attachment = 0;
-        color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            {
+                .flags = 0,
+                .format = VK_FORMAT_R16G16_SFLOAT,
+                .samples = VK_SAMPLE_COUNT_1_BIT,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                .finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            },
+
+            //Depth
+
+            {
+                .flags = 0,
+                .format = DEPTH_FORMAT,
+                .samples = VK_SAMPLE_COUNT_1_BIT,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            }
+        };
+
+
+        std::vector<VkAttachmentReference> color_attachment_refs = {
+            {.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
+            {.attachment = 1, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
+            {.attachment = 2, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
+        };
 
         VkAttachmentReference depth_attachment_ref{};
-        depth_attachment_ref.attachment = 1;
+        depth_attachment_ref.attachment = 3;
         depth_attachment_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
         VkSubpassDescription subpass{};
         subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &color_attachment_ref;
+        subpass.colorAttachmentCount = color_attachment_refs.size();
+        subpass.pColorAttachments = color_attachment_refs.data();
         subpass.pDepthStencilAttachment = &depth_attachment_ref;
 
         // Subpass dependencies for layout transitions
@@ -621,11 +686,11 @@ namespace gage::gfx::data
         dependencies[1].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
         dependencies[1].dependencyFlags = 0;
 
-        std::array<VkAttachmentDescription, 2> attachments = {color_attachment, depth_attachment};
+        
         VkRenderPassCreateInfo render_pass_ci{};
         render_pass_ci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        render_pass_ci.attachmentCount = attachments.size();
-        render_pass_ci.pAttachments = attachments.data();
+        render_pass_ci.attachmentCount = color_attachments.size();
+        render_pass_ci.pAttachments = color_attachments.data();
         render_pass_ci.subpassCount = 1;
         render_pass_ci.pSubpasses = &subpass;
         render_pass_ci.dependencyCount = dependencies.size();
@@ -633,105 +698,16 @@ namespace gage::gfx::data
 
         vk_check(vkCreateRenderPass(gfx.device, &render_pass_ci, nullptr, &render_pass));
 
-        // Create color image and view
-        {
-            VkImageCreateInfo color_image_ci = {};
-            color_image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-            color_image_ci.imageType = VK_IMAGE_TYPE_2D;
-            color_image_ci.extent.width = gfx.draw_extent.width;
-            color_image_ci.extent.height = gfx.draw_extent.height;
-            color_image_ci.extent.depth = 1;
-            color_image_ci.mipLevels = 1;
-            color_image_ci.arrayLayers = 1;
-            color_image_ci.format = COLOR_FORMAT;
-            color_image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
-            color_image_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            color_image_ci.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-            color_image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
-
-            vk_check(vkCreateImage(gfx.device, &color_image_ci, nullptr, &color_image));
-
-            VkMemoryRequirements mem_reqs{};
-            vkGetImageMemoryRequirements(gfx.device, color_image, &mem_reqs);
-            // color_image_memory_size = mem_reqs.size;
-
-            VkMemoryAllocateInfo mem_alloc_info{};
-            mem_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            mem_alloc_info.allocationSize = mem_reqs.size;
-            mem_alloc_info.memoryTypeIndex = utils::find_memory_type(gfx.physical_device, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-            vk_check(vkAllocateMemory(gfx.device, &mem_alloc_info, nullptr, &color_image_memory));
-            vk_check(vkBindImageMemory(gfx.device, color_image, color_image_memory, 0));
-
-            VkImageViewCreateInfo color_image_view_ci = {};
-            color_image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            color_image_view_ci.image = color_image;
-            color_image_view_ci.format = COLOR_FORMAT;
-            color_image_view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            color_image_view_ci.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-            color_image_view_ci.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-            color_image_view_ci.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-            color_image_view_ci.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-            color_image_view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            color_image_view_ci.subresourceRange.baseMipLevel = 0;
-            color_image_view_ci.subresourceRange.baseArrayLayer = 0;
-            color_image_view_ci.subresourceRange.layerCount = 1;
-            color_image_view_ci.subresourceRange.levelCount = 1;
-
-            vk_check(vkCreateImageView(gfx.device, &color_image_view_ci, nullptr, &color_image_view));
-        }
-        // Create depth image
-        {
-            VkImageCreateInfo depth_image_ci = {};
-            depth_image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-            depth_image_ci.imageType = VK_IMAGE_TYPE_2D;
-            depth_image_ci.extent.width = gfx.draw_extent.width;
-            depth_image_ci.extent.height = gfx.draw_extent.height;
-            depth_image_ci.extent.depth = 1;
-            depth_image_ci.mipLevels = 1;
-            depth_image_ci.arrayLayers = 1;
-            depth_image_ci.format = DEPTH_FORMAT;
-            depth_image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
-            depth_image_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            depth_image_ci.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-            depth_image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
-
-            vk_check(vkCreateImage(gfx.device, &depth_image_ci, nullptr, &depth_image));
-
-            VkMemoryRequirements mem_reqs{};
-            vkGetImageMemoryRequirements(gfx.device, depth_image, &mem_reqs);
-            // depth_image_memory_size = mem_reqs.size;
-
-            VkMemoryAllocateInfo mem_alloc_info{};
-            mem_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            mem_alloc_info.allocationSize = mem_reqs.size;
-            mem_alloc_info.memoryTypeIndex = utils::find_memory_type(gfx.physical_device, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-            vk_check(vkAllocateMemory(gfx.device, &mem_alloc_info, nullptr, &depth_image_memory));
-            vk_check(vkBindImageMemory(gfx.device, depth_image, depth_image_memory, 0));
-
-            VkImageViewCreateInfo depth_image_view_ci = {};
-            depth_image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            depth_image_view_ci.image = depth_image;
-            depth_image_view_ci.format = DEPTH_FORMAT;
-            depth_image_view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            depth_image_view_ci.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-            depth_image_view_ci.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-            depth_image_view_ci.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-            depth_image_view_ci.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-            depth_image_view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-            depth_image_view_ci.subresourceRange.baseMipLevel = 0;
-            depth_image_view_ci.subresourceRange.baseArrayLayer = 0;
-            depth_image_view_ci.subresourceRange.layerCount = 1;
-            depth_image_view_ci.subresourceRange.levelCount = 1;
-
-            vk_check(vkCreateImageView(gfx.device, &depth_image_view_ci, nullptr, &depth_image_view));
-        }
+        
+       
         // Create frame buffer
         {
-            std::array<VkImageView, 2> attachments = {
-                color_image_view,
-                depth_image_view};
+            std::vector<VkImageView> attachments = {
+                position_view,
+                normal_view,
+                uv_view,
+                depth_image_view
+            };
             VkFramebufferCreateInfo frame_buffer_ci{};
             frame_buffer_ci.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
             frame_buffer_ci.renderPass = render_pass;
@@ -746,19 +722,122 @@ namespace gage::gfx::data
     void DeferedPBRPipeline::destroy_render_pass()
     {
         vkDestroyRenderPass(gfx.device, render_pass, nullptr);
+        vkDestroyFramebuffer(gfx.device, frame_buffer, nullptr);
+    }
 
-        vkDestroyImage(gfx.device, color_image, nullptr);
-        vkDestroyImageView(gfx.device, color_image_view, nullptr);
+    void DeferedPBRPipeline::create_g_buffer_images()
+    {
+        VkImageCreateInfo image_ci = {};
+        image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_ci.imageType = VK_IMAGE_TYPE_2D;
+        image_ci.extent.width = gfx.draw_extent.width;
+        image_ci.extent.height = gfx.draw_extent.height;
+        image_ci.extent.depth = 1;
+        image_ci.mipLevels = 1;
+        image_ci.arrayLayers = 1;
+        image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+        image_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
+
+        image_ci.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        image_ci.format = POSITION_FORMAT;
+        vk_check(vkCreateImage(gfx.device, &image_ci, nullptr, &position));
+
+
+        image_ci.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        image_ci.format = NORMAL_FORMAT;
+        vk_check(vkCreateImage(gfx.device, &image_ci, nullptr, &normal));
+
+
+        image_ci.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        image_ci.format = UV_FORMAT;
+        vk_check(vkCreateImage(gfx.device, &image_ci, nullptr, &uv));
+
+        image_ci.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        image_ci.format = DEPTH_FORMAT;
+        vk_check(vkCreateImage(gfx.device, &image_ci, nullptr, &depth_image));
+
+        auto allocate_memory = [this](VkImage &image, VkDeviceMemory &memory)
+        {
+            VkMemoryRequirements mem_reqs{};
+            vkGetImageMemoryRequirements(gfx.device, image, &mem_reqs);
+            VkMemoryAllocateInfo mem_alloc_info{};
+            mem_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            mem_alloc_info.allocationSize = mem_reqs.size;
+            mem_alloc_info.memoryTypeIndex = utils::find_memory_type(gfx.physical_device, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            vk_check(vkAllocateMemory(gfx.device, &mem_alloc_info, nullptr, &memory));
+            vk_check(vkBindImageMemory(gfx.device, image, memory, 0)); 
+        };
+
+        allocate_memory(position, position_memory);
+        allocate_memory(normal, normal_memory);
+        allocate_memory(uv, uv_memory);
+        allocate_memory(depth_image, depth_image_memory);
+
+        VkImageViewCreateInfo image_view_ci = {};
+        image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        image_view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        image_view_ci.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        image_view_ci.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        image_view_ci.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        image_view_ci.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+        image_view_ci.subresourceRange.baseMipLevel = 0;
+        image_view_ci.subresourceRange.baseArrayLayer = 0;
+        image_view_ci.subresourceRange.layerCount = 1;
+        image_view_ci.subresourceRange.levelCount = 1;
+
+
+        image_view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        image_view_ci.format = POSITION_FORMAT;
+        image_view_ci.image = position;
+        vk_check(vkCreateImageView(gfx.device, &image_view_ci, nullptr, &position_view));
+
+        image_view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        image_view_ci.format = NORMAL_FORMAT;
+        image_view_ci.image = normal;
+        vk_check(vkCreateImageView(gfx.device, &image_view_ci, nullptr, &normal_view));
+
+        image_view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        image_view_ci.format = UV_FORMAT;
+        image_view_ci.image = uv;
+        vk_check(vkCreateImageView(gfx.device, &image_view_ci, nullptr, &uv_view));
+
+        image_view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        image_view_ci.format = DEPTH_FORMAT;
+        image_view_ci.image = depth_image;
+        vk_check(vkCreateImageView(gfx.device, &image_view_ci, nullptr, &depth_image_view));
+    }
+    void DeferedPBRPipeline::destroy_g_buffer_images()
+    {
+        vkDestroyImageView(gfx.device, position_view, nullptr);
+        vkDestroyImage(gfx.device, position, nullptr);
+        vkFreeMemory(gfx.device, position_memory, nullptr);
+
+        vkDestroyImageView(gfx.device, normal_view, nullptr);
+        vkDestroyImage(gfx.device, normal, nullptr);
+        vkFreeMemory(gfx.device, normal_memory, nullptr);
+
+        vkDestroyImageView(gfx.device, uv_view, nullptr);
+        vkDestroyImage(gfx.device, uv, nullptr);
+        vkFreeMemory(gfx.device, uv_memory, nullptr);
+
         vkDestroyImage(gfx.device, depth_image, nullptr);
         vkDestroyImageView(gfx.device, depth_image_view, nullptr);
-
-        vkDestroyFramebuffer(gfx.device, frame_buffer, nullptr);
-        vkFreeMemory(gfx.device, color_image_memory, nullptr);
         vkFreeMemory(gfx.device, depth_image_memory, nullptr);
     }
 
-    VkImage DeferedPBRPipeline::get_color_image_handle() const
+
+    VkImage DeferedPBRPipeline::get_position() const 
     {
-        return color_image;
+        return position;
     }
+    VkImage DeferedPBRPipeline::get_normal() const
+    {
+        return normal;
+    }
+    VkImage DeferedPBRPipeline::get_uv() const
+    {
+        return uv;
+    }
+
 }

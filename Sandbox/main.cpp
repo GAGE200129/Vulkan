@@ -8,6 +8,7 @@
 #include <Core/src/gfx/data/Camera.hpp>
 #include <Core/src/gfx/draw/Model.hpp>
 #include <Core/src/gfx/data/DeferedPBRPipeline.hpp>
+#include <Core/src/gfx/data/terrain/Terrain.hpp>
 #include <Core/src/utils/Cvar.hpp>
 
 #include <thread>
@@ -42,6 +43,8 @@ int main()
 
             gfx::data::Camera camera{};
             camera.far = 100.0f;
+            //gfx::data::terrain::Terrain terrain{graphics, "res/terrains/test.ter"};
+
             while (!window.is_closing())
             {
                 win::update();
