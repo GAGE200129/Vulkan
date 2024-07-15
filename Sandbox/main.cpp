@@ -7,7 +7,7 @@
 #include <Core/src/utils/FileLoader.hpp>
 #include <Core/src/gfx/data/Camera.hpp>
 #include <Core/src/gfx/draw/Model.hpp>
-#include <Core/src/gfx/data/DefaultPipeline.hpp>
+#include <Core/src/gfx/data/DeferedPBRPipeline.hpp>
 #include <Core/src/utils/Cvar.hpp>
 
 #include <thread>
@@ -37,7 +37,7 @@ int main()
 
             std::optional<gfx::draw::Model> model, model3;
             model.emplace(graphics, "res/models/sponza.glb", gfx::draw::Model::Mode::Binary);
-            model3.emplace(graphics, "res/models/DamagedHelmet.gltf", gfx::draw::Model::Mode::ASCII);
+            model3.emplace(graphics, "res/models/box_textured.glb", gfx::draw::Model::Mode::Binary);
 
 
             gfx::data::Camera camera{};
@@ -45,40 +45,41 @@ int main()
             while (!window.is_closing())
             {
                 win::update();
-                static std::chrono::steady_clock::rep duration;
-                imgui_window.stats.frame_time = duration / 1000000.0;
+                // static std::chrono::steady_clock::rep duration;
+                // imgui_window.stats.frame_time = duration / 1000000.0;
                 imgui_window.clear();
                 imgui_window.draw(camera, window);
                 imgui_window.end_frame();
                
-                auto start = std::chrono::high_resolution_clock::now();
 
+
+
+                // auto start = std::chrono::high_resolution_clock::now();
                 auto frustum = camera.create_frustum(window.get_graphics().get_scaled_draw_extent().width, window.get_graphics().get_scaled_draw_extent().height);
-
-
                 auto cmd = graphics.clear(camera);
-                graphics.get_default_pipeline().get_shadow_pipeline().begin(cmd);
-                model.value().draw(cmd, graphics.get_default_pipeline().get_shadow_pipeline().get_layout());
-                model3.value().draw(cmd, graphics.get_default_pipeline().get_shadow_pipeline().get_layout());
-                graphics.get_default_pipeline().get_shadow_pipeline().end(cmd);
+                const auto& pbr_pipeline = graphics.get_defered_pbr_pipeline();
+                pbr_pipeline.get_shadow_pipeline().begin(cmd);
+                model.value().draw(cmd, pbr_pipeline.get_shadow_pipeline().get_layout());
+                model3.value().draw(cmd, pbr_pipeline.get_shadow_pipeline().get_layout());
+                pbr_pipeline.get_shadow_pipeline().end(cmd);
                 
-                graphics.get_default_pipeline().begin(cmd);
-                model.value().draw(cmd, graphics.get_default_pipeline().get_layout(), frustum);
-                model3.value().draw(cmd, graphics.get_default_pipeline().get_layout(), frustum);
-                graphics.get_default_pipeline().end(cmd);
+                pbr_pipeline.begin(cmd);
+                model.value().draw(cmd, pbr_pipeline.get_layout(), frustum);
+                model3.value().draw(cmd, pbr_pipeline.get_layout(), frustum);
+                pbr_pipeline.end(cmd);
 
                 
                 graphics.end_frame(cmd);
 
                
-                auto finish = std::chrono::high_resolution_clock::now();
-                duration = std::chrono::duration_cast<std::chrono::nanoseconds>(finish - start).count();
+                // auto finish = std::chrono::high_resolution_clock::now();
+                // duration = std::chrono::duration_cast<std::chrono::nanoseconds>(finish - start).count();
                 
 
-                static constexpr int64_t NS_PER_FRAME = (1.0 / 60.0) * 1000000000;
-                int64_t delay = NS_PER_FRAME - duration;
-                if (delay > 0)
-                    std::this_thread::sleep_for(std::chrono::nanoseconds(delay));
+                // static constexpr int64_t NS_PER_FRAME = (1.0 / 60.0) * 1000000000;
+                // int64_t delay = NS_PER_FRAME - duration;
+                // if (delay > 0)
+                //     std::this_thread::sleep_for(std::chrono::nanoseconds(delay));
             }
 
             graphics.wait();

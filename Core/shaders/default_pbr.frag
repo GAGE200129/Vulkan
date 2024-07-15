@@ -49,18 +49,9 @@ vec4 calculate_directional_light_pbr(in DirectionalLight light,
     float sampled_depth = texture(light_depth_map, vec3(proj_coords.xy, layer)).r; 
     
     float bias = max(0.05 * (1.0 - dot(n_unsampled, -light.direction)), 0.005);
-   
-    // vec2 texel_size = 1.0 / textureSize(light_depth_map, 0).xy;
-    // for (int x=-1 ; x <= 1 ; x++){
-    //     for (int y= -1 ; y <= 1 ; y++){
-    //         f
-            
+    bias *= 1.0 / (ubo.directional_light_cascade_planes[layer] * 0.5f);
 
-    //     }
-    // }
-    // if(proj_coords.z > 1.0) 
-    //     shadow = 0.0;
-    // shadow = 1.0 - (shadow / 9.0);
+
     
     float shadow = 1.0;
     if(sampled_depth + bias < current_depth)
@@ -107,8 +98,8 @@ void main()
     if(material.has_albedo)
         albedo *= texture(textures[0], fs_in.uv).rgb;
      
-    float metalic = 1.0;
-    float roughness = 0.0;
+    float metalic = 0.0;
+    float roughness = 1.0;
     if(material.has_metalic_roughness)
     {
         vec3 metalic_roughness = texture(textures[1], fs_in.uv).rgb;

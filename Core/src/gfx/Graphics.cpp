@@ -7,7 +7,7 @@
 #include "Exception.hpp"
 
 #include "data/Camera.hpp"
-#include "data/DefaultPipeline.hpp"
+#include "data/DeferedPBRPipeline.hpp"
 #include "data/ShadowPipeline.hpp"
 
 using namespace std::string_literals;
@@ -291,7 +291,7 @@ namespace gage::gfx
             vkUpdateDescriptorSets(device, 1, &descriptor_write, 0, nullptr);
         }
 
-        default_pipeline = std::make_unique<data::DefaultPipeline>(*this);
+        default_pipeline = std::make_unique<data::DeferedPBRPipeline>(*this);
         delete_stack.push([this]()
                           { default_pipeline.reset(); });
     }
@@ -602,12 +602,12 @@ namespace gage::gfx
         return swapchain.value();
     }
 
-    const data::DefaultPipeline &Graphics::get_default_pipeline() const
+    const data::DeferedPBRPipeline &Graphics::get_defered_pbr_pipeline() const
     {
         return *default_pipeline;
     }
 
-    data::DefaultPipeline &Graphics::get_default_pipeline()
+    data::DeferedPBRPipeline &Graphics::get_defered_pbr_pipeline()
     {
         return *default_pipeline;
     }

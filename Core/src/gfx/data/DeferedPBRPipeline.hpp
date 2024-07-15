@@ -6,17 +6,15 @@
 
 namespace gage::gfx::data
 {
-    class DefaultPipeline
+    class DeferedPBRPipeline
     {
     public:
-        DefaultPipeline(Graphics& gfx);
-        ~DefaultPipeline();
+        DeferedPBRPipeline(Graphics& gfx);
+        ~DeferedPBRPipeline();
 
-        void begin(VkCommandBuffer cmd);
-        void end(VkCommandBuffer cmd);
+        void begin(VkCommandBuffer cmd) const;
+        void end(VkCommandBuffer cmd) const;
 
-        VkCommandBuffer begin_cmd();
-        void end_cmd(VkCommandBuffer cmd);
         void set_push_constant(VkCommandBuffer cmd, const glm::mat4x4& transform);
 
         VkPipelineLayout get_layout() const;
@@ -31,6 +29,7 @@ namespace gage::gfx::data
         VkImage get_color_image_handle() const;
 
         ShadowPipeline& get_shadow_pipeline();
+        const ShadowPipeline& get_shadow_pipeline() const;
     private:
         void create_default_image_sampler();
         void destroy_default_image_sampler();

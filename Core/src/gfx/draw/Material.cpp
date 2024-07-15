@@ -2,7 +2,7 @@
 #include "Material.hpp"
 
 #include "../Graphics.hpp"
-#include "../data/DefaultPipeline.hpp"
+#include "../data/DeferedPBRPipeline.hpp"
 
 
 
@@ -51,7 +51,7 @@ namespace gage::gfx::draw
 
        
         uniform_buffer.emplace(gfx, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(UniformBuffer), &uniform_buffer_data);
-        descriptor_set = gfx.get_default_pipeline().allocate_instance_set(
+        descriptor_set = gfx.get_defered_pbr_pipeline().allocate_instance_set(
             sizeof(UniformBuffer), uniform_buffer.value().get_buffer_handle(),
             albedo_image.has_value() ? albedo_image.value().get_image_view() : VK_NULL_HANDLE, 
             albedo_image.has_value() ? albedo_image.value().get_sampler() : VK_NULL_HANDLE,
@@ -66,7 +66,7 @@ namespace gage::gfx::draw
 
     Material::~Material()
     {
-        gfx.get_default_pipeline().free_instance_set(descriptor_set);
+        gfx.get_defered_pbr_pipeline().free_instance_set(descriptor_set);
     }
 
     VkDescriptorSet Material::get_desc_set() const

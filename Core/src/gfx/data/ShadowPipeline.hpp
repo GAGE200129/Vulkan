@@ -15,8 +15,8 @@ namespace gage::gfx::data
         ShadowPipeline(const ShadowPipeline&) = delete;
         ShadowPipeline operator=(const ShadowPipeline&) = delete;
 
-        void begin(VkCommandBuffer cmd);
-        void end(VkCommandBuffer cmd);
+        void begin(VkCommandBuffer cmd) const;
+        void end(VkCommandBuffer cmd) const;
 
         void reset();
 

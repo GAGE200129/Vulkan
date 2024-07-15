@@ -4,7 +4,7 @@
 #include "Model.hpp"
 #include "Mesh.hpp"
 #include "../Graphics.hpp"
-#include "../data/DefaultPipeline.hpp"
+#include "../data/DeferedPBRPipeline.hpp"
 
 namespace gage::gfx::draw
 {

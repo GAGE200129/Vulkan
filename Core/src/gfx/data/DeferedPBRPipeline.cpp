@@ -1,5 +1,5 @@
 #include <pch.hpp>
-#include "DefaultPipeline.hpp"
+#include "DeferedPBRPipeline.hpp"
 
 #include "../Graphics.hpp"
 #include "Camera.hpp"
@@ -9,7 +9,7 @@
 
 namespace gage::gfx::data
 {
-    DefaultPipeline::DefaultPipeline(Graphics &gfx) : 
+    DeferedPBRPipeline::DeferedPBRPipeline(Graphics &gfx) : 
         gfx(gfx),
         shadow_pipeline(gfx),
         post_pipeline(gfx)
@@ -20,7 +20,7 @@ namespace gage::gfx::data
         create_default_image_sampler();
     }
 
-    DefaultPipeline::~DefaultPipeline()
+    DeferedPBRPipeline::~DeferedPBRPipeline()
     {
         destroy_render_pass();
         destroy_default_image_sampler();
@@ -29,7 +29,7 @@ namespace gage::gfx::data
     }
 
 
-    void DefaultPipeline::begin(VkCommandBuffer cmd)
+    void DeferedPBRPipeline::begin(VkCommandBuffer cmd) const
     {
         VkRenderPassBeginInfo render_pass_begin_info{};
         render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -56,30 +56,34 @@ namespace gage::gfx::data
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
         vkCmdSetViewport(cmd, 0, 1, &viewport);
     }
-    void DefaultPipeline::end(VkCommandBuffer cmd)
+    void DeferedPBRPipeline::end(VkCommandBuffer cmd) const
     {
         vkCmdEndRenderPass(cmd);
     }
 
 
 
-    VkPipelineLayout DefaultPipeline::get_layout() const
+    VkPipelineLayout DeferedPBRPipeline::get_layout() const
     {
         return pipeline_layout;
     }
-    ShadowPipeline& DefaultPipeline::get_shadow_pipeline()
+    ShadowPipeline& DeferedPBRPipeline::get_shadow_pipeline()
+    {
+        return shadow_pipeline;
+    }
+    const ShadowPipeline& DeferedPBRPipeline::get_shadow_pipeline() const
     {
         return shadow_pipeline;
     }
 
-    void DefaultPipeline::set_push_constant(VkCommandBuffer cmd, const glm::mat4x4 &transform)
+    void DeferedPBRPipeline::set_push_constant(VkCommandBuffer cmd, const glm::mat4x4 &transform)
     {
         vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), &transform);
     }
 
 
 
-    VkDescriptorSet DefaultPipeline::allocate_instance_set(size_t size_in_bytes, VkBuffer buffer,
+    VkDescriptorSet DeferedPBRPipeline::allocate_instance_set(size_t size_in_bytes, VkBuffer buffer,
                                                            VkImageView albedo_view, VkSampler albedo_sampler,
                                                            VkImageView metalic_roughness_view, VkSampler metalic_roughness_sampler,
                                                            VkImageView normal_view, VkSampler normal_sampler) const
@@ -164,12 +168,12 @@ namespace gage::gfx::data
         return res;
     }
 
-    void DefaultPipeline::free_instance_set(VkDescriptorSet set) const
+    void DeferedPBRPipeline::free_instance_set(VkDescriptorSet set) const
     {
         vkFreeDescriptorSets(gfx.device, gfx.desc_pool, 1, &set);
     }
 
-    void DefaultPipeline::create_default_image_sampler()
+    void DeferedPBRPipeline::create_default_image_sampler()
     {
         // Create default sampler
         VkSamplerCreateInfo sampler_info{};
@@ -332,14 +336,14 @@ namespace gage::gfx::data
         vmaDestroyBuffer(gfx.allocator, staging_buffer, staging_allocation);
     }
 
-    void DefaultPipeline::destroy_default_image_sampler()
+    void DeferedPBRPipeline::destroy_default_image_sampler()
     {
         vkDestroySampler(gfx.device, default_sampler, nullptr);
         vkDestroyImageView(gfx.device, default_image_view, nullptr);
         vmaDestroyImage(gfx.allocator, default_image, default_image_alloc);
     }
 
-    void DefaultPipeline::reset_pipeline()
+    void DeferedPBRPipeline::reset_pipeline()
     {
         destroy_render_pass();
         destroy_pipeline();
@@ -347,7 +351,7 @@ namespace gage::gfx::data
         create_pipeline();
     }
 
-    void DefaultPipeline::create_pipeline()
+    void DeferedPBRPipeline::create_pipeline()
     {
         std::vector<VkVertexInputBindingDescription> vertex_bindings{
             {.binding = 0, .stride = (sizeof(float) * 3), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}, // position
@@ -522,12 +526,12 @@ namespace gage::gfx::data
         vkDestroyShaderModule(gfx.device, geometry_shader, nullptr);
         vkDestroyShaderModule(gfx.device, fragment_shader, nullptr);
     }
-    void DefaultPipeline::destroy_pipeline()
+    void DeferedPBRPipeline::destroy_pipeline()
     {
         vkDestroyPipeline(gfx.device, pipeline, nullptr);
     }
 
-    void DefaultPipeline::create_pipeline_layout()
+    void DeferedPBRPipeline::create_pipeline_layout()
     {
         // PER INSTANCE SET LAYOUT
         std::vector<VkDescriptorSetLayoutBinding> instance_bindings{
@@ -556,13 +560,13 @@ namespace gage::gfx::data
         pipeline_layout_info.setLayoutCount = layouts.size();
         vk_check(vkCreatePipelineLayout(gfx.device, &pipeline_layout_info, nullptr, &pipeline_layout));
     }
-    void DefaultPipeline::destroy_pipeline_layout()
+    void DeferedPBRPipeline::destroy_pipeline_layout()
     {
         vkDestroyPipelineLayout(gfx.device, pipeline_layout, nullptr);
         vkDestroyDescriptorSetLayout(gfx.device, instance_set_layout, nullptr);
     }
 
-    void DefaultPipeline::create_render_pass()
+    void DeferedPBRPipeline::create_render_pass()
     {
         VkAttachmentDescription color_attachment{};
         color_attachment.format = COLOR_FORMAT;
@@ -739,7 +743,7 @@ namespace gage::gfx::data
             vk_check(vkCreateFramebuffer(gfx.device, &frame_buffer_ci, nullptr, &frame_buffer));
         }
     }
-    void DefaultPipeline::destroy_render_pass()
+    void DeferedPBRPipeline::destroy_render_pass()
     {
         vkDestroyRenderPass(gfx.device, render_pass, nullptr);
 
@@ -753,7 +757,7 @@ namespace gage::gfx::data
         vkFreeMemory(gfx.device, depth_image_memory, nullptr);
     }
 
-    VkImage DefaultPipeline::get_color_image_handle() const
+    VkImage DeferedPBRPipeline::get_color_image_handle() const
     {
         return color_image;
     }

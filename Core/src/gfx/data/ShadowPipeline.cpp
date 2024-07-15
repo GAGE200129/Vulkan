@@ -28,7 +28,7 @@ namespace gage::gfx::data
         destroy_pipeline_layout();
     }
 
-    void ShadowPipeline::begin(VkCommandBuffer cmd)
+    void ShadowPipeline::begin(VkCommandBuffer cmd) const
     {
         // Bind global set of graphics
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &gfx.frame_datas[gfx.frame_index].global_set, 0, nullptr);
@@ -47,7 +47,7 @@ namespace gage::gfx::data
 
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
     }
-    void ShadowPipeline::end(VkCommandBuffer cmd)
+    void ShadowPipeline::end(VkCommandBuffer cmd) const
     {
         vkCmdEndRenderPass(cmd);
     }

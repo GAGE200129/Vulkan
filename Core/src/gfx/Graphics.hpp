@@ -27,7 +27,7 @@ namespace gage::gfx::data
     class CPUBuffer;
     class DescriptorSet;
     class Image;
-    class DefaultPipeline;
+    class DeferedPBRPipeline;
     class ShadowPipeline;
 }
 
@@ -52,7 +52,7 @@ namespace gage::gfx
         class GlobalUniform;
         friend class bind::IBindable;
         friend class data::Swapchain;
-        friend class data::DefaultPipeline;
+        friend class data::DeferedPBRPipeline;
         friend class data::ShadowPipeline;
         friend class data::GPUBuffer;
         friend class data::CPUBuffer;
@@ -82,8 +82,8 @@ namespace gage::gfx
         const glm::mat4& get_projection() const;
         const glm::mat4& get_view() const;
         const data::Swapchain& get_swapchain() const;
-        const data::DefaultPipeline& get_default_pipeline() const;
-        data::DefaultPipeline& get_default_pipeline();
+        const data::DeferedPBRPipeline& get_defered_pbr_pipeline() const;
+        data::DeferedPBRPipeline& get_defered_pbr_pipeline();
 
 
         GlobalUniform& get_global_uniform();
@@ -160,6 +160,6 @@ namespace gage::gfx
         uint32_t directional_light_shadow_map_resolution_temp{2048};
         float directional_light_shadow_map_distance{50.0f};
         bool directional_light_shadow_map_resize_requested{};
-        std::unique_ptr<data::DefaultPipeline> default_pipeline{};
+        std::unique_ptr<data::DeferedPBRPipeline> default_pipeline{};
     };
 }
