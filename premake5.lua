@@ -36,7 +36,7 @@ project "Core"
    }
    
    
-   links { "glfw", "vulkan", "luajit-5.1", "bfd", "GL"}
+   links { "glfw", "vulkan", "luajit-5.1", "bfd", "GL", "Jolt"}
    includedirs { 
       "%{prj.location}/src",
       "%{prj.location}/ThirdParty",

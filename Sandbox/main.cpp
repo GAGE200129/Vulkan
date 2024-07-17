@@ -17,6 +17,8 @@
 #include <Core/src/gfx/data/terrain/Terrain.hpp>
 #include <Core/src/utils/Cvar.hpp>
 
+#include <Core/src/phys/phys.hpp>
+
 #include <thread>
 #include <iostream>
 
@@ -34,6 +36,7 @@ int main()
     {
         log::init();
         win::init();
+        phys::init();
         {
             win::Window window(800, 600, "Hello world");
             auto &graphics = window.get_graphics();
@@ -45,6 +48,8 @@ int main()
 
             gfx::data::Camera camera{};
             camera.far = 100.0f;
+
+            
             
 
             std::vector<gfx::data::PointLight::Data> point_lights{};
@@ -75,6 +80,8 @@ int main()
 
             while (!window.is_closing())
             {
+                phys::test_update();
+                
                 win::update();
                 imgui_window.clear();
                 imgui_window.draw(camera, window);
@@ -123,8 +130,10 @@ int main()
             model.reset();
             // model2.reset();
             model3.reset();
+
         }
         win::shutdown();
+        phys::shutdown();
     }
     catch (gfx::GraphicsException &e)
     {
