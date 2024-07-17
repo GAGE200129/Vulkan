@@ -3,7 +3,7 @@
 
 #include "../Exception.hpp"
 #include "../Graphics.hpp"
-#include "../data/DeferedPBRPipeline.hpp"
+#include "../data/PBRPipeline.hpp"
 
 #include "Model.hpp"
 
@@ -152,10 +152,10 @@ namespace gage::gfx::draw
             VkDeviceSize offsets[] =
                 {0, 0, 0};
 
-            VkDescriptorSet desc_set = model.materials.at(section.material_index)->get_desc_set();
+            const VkDescriptorSet& desc_set = model.materials.at(section.material_index)->get_desc_set();
             vkCmdPushConstants(cmd, layout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), glm::value_ptr(transform));
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                    gfx.get_defered_pbr_pipeline().get_layout(),
+                                    gfx.get_pbr_pipeline().get_layout(),
                                     1,
                                     1, &desc_set, 0, nullptr);
 

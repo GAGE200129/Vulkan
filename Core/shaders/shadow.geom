@@ -1,12 +1,11 @@
 #version 460 core
 #extension GL_ARB_shading_language_include : require
 
-#include "global_uniform_buffer.inc"
+#include "includes/global_uniform_buffer.inc"
     
 layout(triangles, invocations = CASCADE_COUNT) in;
 layout(triangle_strip, max_vertices = 3) out;
     
-#include "global_uniform_buffer.inc"
     
 void main()
 {          

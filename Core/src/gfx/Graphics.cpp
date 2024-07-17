@@ -8,8 +8,9 @@
 #include "Exception.hpp"
 
 #include "data/Camera.hpp"
-#include "data/DeferedPBRPipeline.hpp"
-#include "data/ShadowPipeline.hpp"
+#include "data/GBuffer.hpp"
+#include "data/PBRPipeline.hpp"
+#include "data/FinalAmbient.hpp"
 
 using namespace std::string_literals;
 
@@ -290,130 +291,17 @@ namespace gage::gfx
             vkUpdateDescriptorSets(device, 1, &descriptor_write, 0, nullptr);
         }
 
-        default_pipeline = std::make_unique<data::DeferedPBRPipeline>(*this);
+        g_buffer = std::make_unique<data::GBuffer>(*this);
         delete_stack.push([this]()
-                          { default_pipeline.reset(); });
+                          { g_buffer.reset(); });
 
-        //==TEST COMPUTE PIPELINE==//
-        {
-            // Create output image
-            VkImageCreateInfo img_ci = {};
-            img_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-            img_ci.imageType = VK_IMAGE_TYPE_2D;
-            img_ci.extent.width = draw_extent.width;
-            img_ci.extent.height = draw_extent.height;
-            img_ci.extent.depth = 1;
-            img_ci.mipLevels = 1;
-            img_ci.arrayLayers = 1;
-            img_ci.format = VK_FORMAT_R16G16B16A16_SFLOAT;
-            img_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
-            img_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            img_ci.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
-            img_ci.samples = VK_SAMPLE_COUNT_1_BIT;
+        pbr_pipeline = std::make_unique<data::PBRPipeline>(*this);
+        delete_stack.push([this]()
+                          { pbr_pipeline.reset(); });
 
-            VmaAllocationCreateInfo alloc_ci = {};
-            alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
-            alloc_ci.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-
-            vk_check(vmaCreateImage(allocator, &img_ci, &alloc_ci, &compute_image, &compute_memory, nullptr));
-            delete_stack.push([this]()
-                              { vmaDestroyImage(allocator, compute_image, compute_memory); });
-
-            // Create image view
-
-            VkImageViewCreateInfo view_info{};
-            view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            view_info.image = compute_image;
-            view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            view_info.format = VK_FORMAT_R16G16B16A16_SFLOAT;
-            view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            view_info.subresourceRange.baseMipLevel = 0;
-            view_info.subresourceRange.levelCount = 1;
-            view_info.subresourceRange.baseArrayLayer = 0;
-            view_info.subresourceRange.layerCount = 1;
-
-            vk_check(vkCreateImageView(device, &view_info, nullptr, &compute_image_view));
-            delete_stack.push([this]()
-                              { vkDestroyImageView(device, compute_image_view, nullptr); });
-
-            // Create descriptor set layout
-            std::vector<VkDescriptorSetLayoutBinding> bindings = {
-                {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT, .pImmutableSamplers = nullptr},
-                {.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT, .pImmutableSamplers = nullptr},
-            };
-
-            VkDescriptorSetLayoutCreateInfo desc_layout_ci{};
-            desc_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-            desc_layout_ci.bindingCount = bindings.size();
-            desc_layout_ci.pBindings = bindings.data();
-            desc_layout_ci.flags = 0;
-            vk_check(vkCreateDescriptorSetLayout(device, &desc_layout_ci, nullptr, &compute_set_layout));
-            delete_stack.push([this]()
-                              { vkDestroyDescriptorSetLayout(device, compute_set_layout, nullptr); });
-            // Allocate descriptor set
-            VkDescriptorSetAllocateInfo set_alloc_info{};
-            set_alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-            set_alloc_info.descriptorPool = desc_pool;
-            set_alloc_info.descriptorSetCount = 1;
-            set_alloc_info.pSetLayouts = &compute_set_layout;
-            vkAllocateDescriptorSets(device, &set_alloc_info, &compute_set);
-            delete_stack.push([&, this]()
-                              { vkFreeDescriptorSets(device, desc_pool, 1, &compute_set); });
-
-            VkDescriptorImageInfo image_info{};
-            VkWriteDescriptorSet descriptor_write{};
-            descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptor_write.descriptorCount = 1;
-            descriptor_write.dstSet = compute_set;
-            descriptor_write.pImageInfo = &image_info;
-
-            image_info.sampler = VK_NULL_HANDLE;
-            image_info.imageView = compute_image_view;
-            image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-            descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-            descriptor_write.dstBinding = 0;
-            vkUpdateDescriptorSets(device, 1, &descriptor_write, 0, nullptr);
-
-            // Create pipeline layout
-            VkPipelineLayoutCreateInfo layout = {};
-            layout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-            layout.pNext = nullptr;
-            layout.pSetLayouts = &compute_set_layout;
-            layout.setLayoutCount = 1;
-
-            vk_check(vkCreatePipelineLayout(device, &layout, nullptr, &compute_layout));
-            delete_stack.push([&, this]()
-                              { vkDestroyPipelineLayout(device, compute_layout, nullptr); });
-
-            // Create pipeline
-
-            auto shader_binary = utils::file_path_to_binary("Core/shaders/compiled/basic_defered.comp.spv");
-            VkShaderModule compute_shader{};
-
-            VkShaderModuleCreateInfo shader_module_ci = {};
-            shader_module_ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-            shader_module_ci.codeSize = shader_binary.size();
-            shader_module_ci.pCode = (uint32_t *)shader_binary.data();
-            vk_check(vkCreateShaderModule(device, &shader_module_ci, nullptr, &compute_shader));
-
-            VkPipelineShaderStageCreateInfo stage_info = {};
-            stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-            stage_info.pNext = nullptr;
-            stage_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-            stage_info.module = compute_shader;
-            stage_info.pName = "main";
-
-            VkComputePipelineCreateInfo pipeline_ci{};
-            pipeline_ci.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-            pipeline_ci.pNext = nullptr;
-            pipeline_ci.layout = compute_layout;
-            pipeline_ci.stage = stage_info;
-
-            vk_check(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipeline_ci, nullptr, &compute_pipeline));
-            delete_stack.push([&, this]()
-                              { vkDestroyPipeline(device, compute_pipeline, nullptr); });
-            vkDestroyShaderModule(device, compute_shader, nullptr);
-        }
+        final_ambient = std::make_unique<data::FinalAmbient>(*this);
+        delete_stack.push([this]()
+                          { final_ambient.reset(); });
     }
 
     Graphics::~Graphics()
@@ -452,8 +340,8 @@ namespace gage::gfx
             draw_extent = draw_extent_temp;
             swapchain.reset();
             swapchain.emplace(*this);
-            default_pipeline->reset();
-
+            g_buffer->reset();
+            final_ambient->reset();
             resize_requested = false;
         }
 
@@ -461,7 +349,7 @@ namespace gage::gfx
         {
             vkDeviceWaitIdle(device);
             directional_light_shadow_map_resolution = directional_light_shadow_map_resolution_temp;
-            default_pipeline->get_shadow_pipeline().reset();
+
             directional_light_shadow_map_resize_requested = false;
         }
 
@@ -493,8 +381,8 @@ namespace gage::gfx
         cmd_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
         vk_check(vkBeginCommandBuffer(cmd, &cmd_begin_info));
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, default_pipeline->get_layout(), 0, 1, &frame_datas[frame_index].global_set, 0, nullptr);
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, default_pipeline->get_shadow_pipeline().get_layout(), 0, 1, &frame_datas[frame_index].global_set, 0, nullptr);
+        
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, final_ambient->get_layout(), 0, 1, &frame_datas[frame_index].global_set, 0, nullptr);
 
         return cmd;
     }
@@ -505,60 +393,11 @@ namespace gage::gfx
         VkSemaphore &present_semaphore = frame_datas[frame_index].present_semaphore;
         VkSemaphore &render_semaphore = frame_datas[frame_index].render_semaphore;
         VkFence &render_fence = frame_datas[frame_index].render_fence;
+
         VkImageMemoryBarrier swapchain_memory_barrier{};
         swapchain_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         swapchain_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         swapchain_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-        swapchain_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        swapchain_memory_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-        swapchain_memory_barrier.srcAccessMask = 0;
-        swapchain_memory_barrier.dstAccessMask = 0;
-        swapchain_memory_barrier.image = compute_image;
-        swapchain_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        swapchain_memory_barrier.subresourceRange.baseMipLevel = 0;
-        swapchain_memory_barrier.subresourceRange.levelCount = 1;
-        swapchain_memory_barrier.subresourceRange.baseArrayLayer = 0;
-        swapchain_memory_barrier.subresourceRange.layerCount = 1;
-
-         vkCmdPipelineBarrier(
-            cmd,
-            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-            0,
-            0, nullptr,
-            0, nullptr,
-            1, &swapchain_memory_barrier);
-
-        // bind the gradient drawing compute pipeline
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline);
-
-        // bind the descriptor set containing the draw image for the compute pipeline
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, compute_layout, 0, 1, &compute_set, 0, nullptr);
-
-        // execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
-        vkCmdDispatch(cmd, std::ceil(draw_extent.width / 16.0), std::ceil(draw_extent.height / 16.0), 1);
-
-        
-        swapchain_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-        swapchain_memory_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        swapchain_memory_barrier.srcAccessMask = 0;
-        swapchain_memory_barrier.dstAccessMask = 0;
-        swapchain_memory_barrier.image = compute_image;
-        swapchain_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        swapchain_memory_barrier.subresourceRange.baseMipLevel = 0;
-        swapchain_memory_barrier.subresourceRange.levelCount = 1;
-        swapchain_memory_barrier.subresourceRange.baseArrayLayer = 0;
-        swapchain_memory_barrier.subresourceRange.layerCount = 1;
-
-         vkCmdPipelineBarrier(
-            cmd,
-            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-            0,
-            0, nullptr,
-            0, nullptr,
-            1, &swapchain_memory_barrier);
-        
-
         // Blit swapchain color image to swapchain image and wait for color result
         swapchain_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         swapchain_memory_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -601,7 +440,7 @@ namespace gage::gfx
         region.dstOffsets[1].y = draw_extent.height;
         region.dstOffsets[1].z = 1;
 
-        vkCmdBlitImage(cmd, compute_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        vkCmdBlitImage(cmd, g_buffer->get_final_color(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                        swapchain->at(swapchain_image_index), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                        1, &region, VK_FILTER_NEAREST);
 
@@ -761,14 +600,19 @@ namespace gage::gfx
         return swapchain.value();
     }
 
-    const data::DeferedPBRPipeline &Graphics::get_defered_pbr_pipeline() const
+    const data::GBuffer &Graphics::get_g_buffer() const
     {
-        return *default_pipeline;
+        return *g_buffer;
     }
 
-    data::DeferedPBRPipeline &Graphics::get_defered_pbr_pipeline()
+    const data::PBRPipeline &Graphics::get_pbr_pipeline() const
     {
-        return *default_pipeline;
+        return *pbr_pipeline;
+    }
+
+    const data::FinalAmbient &Graphics::get_final_ambient() const
+    {
+        return *final_ambient;
     }
 
     void Graphics::resize(int width, int height)

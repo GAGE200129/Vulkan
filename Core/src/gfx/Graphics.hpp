@@ -27,9 +27,10 @@ namespace gage::gfx::data
     class CPUBuffer;
     class DescriptorSet;
     class Image;
-    class DeferedPBRPipeline;
+    class PBRPipeline;
     class ShadowPipeline;
     class GBuffer;
+    class FinalAmbient;
 }
 
 struct GLFWwindow;
@@ -53,13 +54,14 @@ namespace gage::gfx
         class GlobalUniform;
         friend class bind::IBindable;
         friend class data::Swapchain;
-        friend class data::DeferedPBRPipeline;
+        friend class data::PBRPipeline;
         friend class data::ShadowPipeline;
         friend class data::GPUBuffer;
         friend class data::CPUBuffer;
         friend class data::DescriptorSet;
         friend class data::Image;
         friend class data::GBuffer;
+        friend class data::FinalAmbient;
         
     public:
         Graphics(GLFWwindow *window, std::string app_name);
@@ -84,8 +86,9 @@ namespace gage::gfx
         const glm::mat4& get_projection() const;
         const glm::mat4& get_view() const;
         const data::Swapchain& get_swapchain() const;
-        const data::DeferedPBRPipeline& get_defered_pbr_pipeline() const;
-        data::DeferedPBRPipeline& get_defered_pbr_pipeline();
+        const data::GBuffer& get_g_buffer() const;
+        const data::PBRPipeline& get_pbr_pipeline() const;
+        const data::FinalAmbient& get_final_ambient() const;
         GlobalUniform& get_global_uniform();
         VkExtent2D get_scaled_draw_extent();
 
@@ -159,18 +162,9 @@ namespace gage::gfx
         uint32_t directional_light_shadow_map_resolution_temp{2048};
         float directional_light_shadow_map_distance{50.0f};
         bool directional_light_shadow_map_resize_requested{};
-        std::unique_ptr<data::DeferedPBRPipeline> default_pipeline{};
-
-        //Compute pipelines
-        VkDescriptorSetLayout compute_set_layout{};
-        VkDescriptorSet compute_set{};
-        VkPipelineLayout compute_layout{};
-        VkPipeline compute_pipeline{};
-
-        VkImage compute_image{};
-        VkImageView compute_image_view{};
-        VmaAllocation compute_memory{};
-    
+        std::unique_ptr<data::GBuffer> g_buffer{};
+        std::unique_ptr<data::PBRPipeline> pbr_pipeline{};
+        std::unique_ptr<data::FinalAmbient> final_ambient{};
         
     };
 }

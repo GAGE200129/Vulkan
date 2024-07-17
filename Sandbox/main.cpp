@@ -7,7 +7,10 @@
 #include <Core/src/utils/FileLoader.hpp>
 #include <Core/src/gfx/data/Camera.hpp>
 #include <Core/src/gfx/draw/Model.hpp>
-#include <Core/src/gfx/data/DeferedPBRPipeline.hpp>
+#include <Core/src/gfx/data/GBuffer.hpp>
+#include <Core/src/gfx/data/PBRPipeline.hpp>
+#include <Core/src/gfx/data/FinalAmbient.hpp>
+#include <Core/src/gfx/Graphics.hpp>
 #include <Core/src/gfx/data/terrain/Terrain.hpp>
 #include <Core/src/utils/Cvar.hpp>
 
@@ -21,11 +24,9 @@
 using namespace gage;
 using namespace std::chrono_literals;
 
-
 int main()
 {
 
-    
     try
     {
         log::init();
@@ -35,61 +36,47 @@ int main()
             auto &graphics = window.get_graphics();
             win::ImguiWindow imgui_window{graphics};
 
-
             std::optional<gfx::draw::Model> model, model3;
             model.emplace(graphics, "res/models/sponza.glb", gfx::draw::Model::Mode::Binary);
             model3.emplace(graphics, "res/models/box_textured.glb", gfx::draw::Model::Mode::Binary);
 
-
             gfx::data::Camera camera{};
             camera.far = 100.0f;
-            //gfx::data::terrain::Terrain terrain{graphics, "res/terrains/test.ter"};
+            
 
             while (!window.is_closing())
             {
                 win::update();
-                // static std::chrono::steady_clock::rep duration;
-                // imgui_window.stats.frame_time = duration / 1000000.0;
                 imgui_window.clear();
                 imgui_window.draw(camera, window);
                 imgui_window.end_frame();
-               
 
-
-
-                // auto start = std::chrono::high_resolution_clock::now();
                 auto frustum = camera.create_frustum(window.get_graphics().get_scaled_draw_extent().width, window.get_graphics().get_scaled_draw_extent().height);
                 auto cmd = graphics.clear(camera);
-                const auto& pbr_pipeline = graphics.get_defered_pbr_pipeline();
-                pbr_pipeline.get_shadow_pipeline().begin(cmd);
-                model.value().draw(cmd, pbr_pipeline.get_shadow_pipeline().get_layout());
-                model3.value().draw(cmd, pbr_pipeline.get_shadow_pipeline().get_layout());
-                pbr_pipeline.get_shadow_pipeline().end(cmd);
-                
-                pbr_pipeline.begin(cmd);
+
+                const auto &g_buffer = graphics.get_g_buffer();
+                g_buffer.begin(cmd);
+
+                const auto &pbr_pipeline = graphics.get_pbr_pipeline();
+                const auto &final_ambient = graphics.get_final_ambient();
+                pbr_pipeline.bind(cmd);
                 model.value().draw(cmd, pbr_pipeline.get_layout(), frustum);
                 model3.value().draw(cmd, pbr_pipeline.get_layout(), frustum);
-                pbr_pipeline.end(cmd);
 
-                
+                g_buffer.end(cmd);
+
+                g_buffer.begin_finalpass(cmd);
+                final_ambient.process(cmd);
+
+                g_buffer.end(cmd);
+
                 graphics.end_frame(cmd);
-
-               
-                // auto finish = std::chrono::high_resolution_clock::now();
-                // duration = std::chrono::duration_cast<std::chrono::nanoseconds>(finish - start).count();
-                
-
-                // static constexpr int64_t NS_PER_FRAME = (1.0 / 60.0) * 1000000000;
-                // int64_t delay = NS_PER_FRAME - duration;
-                // if (delay > 0)
-                //     std::this_thread::sleep_for(std::chrono::nanoseconds(delay));
             }
 
             graphics.wait();
             model.reset();
-            //model2.reset();
+            // model2.reset();
             model3.reset();
-
         }
         win::shutdown();
     }

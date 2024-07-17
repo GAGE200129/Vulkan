@@ -4,26 +4,24 @@
 #include "includes/global_uniform_buffer.inc"
 #include "includes/material.inc"
 
-layout(location = 0) in FSOutput
+layout(location = 0) in VSOutput
 {
+    vec3 world_pos;
     vec3 normal;
     vec2 uv;
-    vec3 world_pos;
     mat3 TBN;
 } fs_in; 
   
 
 
 //output write
-layout (location = 0) out vec4 outFragColor;
-layout (location = 1) out vec3 out_g_buffer_position;
+layout (location = 0) out vec3 out_g_buffer_position;
+layout (location = 1) out vec3 out_g_buffer_normal;
+layout (location = 2) out vec3 out_g_buffer_albedo;
 
 
-
-
-void main() 
+void main()
 {
-    vec3 to_cam_dir = normalize(ubo.camera_position - fs_in.world_pos);
 
     vec3 albedo = material.color.rgb;
     if(material.has_albedo)
@@ -39,8 +37,7 @@ void main()
         metalic = metalic_roughness.b;
     }
 
-    vec3 n_unsampled = normalize(fs_in.normal);
-    vec3 n = n_unsampled;
+    vec3 n = normalize(fs_in.normal);
     if(material.has_normal)
     {
        n = texture(textures[2], fs_in.uv).rgb; 
@@ -48,16 +45,8 @@ void main()
        n = normalize(fs_in.TBN * n); 
     }
 
-	outFragColor = calculate_directional_light_pbr(ubo.directional_light,
-        fs_in.world_pos,
-        (ubo.view * vec4(fs_in.world_pos, 1.0)).xyz,
-        directional_light_map,
-        ubo.directional_light_cascade_planes,
-        ubo.directional_light_proj_views,
-        n,
-        n_unsampled,
-        to_cam_dir,
-        albedo, metalic, roughness, 1.0);
 
     out_g_buffer_position = fs_in.world_pos;
+    out_g_buffer_normal = n;
+    out_g_buffer_albedo = albedo;
 }

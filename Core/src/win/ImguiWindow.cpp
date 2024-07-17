@@ -10,7 +10,7 @@
 #include <Core/src/gfx/Graphics.hpp>
 #include <Core/src/gfx/data/Camera.hpp>
 #include <Core/src/gfx/data/Swapchain.hpp>
-#include <Core/src/gfx/data/DeferedPBRPipeline.hpp>
+#include <Core/src/gfx/data/PBRPipeline.hpp>
 
 
 #include "Window.hpp"

@@ -1,7 +1,7 @@
 #version 460
 #extension GL_ARB_shading_language_include : require
 
-#include "global_uniform_buffer.inc"
+#include "includes/global_uniform_buffer.inc"
 
 layout(location = 0) in vec3 in_pos;
 layout(location = 1) in vec3 in_normal;
