@@ -356,6 +356,7 @@ namespace gage::gfx
             swapchain.emplace(*this);
             g_buffer->reset();
             final_ambient->reset();
+            directional_light->reset();
             resize_requested = false;
         }
 
@@ -363,7 +364,7 @@ namespace gage::gfx
         {
             vkDeviceWaitIdle(device);
             directional_light_shadow_map_resolution = directional_light_shadow_map_resolution_temp;
-
+            g_buffer->reset_shadowmap();
             directional_light_shadow_map_resize_requested = false;
         }
 

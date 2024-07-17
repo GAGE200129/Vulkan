@@ -82,9 +82,6 @@ void main()
         float NdotL = max(dot(n, L), 0.0);        
         Lo += (kD * albedo / PI + specular) * radiance * NdotL;
     } 
-    //vec3 ambient = vec3(0.3) * albedo * ao;
-
-    //out_color = vec4(current_depth, current_depth, current_depth, 1.0);
 
     out_color = vec4(Lo * shadow, 1);
 }

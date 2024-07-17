@@ -141,19 +141,22 @@ namespace gage::win
             static int resolution = 1024;
             static float distances[] = {10.0f, 20.0f, 50.0f};
             auto& ubo = window.get_graphics().get_global_uniform();
-            ImGui::Text("Directional light");
-            if(ImGui::DragFloat3("Direction", &ubo.directional_light_direction.x, 0.01f, -1, 1))
+
+            ImGui::ColorEdit3("Ambient: color", &ubo.ambient_light_color.x);
+            ImGui::DragFloat("Ambient: intensity", &ubo.ambient_light_intensity, 0.01f, 0.0f, 10.0f);
+            ImGui::Separator();
+            if(ImGui::DragFloat3("Directional: direction", &ubo.directional_light_direction.x, 0.01f, -1, 1))
             {
                 ubo.directional_light_direction = glm::normalize(ubo.directional_light_direction);
             }
-            ImGui::ColorEdit3("Color", &ubo.directional_light_color.x);
-            if(ImGui::DragInt("Shadow map resolution", &resolution, 1.0f, 512, 4096))
+            ImGui::ColorEdit3("Directional: color", &ubo.directional_light_color.x);
+            if(ImGui::DragInt("Directional: Shadow map resolution", &resolution, 1.0f, 512, 4096))
             {
                 window.get_graphics().resize_shadow_map(resolution);
             }
-            bool distances_dirty = ImGui::DragFloat("Shadow map cascade distance 1", &distances[0], 0.1f, 0.1f, 2048.0f);
-            distances_dirty |= ImGui::DragFloat("Shadow map cascade distance 2", &distances[1], 0.1f, 0.1f, 2048.0f);
-            distances_dirty |= ImGui::DragFloat("Shadow map cascade distance 3", &distances[2], 0.1f, 0.1f, 2048.0f);
+            bool distances_dirty = ImGui::DragFloat("Directional: Shadow map cascade distance 1", &distances[0], 0.1f, 0.1f, 2048.0f);
+            distances_dirty |= ImGui::DragFloat("Directional: Shadow map cascade distance 2", &distances[1], 0.1f, 0.1f, 2048.0f);
+            distances_dirty |= ImGui::DragFloat("Directional: Shadow map cascade distance 3", &distances[2], 0.1f, 0.1f, 2048.0f);
             if(distances_dirty)
             {
                 ubo.directional_light_cascade_planes[0].x = distances[0];

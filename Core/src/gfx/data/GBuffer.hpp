@@ -32,11 +32,29 @@ namespace gage::gfx::data
         VkImage get_final_color() const;
 
         void reset();
+        void reset_shadowmap();
 
     private:
-        void create_images();
-        void create_framebuffers();
-        void create_render_passes();
+        void create_shadowpass_image();
+        void create_image();
+        void create_finalpass_image();
+
+
+        void create_shadowpass_framebuffer();
+        void create_framebuffer();
+        void create_finalpass_framebuffer();
+
+        void create_shadowpass_render_pass();
+        void create_render_pass();
+        void create_finalpass_render_pass();
+        
+        void destroy_shadowpass_image();
+        void destroy_image();
+        void destroy_finalpass_image();
+
+        void destroy_shadowpass_framebuffer();
+        void destroy_framebuffer();
+        void destroy_finalpass_framebuffer();
     private:
         static constexpr VkFormat SHADOW_FORMAT = {VK_FORMAT_D32_SFLOAT};
         static constexpr VkFormat POSITION_FORMAT = {VK_FORMAT_R16G16B16_SFLOAT};
