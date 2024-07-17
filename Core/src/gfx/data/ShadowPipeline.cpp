@@ -1,69 +1,55 @@
 #include <pch.hpp>
 #include "ShadowPipeline.hpp"
 
+#include "../Graphics.hpp"
+
 #include <Core/src/utils/FileLoader.hpp>
 #include <Core/src/utils/VulkanHelper.hpp>
+
+#include "GBuffer.hpp"
 
 namespace gage::gfx::data
 {
 
     ShadowPipeline::ShadowPipeline(Graphics &gfx) : gfx(gfx)
     {
-        create_render_pass();
-        create_depth_image();
-        create_framebuffer();
+
         create_pipeline_layout();
         create_pipeline();
 
-        // Link global set with depth image
-        link_depth_to_global_set();
     }
 
     ShadowPipeline::~ShadowPipeline()
     {
-        destroy_framebuffer();
-        destroy_depth_image();
-        destroy_render_pass();
         destroy_pipeline();
         destroy_pipeline_layout();
     }
 
-    void ShadowPipeline::begin(VkCommandBuffer cmd) const
+    void ShadowPipeline::bind(VkCommandBuffer cmd) const
     {
-        // Bind global set of graphics
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &gfx.frame_datas[gfx.frame_index].global_set, 0, nullptr);
 
-        VkRenderPassBeginInfo render_pass_begin_info{};
-        render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        render_pass_begin_info.renderPass = render_pass;
-        render_pass_begin_info.framebuffer = frame_buffer;
-        render_pass_begin_info.renderArea.offset = {0, 0};
-        render_pass_begin_info.renderArea.extent = VkExtent2D{gfx.directional_light_shadow_map_resolution, gfx.directional_light_shadow_map_resolution};
-        std::array<VkClearValue, 1> clear_values{};
-        clear_values[0].depthStencil = {1.0, 0};
-        render_pass_begin_info.clearValueCount = clear_values.size();
-        render_pass_begin_info.pClearValues = clear_values.data();
-        vkCmdBeginRenderPass(cmd, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+        // Dummy viewport state
+        VkViewport viewport = {};
+        viewport.x = 0;
+        viewport.y = 0;
+        viewport.width = gfx.directional_light_shadow_map_resolution;
+        viewport.height = gfx.directional_light_shadow_map_resolution;
+        viewport.minDepth = 0.f;
+        viewport.maxDepth = 1.f;
 
+        VkRect2D scissor = {};
+        scissor.offset.x = 0;
+        scissor.offset.y = 0;
+        scissor.extent.width = gfx.directional_light_shadow_map_resolution;
+        scissor.extent.height = gfx.directional_light_shadow_map_resolution;
+        
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-    }
-    void ShadowPipeline::end(VkCommandBuffer cmd) const
-    {
-        vkCmdEndRenderPass(cmd);
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &gfx.frame_datas[gfx.frame_index].global_set, 0, nullptr);
+        vkCmdSetViewport(cmd, 0, 1, &viewport);
+        vkCmdSetScissor(cmd, 0, 1, &scissor);
     }
 
-    void ShadowPipeline::reset()
-    {
-        destroy_framebuffer();
-        destroy_depth_image();
-        destroy_pipeline();
 
-
-        create_depth_image();
-        create_framebuffer();
-        create_pipeline();
-        link_depth_to_global_set();
-    }
 
     void ShadowPipeline::create_pipeline_layout()
     {
@@ -214,8 +200,17 @@ namespace gage::gfx::data
         shader_stage_ci.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
         pipeline_shader_stages.push_back(shader_stage_ci);
 
+        std::vector<VkDynamicState> dynamic_states =
+        {
+            VK_DYNAMIC_STATE_VIEWPORT,
+            VK_DYNAMIC_STATE_SCISSOR
+        };
+
         VkPipelineDynamicStateCreateInfo dynamic_state_ci{};
         dynamic_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dynamic_state_ci.dynamicStateCount = dynamic_states.size();
+        dynamic_state_ci.pDynamicStates = dynamic_states.data();
+
 
         VkGraphicsPipelineCreateInfo pipeline_info = {};
         pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -231,7 +226,7 @@ namespace gage::gfx::data
         pipeline_info.pDynamicState = &dynamic_state_ci;
         pipeline_info.pDepthStencilState = &depth_stencil;
         pipeline_info.layout = pipeline_layout;
-        pipeline_info.renderPass = render_pass;
+        pipeline_info.renderPass = gfx.g_buffer->get_shadowpass_render_pass();
 
         vk_check(vkCreateGraphicsPipelines(gfx.device, nullptr, 1, &pipeline_info, nullptr, &pipeline));
 
@@ -244,176 +239,6 @@ namespace gage::gfx::data
         vkDestroyPipeline(gfx.device, pipeline, nullptr);
     }
 
-    void ShadowPipeline::create_render_pass()
-    {
-        VkAttachmentDescription depth_attachment{};
-        depth_attachment.format = DEPTH_FORMAT;
-        depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-
-        // Subpass
-
-        VkAttachmentReference depth_attachment_ref{};
-        depth_attachment_ref.attachment = 0;
-        depth_attachment_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-        VkSubpassDescription subpass{};
-        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 0;
-        subpass.pDepthStencilAttachment = &depth_attachment_ref;
-
-        std::array<VkSubpassDependency, 2> dependencies;
-
-        dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-        dependencies[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        dependencies[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        dependencies[0].dstSubpass = 0;
-        dependencies[0].dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependencies[0].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-        dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-        dependencies[1].srcSubpass = 0;
-        dependencies[1].srcStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-        dependencies[1].srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-        dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-        dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-        VkRenderPassCreateInfo render_pass_ci{};
-        render_pass_ci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        render_pass_ci.attachmentCount = 1;
-        render_pass_ci.pAttachments = &depth_attachment;
-        render_pass_ci.subpassCount = 1;
-        render_pass_ci.pSubpasses = &subpass;
-        render_pass_ci.dependencyCount = dependencies.size();
-        render_pass_ci.pDependencies = dependencies.data();
-
-        vk_check(vkCreateRenderPass(gfx.device, &render_pass_ci, nullptr, &render_pass));
-    }
-    void ShadowPipeline::destroy_render_pass()
-    {
-        vkDestroyRenderPass(gfx.device, render_pass, nullptr);
-    }
-
-    void ShadowPipeline::create_depth_image()
-    {
-        VkImageCreateInfo depth_image_ci = {};
-        depth_image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        depth_image_ci.imageType = VK_IMAGE_TYPE_2D;
-        depth_image_ci.extent.width = gfx.directional_light_shadow_map_resolution;
-        depth_image_ci.extent.height = gfx.directional_light_shadow_map_resolution;
-        depth_image_ci.extent.depth = 1;
-        depth_image_ci.mipLevels = 1;
-        depth_image_ci.arrayLayers = gfx.CASCADE_COUNT; //Layers
-        depth_image_ci.format = DEPTH_FORMAT;
-        depth_image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
-        depth_image_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        depth_image_ci.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        depth_image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
-
-        vk_check(vkCreateImage(gfx.device, &depth_image_ci, nullptr, &depth_image));
-
-        VkMemoryRequirements mem_reqs{};
-        vkGetImageMemoryRequirements(gfx.device, depth_image, &mem_reqs);
-        // depth_image_memory_size = mem_reqs.size;
-
-        VkMemoryAllocateInfo mem_alloc_info{};
-        mem_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        mem_alloc_info.allocationSize = mem_reqs.size;
-        mem_alloc_info.memoryTypeIndex = utils::find_memory_type(gfx.physical_device, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-        vk_check(vkAllocateMemory(gfx.device, &mem_alloc_info, nullptr, &depth_image_memory));
-        vk_check(vkBindImageMemory(gfx.device, depth_image, depth_image_memory, 0));
-
-        VkImageViewCreateInfo depth_image_view_ci = {};
-        depth_image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        depth_image_view_ci.image = depth_image;
-        depth_image_view_ci.format = DEPTH_FORMAT;
-        depth_image_view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-        depth_image_view_ci.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-        depth_image_view_ci.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-        depth_image_view_ci.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-        depth_image_view_ci.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        depth_image_view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        depth_image_view_ci.subresourceRange.baseMipLevel = 0;
-        depth_image_view_ci.subresourceRange.baseArrayLayer = 0;
-        depth_image_view_ci.subresourceRange.layerCount = gfx.CASCADE_COUNT; //Layers
-        depth_image_view_ci.subresourceRange.levelCount = 1;
-
-        vk_check(vkCreateImageView(gfx.device, &depth_image_view_ci, nullptr, &depth_image_view));
-
-        // Create sampler
-        VkSamplerCreateInfo sampler_info{};
-        sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        sampler_info.magFilter = VK_FILTER_LINEAR;
-        sampler_info.minFilter = VK_FILTER_LINEAR;
-        sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-        sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-        sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-        sampler_info.anisotropyEnable = VK_FALSE;
-        sampler_info.maxAnisotropy = 0;
-        sampler_info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-        sampler_info.unnormalizedCoordinates = VK_FALSE;
-        sampler_info.compareEnable = VK_FALSE;
-        sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
-        sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-        sampler_info.mipLodBias = 0.0f;
-        sampler_info.minLod = 0.0f;
-        sampler_info.maxLod = 0.0f;
-
-        vk_check(vkCreateSampler(gfx.device, &sampler_info, nullptr, &depth_sampler));
-    }
-    void ShadowPipeline::destroy_depth_image()
-    {
-        vkDestroyImage(gfx.device, depth_image, nullptr);
-        vkDestroyImageView(gfx.device, depth_image_view, nullptr);
-        vkFreeMemory(gfx.device, depth_image_memory, nullptr);
-        vkDestroySampler(gfx.device, depth_sampler, nullptr);
-    }
-
-    void ShadowPipeline::create_framebuffer()
-    {
-
-        VkFramebufferCreateInfo frame_buffer_ci{};
-        frame_buffer_ci.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        frame_buffer_ci.renderPass = render_pass;
-        frame_buffer_ci.attachmentCount = 1;
-        frame_buffer_ci.pAttachments = &depth_image_view;
-        frame_buffer_ci.width = gfx.directional_light_shadow_map_resolution;
-        frame_buffer_ci.height = gfx.directional_light_shadow_map_resolution;
-        frame_buffer_ci.layers = gfx.CASCADE_COUNT;
-        vk_check(vkCreateFramebuffer(gfx.device, &frame_buffer_ci, nullptr, &frame_buffer));
-    }
-    void ShadowPipeline::destroy_framebuffer()
-    {
-        vkDestroyFramebuffer(gfx.device, frame_buffer, nullptr);
-    }
-
-    void ShadowPipeline::link_depth_to_global_set()
-    {
-        for (uint32_t i = 0; i < Graphics::FRAMES_IN_FLIGHT; i++)
-        {
-            VkDescriptorImageInfo image_info{};
-            image_info.sampler = depth_sampler;
-            image_info.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-            image_info.imageView = depth_image_view;
-
-            VkWriteDescriptorSet descriptor_write{};
-            descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptor_write.descriptorCount = 1;
-            descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptor_write.dstBinding = 1;
-            descriptor_write.dstSet = gfx.frame_datas[i].global_set;
-            descriptor_write.pImageInfo = &image_info;
-            vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
-        }
-    }
 
     VkPipelineLayout ShadowPipeline::get_layout() const
     {

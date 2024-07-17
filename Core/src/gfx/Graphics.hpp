@@ -31,6 +31,7 @@ namespace gage::gfx::data
     class ShadowPipeline;
     class GBuffer;
     class FinalAmbient;
+    class DirectionalLight;
 }
 
 struct GLFWwindow;
@@ -62,6 +63,7 @@ namespace gage::gfx
         friend class data::Image;
         friend class data::GBuffer;
         friend class data::FinalAmbient;
+        friend class data::DirectionalLight;
         
     public:
         Graphics(GLFWwindow *window, std::string app_name);
@@ -87,14 +89,18 @@ namespace gage::gfx
         const glm::mat4& get_view() const;
         const data::Swapchain& get_swapchain() const;
         const data::GBuffer& get_g_buffer() const;
+        const data::ShadowPipeline& get_shadow_pipeline() const;
         const data::PBRPipeline& get_pbr_pipeline() const;
         const data::FinalAmbient& get_final_ambient() const;
+        const data::DirectionalLight& get_directional_light() const;
         GlobalUniform& get_global_uniform();
         VkExtent2D get_scaled_draw_extent();
 
 
     private:
         glm::mat4x4 calculate_directional_light_proj_view(const data::Camera& camera, float near, float far);
+        void create_default_image_sampler();
+        void destroy_default_image_sampler();
     private:
         std::mutex uploading_mutex{};
         std::string app_name{};
@@ -125,6 +131,12 @@ namespace gage::gfx
         VkQueue queue{};
         uint32_t queue_family{};
 
+        //Default data
+        VkImage default_image{};
+        VkImageView default_image_view{};
+        VmaAllocation default_image_alloc{};
+        VkSampler default_sampler{};
+
         
         struct FrameData
         {
@@ -138,18 +150,20 @@ namespace gage::gfx
             VmaAllocationInfo global_alloc_info{};
         } frame_datas[FRAMES_IN_FLIGHT] {};
 
-        struct DirectionalLight
-        {
-            glm::vec3 direction{0, -1, 0}; float _padding;
-            glm::vec3 color{1, 1, 1}; float _padding2;
-        };
+
+
         static constexpr uint32_t CASCADE_COUNT{3};
         struct GlobalUniform
         {
             glm::mat4x4 projection{};
             glm::mat4x4 view{};
-            glm::vec3 camera_position{}; float _padding{};
-            DirectionalLight directional_light{};
+            glm::vec3 camera_position{}; float padding;
+
+            glm::vec3 ambient_light_color{1, 1, 1}; float ambient_light_intensity{0.1f};
+
+            glm::vec3 directional_light_direction{0, -1, 0}; float padding2;
+            glm::vec3 directional_light_color{1, 1, 1}; float padding3;
+            
             glm::mat4x4 directional_light_proj_views[CASCADE_COUNT]{};
             glm::vec4  directional_light_cascade_planes[CASCADE_COUNT]{ {10, 0, 0, 0}, {30, 0, 0, 0}, {50, 0, 0, 0} };
         } global_uniform{};
@@ -163,8 +177,9 @@ namespace gage::gfx
         float directional_light_shadow_map_distance{50.0f};
         bool directional_light_shadow_map_resize_requested{};
         std::unique_ptr<data::GBuffer> g_buffer{};
+        std::unique_ptr<data::ShadowPipeline> shadow_pipeline{};
         std::unique_ptr<data::PBRPipeline> pbr_pipeline{};
         std::unique_ptr<data::FinalAmbient> final_ambient{};
-        
+        std::unique_ptr<data::DirectionalLight> directional_light{};
     };
 }

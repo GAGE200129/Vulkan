@@ -2,7 +2,7 @@
 #extension GL_ARB_shading_language_include : require
 
 #include "includes/global_uniform_buffer.inc"
-#include "includes/material.inc"
+
 
 layout(location = 0) in VSOutput
 {
@@ -18,6 +18,18 @@ layout(location = 0) in VSOutput
 layout (location = 0) out vec3 out_g_buffer_position;
 layout (location = 1) out vec3 out_g_buffer_normal;
 layout (location = 2) out vec3 out_g_buffer_albedo;
+layout (location = 3) out vec3 out_g_buffer_metalic_roughness;
+
+layout(set = 1, binding = 0) uniform Material
+{
+    vec4 color;
+    float specular_intensity;
+    float specular_power;
+    bool has_albedo;
+    bool has_metalic_roughness;
+    bool has_normal;
+} material;
+layout(set = 1, binding = 1) uniform sampler2D textures[3];
 
 
 void main()
@@ -27,14 +39,11 @@ void main()
     if(material.has_albedo)
         albedo *= texture(textures[0], fs_in.uv).rgb;
      
-    float metalic = 0.0;
-    float roughness = 1.0;
+    vec3 metalic_roughness = vec3(0.0, 1.0, 0.0);
     if(material.has_metalic_roughness)
     {
-        vec3 metalic_roughness = texture(textures[1], fs_in.uv).rgb;
+        metalic_roughness = texture(textures[1], fs_in.uv).rgb;
 
-        roughness = metalic_roughness.g;
-        metalic = metalic_roughness.b;
     }
 
     vec3 n = normalize(fs_in.normal);
@@ -49,4 +58,5 @@ void main()
     out_g_buffer_position = fs_in.world_pos;
     out_g_buffer_normal = n;
     out_g_buffer_albedo = albedo;
+    out_g_buffer_metalic_roughness = metalic_roughness;
 }

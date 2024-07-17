@@ -1,6 +1,8 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include <glm/vec3.hpp>
+
 
 namespace gage::gfx
 {
@@ -10,11 +12,11 @@ namespace gage::gfx
 
 namespace gage::gfx::data
 {
-    class FinalAmbient
-    {   
+    class DirectionalLight
+    {
     public:
-        FinalAmbient(Graphics& gfx);
-        ~FinalAmbient();
+        DirectionalLight(Graphics& gfx);
+        ~DirectionalLight();
 
         void process(VkCommandBuffer cmd) const;
 

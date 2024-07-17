@@ -9,7 +9,9 @@
 #include <Core/src/gfx/draw/Model.hpp>
 #include <Core/src/gfx/data/GBuffer.hpp>
 #include <Core/src/gfx/data/PBRPipeline.hpp>
+#include <Core/src/gfx/data/ShadowPipeline.hpp>
 #include <Core/src/gfx/data/FinalAmbient.hpp>
+#include <Core/src/gfx/data/DirectionalLight.hpp>
 #include <Core/src/gfx/Graphics.hpp>
 #include <Core/src/gfx/data/terrain/Terrain.hpp>
 #include <Core/src/utils/Cvar.hpp>
@@ -55,18 +57,30 @@ int main()
                 auto cmd = graphics.clear(camera);
 
                 const auto &g_buffer = graphics.get_g_buffer();
-                g_buffer.begin(cmd);
-
                 const auto &pbr_pipeline = graphics.get_pbr_pipeline();
-                const auto &final_ambient = graphics.get_final_ambient();
+                const auto &shadow_pipeline = graphics.get_shadow_pipeline();
+
+
+                
+                g_buffer.begin_shadowpass(cmd);
+                shadow_pipeline.bind(cmd);
+                model.value().draw(cmd, shadow_pipeline.get_layout(), frustum);
+                model3.value().draw(cmd, shadow_pipeline.get_layout(), frustum);
+                g_buffer.end(cmd);
+                
+                g_buffer.begin(cmd);
                 pbr_pipeline.bind(cmd);
                 model.value().draw(cmd, pbr_pipeline.get_layout(), frustum);
                 model3.value().draw(cmd, pbr_pipeline.get_layout(), frustum);
 
                 g_buffer.end(cmd);
 
+
+                const auto &final_ambient = graphics.get_final_ambient();
+                const auto &directional_light = graphics.get_directional_light();
                 g_buffer.begin_finalpass(cmd);
                 final_ambient.process(cmd);
+                directional_light.process(cmd);
 
                 g_buffer.end(cmd);
 

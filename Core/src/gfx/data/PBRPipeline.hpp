@@ -29,8 +29,7 @@ namespace gage::gfx::data
 
 
     private:
-        void create_default_image_sampler();
-        void destroy_default_image_sampler();
+        
         void create_pipeline();
         void destroy_pipeline();
         void create_pipeline_layout();
@@ -43,10 +42,5 @@ namespace gage::gfx::data
         VkPipelineLayout pipeline_layout{};
         VkPipeline pipeline{};
         VkDescriptorSetLayout set_layout{};
-
-        VkImage default_image{};
-        VkImageView default_image_view{};
-        VmaAllocation default_image_alloc{};
-        VkSampler default_sampler{};
     };
 }

@@ -1,5 +1,5 @@
 #include <pch.hpp>
-#include "FinalAmbient.hpp"
+#include "DirectionalLight.hpp"
 
 #include "../Graphics.hpp"
 #include "GBuffer.hpp"
@@ -9,12 +9,12 @@
 
 namespace gage::gfx::data
 {
-    FinalAmbient::FinalAmbient(Graphics &gfx) : gfx(gfx)
+    DirectionalLight::DirectionalLight(Graphics &gfx) : gfx(gfx)
     {
         // Create descriptor set layout
         {
             std::vector<VkDescriptorSetLayoutBinding> bindings{
-                {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
+                {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 4, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
             };
 
             VkDescriptorSetLayoutCreateInfo ci{};
@@ -71,7 +71,7 @@ namespace gage::gfx::data
                     .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
                     .offset = 0,
                     .size = sizeof(float)
-                },
+                }
             };
             VkPipelineLayoutCreateInfo ci = {};
             ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -167,7 +167,7 @@ namespace gage::gfx::data
             VkShaderModule vertex_shader{};
             VkShaderModule fragment_shader{};
             auto vertex_binary = utils::file_path_to_binary("Core/shaders/compiled/vertex_generator.vert.spv");
-            auto fragment_binary = utils::file_path_to_binary("Core/shaders/compiled/ambient.frag.spv");
+            auto fragment_binary = utils::file_path_to_binary("Core/shaders/compiled/directional.frag.spv");
 
             VkShaderModuleCreateInfo shader_module_ci = {};
             shader_module_ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -224,7 +224,7 @@ namespace gage::gfx::data
             vkDestroyShaderModule(gfx.device, fragment_shader, nullptr);
         }
     }
-    FinalAmbient::~FinalAmbient()
+    DirectionalLight::~DirectionalLight()
     {
         vkDestroyDescriptorSetLayout(gfx.device, desc_layout, nullptr);
         vkFreeDescriptorSets(gfx.device, gfx.desc_pool, 1, &desc);
@@ -233,7 +233,7 @@ namespace gage::gfx::data
         vkDestroySampler(gfx.device, default_sampler, nullptr);
     }
 
-    void FinalAmbient::process(VkCommandBuffer cmd) const
+    void DirectionalLight::process(VkCommandBuffer cmd) const
     {
         VkViewport viewport = {};
         viewport.x = 0;
@@ -258,12 +258,12 @@ namespace gage::gfx::data
         vkCmdDraw(cmd, 3, 1, 0, 0);
     }
 
-    void FinalAmbient::reset()
+    void DirectionalLight::reset()
     {
         link_desc_to_g_buffer();
     }
 
-    void FinalAmbient::link_desc_to_g_buffer()
+    void DirectionalLight::link_desc_to_g_buffer()
     {
         // Link to position g_buffer
         VkDescriptorImageInfo img_info{};
@@ -273,8 +273,7 @@ namespace gage::gfx::data
         VkWriteDescriptorSet descriptor_write{};
         descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 
-        // Link to albedo g_buffer
-        img_info.imageView = gfx.g_buffer->get_albedo_view();
+        img_info.imageView = gfx.g_buffer->get_position_view();
         descriptor_write.dstSet = desc;
         descriptor_write.dstBinding = 0;
         descriptor_write.dstArrayElement = 0;
@@ -285,10 +284,46 @@ namespace gage::gfx::data
         descriptor_write.pTexelBufferView = nullptr;
         vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
 
-        
+        // Link to normal of g buffer
+        img_info.imageView = gfx.g_buffer->get_normal_view();
+        descriptor_write.dstSet = desc;
+        descriptor_write.dstBinding = 0;
+        descriptor_write.dstArrayElement = 1;
+        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptor_write.descriptorCount = 1;
+        descriptor_write.pBufferInfo = nullptr;
+        descriptor_write.pImageInfo = &img_info;
+        descriptor_write.pTexelBufferView = nullptr;
+        vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
+
+        // Link to albedo g_buffer
+        img_info.imageView = gfx.g_buffer->get_albedo_view();
+        descriptor_write.dstSet = desc;
+        descriptor_write.dstBinding = 0;
+        descriptor_write.dstArrayElement = 2;
+        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptor_write.descriptorCount = 1;
+        descriptor_write.pBufferInfo = nullptr;
+        descriptor_write.pImageInfo = &img_info;
+        descriptor_write.pTexelBufferView = nullptr;
+        vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
+
+        // Link to mr g_buffer
+        img_info.imageView = gfx.g_buffer->get_mr_view();
+        descriptor_write.dstSet = desc;
+        descriptor_write.dstBinding = 0;
+        descriptor_write.dstArrayElement = 3;
+        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptor_write.descriptorCount = 1;
+        descriptor_write.pBufferInfo = nullptr;
+        descriptor_write.pImageInfo = &img_info;
+        descriptor_write.pTexelBufferView = nullptr;
+        vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
+
+
     }
 
-    VkPipelineLayout FinalAmbient::get_layout() const
+    VkPipelineLayout DirectionalLight::get_layout() const
     {
         return pipeline_layout;
     }

@@ -142,11 +142,11 @@ namespace gage::win
             static float distances[] = {10.0f, 20.0f, 50.0f};
             auto& ubo = window.get_graphics().get_global_uniform();
             ImGui::Text("Directional light");
-            if(ImGui::DragFloat3("Direction", &ubo.directional_light.direction.x, 0.01f, -1, 1))
+            if(ImGui::DragFloat3("Direction", &ubo.directional_light_direction.x, 0.01f, -1, 1))
             {
-                ubo.directional_light.direction = glm::normalize(ubo.directional_light.direction);
+                ubo.directional_light_direction = glm::normalize(ubo.directional_light_direction);
             }
-            ImGui::ColorEdit3("Color", &ubo.directional_light.color.x);
+            ImGui::ColorEdit3("Color", &ubo.directional_light_color.x);
             if(ImGui::DragInt("Shadow map resolution", &resolution, 1.0f, 512, 4096))
             {
                 window.get_graphics().resize_shadow_map(resolution);
