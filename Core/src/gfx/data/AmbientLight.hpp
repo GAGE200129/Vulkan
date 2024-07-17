@@ -10,11 +10,11 @@ namespace gage::gfx
 
 namespace gage::gfx::data
 {
-    class FinalAmbient
+    class AmbientLight
     {   
     public:
-        FinalAmbient(Graphics& gfx);
-        ~FinalAmbient();
+        AmbientLight(Graphics& gfx);
+        ~AmbientLight();
 
         void process(VkCommandBuffer cmd) const;
 

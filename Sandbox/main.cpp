@@ -10,8 +10,9 @@
 #include <Core/src/gfx/data/GBuffer.hpp>
 #include <Core/src/gfx/data/PBRPipeline.hpp>
 #include <Core/src/gfx/data/ShadowPipeline.hpp>
-#include <Core/src/gfx/data/FinalAmbient.hpp>
+#include <Core/src/gfx/data/AmbientLight.hpp>
 #include <Core/src/gfx/data/DirectionalLight.hpp>
+#include <Core/src/gfx/data/PointLight.hpp>
 #include <Core/src/gfx/Graphics.hpp>
 #include <Core/src/gfx/data/terrain/Terrain.hpp>
 #include <Core/src/utils/Cvar.hpp>
@@ -46,6 +47,32 @@ int main()
             camera.far = 100.0f;
             
 
+            std::vector<gfx::data::PointLight::Data> point_lights{};
+
+            
+            gfx::data::PointLight::Data point_light{};
+             point_light.position.x = 0;
+             point_light.position.z = 0;
+             point_light.position.y = 5;
+             point_light.color = { (float)rand() / (float)RAND_MAX, (float)rand() / (float)RAND_MAX, (float)rand() / (float)RAND_MAX};
+
+             point_lights.push_back(point_light);
+
+            // for(int x = -10; x <= 10; x += 4)
+            // {
+            //     for(int z = -4; z <= 4; z += 1)
+            //     {
+            //         gfx::data::PointLight::Data point_light{};
+            //         point_light.position.x = x;
+            //         point_light.position.z = z;
+            //         point_light.position.y = 5;
+            //         point_light.color = { (float)rand() / (float)RAND_MAX, (float)rand() / (float)RAND_MAX, (float)rand() / (float)RAND_MAX};
+
+            //         point_lights.push_back(point_light);
+            //     }
+            // }
+            
+
             while (!window.is_closing())
             {
                 win::update();
@@ -78,9 +105,14 @@ int main()
 
                 const auto &final_ambient = graphics.get_final_ambient();
                 const auto &directional_light = graphics.get_directional_light();
+                const auto &point_light = graphics.get_point_light();
                 g_buffer.begin_finalpass(cmd);
                 final_ambient.process(cmd);
                 directional_light.process(cmd);
+                for(auto& p_light : point_lights)
+                {
+                    point_light.process(cmd, p_light);
+                }
 
                 g_buffer.end(cmd);
 

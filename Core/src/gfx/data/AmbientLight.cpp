@@ -1,5 +1,5 @@
 #include <pch.hpp>
-#include "FinalAmbient.hpp"
+#include "AmbientLight.hpp"
 
 #include "../Graphics.hpp"
 #include "GBuffer.hpp"
@@ -9,7 +9,7 @@
 
 namespace gage::gfx::data
 {
-    FinalAmbient::FinalAmbient(Graphics &gfx) : gfx(gfx)
+    AmbientLight::AmbientLight(Graphics &gfx) : gfx(gfx)
     {
         // Create descriptor set layout
         {
@@ -224,7 +224,7 @@ namespace gage::gfx::data
             vkDestroyShaderModule(gfx.device, fragment_shader, nullptr);
         }
     }
-    FinalAmbient::~FinalAmbient()
+    AmbientLight::~AmbientLight()
     {
         vkDestroyDescriptorSetLayout(gfx.device, desc_layout, nullptr);
         vkFreeDescriptorSets(gfx.device, gfx.desc_pool, 1, &desc);
@@ -233,7 +233,7 @@ namespace gage::gfx::data
         vkDestroySampler(gfx.device, default_sampler, nullptr);
     }
 
-    void FinalAmbient::process(VkCommandBuffer cmd) const
+    void AmbientLight::process(VkCommandBuffer cmd) const
     {
         VkViewport viewport = {};
         viewport.x = 0;
@@ -258,12 +258,12 @@ namespace gage::gfx::data
         vkCmdDraw(cmd, 3, 1, 0, 0);
     }
 
-    void FinalAmbient::reset()
+    void AmbientLight::reset()
     {
         link_desc_to_g_buffer();
     }
 
-    void FinalAmbient::link_desc_to_g_buffer()
+    void AmbientLight::link_desc_to_g_buffer()
     {
         // Link to position g_buffer
         VkDescriptorImageInfo img_info{};
@@ -288,7 +288,7 @@ namespace gage::gfx::data
         
     }
 
-    VkPipelineLayout FinalAmbient::get_layout() const
+    VkPipelineLayout AmbientLight::get_layout() const
     {
         return pipeline_layout;
     }

@@ -30,8 +30,9 @@ namespace gage::gfx::data
     class PBRPipeline;
     class ShadowPipeline;
     class GBuffer;
-    class FinalAmbient;
+    class AmbientLight;
     class DirectionalLight;
+    class PointLight;
 }
 
 struct GLFWwindow;
@@ -62,9 +63,10 @@ namespace gage::gfx
         friend class data::DescriptorSet;
         friend class data::Image;
         friend class data::GBuffer;
-        friend class data::FinalAmbient;
+        friend class data::AmbientLight;
         friend class data::DirectionalLight;
-        
+        friend class data::PointLight;
+
     public:
         Graphics(GLFWwindow *window, std::string app_name);
         Graphics(const Graphics &) = delete;
@@ -91,8 +93,9 @@ namespace gage::gfx
         const data::GBuffer& get_g_buffer() const;
         const data::ShadowPipeline& get_shadow_pipeline() const;
         const data::PBRPipeline& get_pbr_pipeline() const;
-        const data::FinalAmbient& get_final_ambient() const;
+        const data::AmbientLight& get_final_ambient() const;
         const data::DirectionalLight& get_directional_light() const;
+        const data::PointLight& get_point_light() const;
         GlobalUniform& get_global_uniform();
         VkExtent2D get_scaled_draw_extent();
 
@@ -179,7 +182,8 @@ namespace gage::gfx
         std::unique_ptr<data::GBuffer> g_buffer{};
         std::unique_ptr<data::ShadowPipeline> shadow_pipeline{};
         std::unique_ptr<data::PBRPipeline> pbr_pipeline{};
-        std::unique_ptr<data::FinalAmbient> final_ambient{};
+        std::unique_ptr<data::AmbientLight> final_ambient{};
         std::unique_ptr<data::DirectionalLight> directional_light{};
+        std::unique_ptr<data::PointLight> point_light{};
     };
 }

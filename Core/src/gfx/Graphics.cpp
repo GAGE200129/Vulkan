@@ -10,9 +10,10 @@
 #include "data/Camera.hpp"
 #include "data/GBuffer.hpp"
 #include "data/PBRPipeline.hpp"
-#include "data/FinalAmbient.hpp"
+#include "data/AmbientLight.hpp"
 #include "data/DirectionalLight.hpp"
 #include "data/ShadowPipeline.hpp"
+#include "data/PointLight.hpp"
 
 using namespace std::string_literals;
 
@@ -309,13 +310,17 @@ namespace gage::gfx
         delete_stack.push([this]()
                           { pbr_pipeline.reset(); });
 
-        final_ambient = std::make_unique<data::FinalAmbient>(*this);
+        final_ambient = std::make_unique<data::AmbientLight>(*this);
         delete_stack.push([this]()
                           { final_ambient.reset(); });
 
         directional_light = std::make_unique<data::DirectionalLight>(*this);
         delete_stack.push([this]()
-                          { directional_light.reset(); });             
+                          { directional_light.reset(); });    
+
+        point_light = std::make_unique<data::PointLight>(*this);
+        delete_stack.push([this]()
+                          { point_light.reset(); });                        
     }
 
     Graphics::~Graphics()
@@ -357,6 +362,7 @@ namespace gage::gfx
             g_buffer->reset();
             final_ambient->reset();
             directional_light->reset();
+            point_light->reset();
             resize_requested = false;
         }
 
@@ -800,7 +806,7 @@ namespace gage::gfx
         return *pbr_pipeline;
     }
 
-    const data::FinalAmbient &Graphics::get_final_ambient() const
+    const data::AmbientLight &Graphics::get_final_ambient() const
     {
         return *final_ambient;
     }
@@ -808,6 +814,11 @@ namespace gage::gfx
     const data::DirectionalLight& Graphics::get_directional_light() const
     {
         return *directional_light;
+    }
+
+    const data::PointLight& Graphics::get_point_light() const
+    {
+        return *point_light;
     }
 
     void Graphics::resize(int width, int height)
