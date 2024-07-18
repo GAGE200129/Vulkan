@@ -7,13 +7,14 @@
 
 #include "Exception.hpp"
 
+#include "data/g_buffer/GBuffer.hpp"
 #include "data/Camera.hpp"
-#include "data/GBuffer.hpp"
 #include "data/PBRPipeline.hpp"
 #include "data/AmbientLight.hpp"
 #include "data/DirectionalLight.hpp"
 #include "data/ShadowPipeline.hpp"
 #include "data/PointLight.hpp"
+#include "data/SSAO.hpp"
 
 using namespace std::string_literals;
 
@@ -298,9 +299,9 @@ namespace gage::gfx
         delete_stack.push([this]()
                           { destroy_default_image_sampler(); });
 
-        g_buffer = std::make_unique<data::GBuffer>(*this);
+        geometry_buffer = std::make_unique<data::g_buffer::GBuffer>(*this);
         delete_stack.push([this]()
-                          { g_buffer.reset(); });
+                          { geometry_buffer.reset(); });
 
         shadow_pipeline = std::make_unique<data::ShadowPipeline>(*this);
         delete_stack.push([this]()
@@ -320,7 +321,11 @@ namespace gage::gfx
 
         point_light = std::make_unique<data::PointLight>(*this);
         delete_stack.push([this]()
-                          { point_light.reset(); });                        
+                          { point_light.reset(); });       
+
+        ssao = std::make_unique<data::SSAO>(*this);
+        delete_stack.push([this]()
+                          { ssao.reset(); });                       
     }
 
     Graphics::~Graphics()
@@ -359,10 +364,11 @@ namespace gage::gfx
             draw_extent = draw_extent_temp;
             swapchain.reset();
             swapchain.emplace(*this);
-            g_buffer->reset();
+            geometry_buffer->reset();
             final_ambient->reset();
             directional_light->reset();
             point_light->reset();
+            ssao->reset();
             resize_requested = false;
         }
 
@@ -370,7 +376,7 @@ namespace gage::gfx
         {
             vkDeviceWaitIdle(device);
             directional_light_shadow_map_resolution = directional_light_shadow_map_resolution_temp;
-            g_buffer->reset_shadowmap();
+            geometry_buffer->reset_shadowmap();
             directional_light_shadow_map_resize_requested = false;
         }
 
@@ -461,7 +467,7 @@ namespace gage::gfx
         region.dstOffsets[1].y = draw_extent.height;
         region.dstOffsets[1].z = 1;
 
-        vkCmdBlitImage(cmd, g_buffer->get_final_color(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        vkCmdBlitImage(cmd, geometry_buffer->get_final_color(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                        swapchain->at(swapchain_image_index), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                        1, &region, VK_FILTER_NEAREST);
 
@@ -791,14 +797,19 @@ namespace gage::gfx
         return swapchain.value();
     }
 
-    const data::GBuffer &Graphics::get_g_buffer() const
+    const data::g_buffer::GBuffer &Graphics::get_g_buffer() const
     {
-        return *g_buffer;
+        return *geometry_buffer;
     }
 
     const data::ShadowPipeline& Graphics::get_shadow_pipeline() const
     {
         return *shadow_pipeline;
+    }
+
+    const data::SSAO& Graphics::get_ssao() const
+    {
+        return *ssao;
     }
 
     const data::PBRPipeline &Graphics::get_pbr_pipeline() const
@@ -832,7 +843,11 @@ namespace gage::gfx
         directional_light_shadow_map_resolution_temp = shadow_map_size;
         directional_light_shadow_map_resize_requested = true;
     }
-
+    void Graphics::set_ssao_bias_and_radius(float bias, float radius)
+    {
+        ssao_bias = bias;
+        ssao_radius = radius;
+    }
     VkExtent2D Graphics::get_scaled_draw_extent()
     {
         return VkExtent2D{(unsigned int)std::floor(draw_extent.width * draw_extent_scale),

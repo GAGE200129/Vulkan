@@ -8,10 +8,18 @@ namespace gage::gfx
 
 namespace gage::gfx::data
 {
+    struct ImageCreateInfo
+    {
+        VkFormat format;
+        VkFilter min_filter;
+        VkFilter mag_filter;
+        VkSamplerAddressMode address_node;
+    };
+
     class Image
     {
     public:
-        Image(Graphics& gfx, const void* image_data, uint32_t width, uint32_t height);
+        Image(Graphics& gfx, const void* image_data, uint32_t width, uint32_t height, size_t size_in_bytes, ImageCreateInfo create_info);
         Image(const Image&) = delete;
         Image(Image&&) = delete;
         Image operator=(const Image&) = delete;
@@ -22,7 +30,6 @@ namespace gage::gfx::data
         VkSampler get_sampler() const;
     private:
         Graphics& gfx;
-        VkFormat image_format{VK_FORMAT_R8G8B8A8_UNORM};
         VkImage image{};
         VkImageView image_view{};
         VmaAllocation allocation{};

@@ -72,11 +72,12 @@ namespace gage::gfx::draw
         thread.emplace(&Model::load_async, this, file_path);
     }
 
-    void Model::draw(VkCommandBuffer cmd, VkPipelineLayout layout, data::Frustum frustum) const
+    void Model::draw(VkCommandBuffer cmd, VkPipelineLayout layout, const glm::mat4x4& initial_transform, data::Frustum frustum) const
     {
         if (!ready)
             return;
-        nodes.at(root_node)->draw(cmd, layout, frustum);
+        
+        nodes.at(root_node)->draw(cmd, layout, frustum, initial_transform);
     }
 
     Model::~Model()

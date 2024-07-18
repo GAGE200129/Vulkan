@@ -17,7 +17,7 @@ namespace gage::gfx::draw
             gltf_material.pbrMetallicRoughness.baseColorFactor.at(3),
         };
 
-        
+        data::ImageCreateInfo image_ci{VK_FORMAT_R8G8B8A8_UNORM, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT};
 
         //Has albedo texture ?
         const auto& albedo_texture_index = gltf_material.pbrMetallicRoughness.baseColorTexture.index;
@@ -26,7 +26,8 @@ namespace gage::gfx::draw
         {
             const auto &image_src_index = model.textures.at(albedo_texture_index).source;
             const auto &image = model.images.at(image_src_index);
-            albedo_image.emplace(gfx, image.image.data(), image.width, image.height);
+            size_t size_in_bytes = image.width * image.height * 4;
+            albedo_image.emplace(gfx, image.image.data(), image.width, image.height, size_in_bytes, image_ci);
         }
 
         //Has metalic roughness ?
@@ -36,7 +37,8 @@ namespace gage::gfx::draw
         {
             const auto &image_src_index = model.textures.at(metalic_roughness_texture_index).source;
             const auto &image = model.images.at(image_src_index);
-            metalic_roughness_image.emplace(gfx, image.image.data(), image.width, image.height);
+            size_t size_in_bytes = image.width * image.height * 4;
+            metalic_roughness_image.emplace(gfx, image.image.data(), image.width, image.height, size_in_bytes, image_ci);
         }
 
         //Has normal map ?
@@ -46,7 +48,8 @@ namespace gage::gfx::draw
         {
             const auto &image_src_index = model.textures.at(normal_texture_index).source;
             const auto &image = model.images.at(image_src_index);
-            normal_image.emplace(gfx, image.image.data(), image.width, image.height);
+            size_t size_in_bytes = image.width * image.height * 4;
+            normal_image.emplace(gfx, image.image.data(), image.width, image.height, size_in_bytes,  image_ci);
         }
 
        

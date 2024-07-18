@@ -6,10 +6,10 @@
 
 namespace gage::gfx::data
 {
-    Image::Image(Graphics& gfx, const void *image_data, uint32_t width, uint32_t height) :
+    Image::Image(Graphics& gfx, const void *image_data, uint32_t width, uint32_t height, size_t size_in_bytes, ImageCreateInfo create_info) :
         gfx(gfx)
     {
-        size_t size_in_bytes = width * height * 4;
+        //size_t size_in_bytes = width * height * 4;
 
         gfx.uploading_mutex.lock();
         VkImageCreateInfo img_ci = {};
@@ -20,7 +20,7 @@ namespace gage::gfx::data
         img_ci.extent.depth = 1;
         img_ci.mipLevels = 1;
         img_ci.arrayLayers = 1;
-        img_ci.format = image_format;
+        img_ci.format = create_info.format;
         img_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
         img_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         img_ci.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
@@ -136,7 +136,7 @@ namespace gage::gfx::data
         view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         view_info.image = image;
         view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        view_info.format = image_format;
+        view_info.format = create_info.format;
         view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         view_info.subresourceRange.baseMipLevel = 0;
         view_info.subresourceRange.levelCount = 1;
@@ -148,11 +148,11 @@ namespace gage::gfx::data
         // Sampler
         VkSamplerCreateInfo sampler_info{};
         sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        sampler_info.magFilter = VK_FILTER_NEAREST;
-        sampler_info.minFilter = VK_FILTER_NEAREST;
-        sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler_info.magFilter = create_info.mag_filter;
+        sampler_info.minFilter = create_info.min_filter;
+        sampler_info.addressModeU = create_info.address_node;
+        sampler_info.addressModeV = create_info.address_node;
+        sampler_info.addressModeW = create_info.address_node;
         sampler_info.anisotropyEnable = VK_FALSE;
         sampler_info.maxAnisotropy = 0;
         sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;

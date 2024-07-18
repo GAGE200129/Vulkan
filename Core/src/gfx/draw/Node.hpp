@@ -23,7 +23,7 @@ namespace gage::gfx::draw
             int32_t mesh
         );
 
-        void draw(VkCommandBuffer cmd, VkPipelineLayout layout, const data::Frustum& frustum) const;
+        void draw(VkCommandBuffer cmd, VkPipelineLayout layout, const data::Frustum& frustum, glm::mat4x4 accumulated_transform) const;
 
     private:
         Graphics &gfx;

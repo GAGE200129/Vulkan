@@ -23,16 +23,28 @@ namespace gage::gfx::bind
 namespace gage::gfx::data
 {
     class Camera;
+   
+
     class GPUBuffer;
     class CPUBuffer;
     class DescriptorSet;
     class Image;
     class PBRPipeline;
     class ShadowPipeline;
-    class GBuffer;
     class AmbientLight;
     class DirectionalLight;
     class PointLight;
+    class SSAO;
+
+    namespace g_buffer
+    {
+        class GBuffer;
+        class MainPass;
+        class ShadowPass;
+        class LightPass;
+        class SSAOPass;
+    }
+
 }
 
 struct GLFWwindow;
@@ -58,14 +70,21 @@ namespace gage::gfx
         friend class data::Swapchain;
         friend class data::PBRPipeline;
         friend class data::ShadowPipeline;
-        friend class data::GPUBuffer;
         friend class data::CPUBuffer;
+        friend class data::GPUBuffer;
         friend class data::DescriptorSet;
         friend class data::Image;
-        friend class data::GBuffer;
+        
         friend class data::AmbientLight;
         friend class data::DirectionalLight;
         friend class data::PointLight;
+        friend class data::SSAO;
+
+        friend class data::g_buffer::GBuffer;
+        friend class data::g_buffer::MainPass;
+        friend class data::g_buffer::ShadowPass;
+        friend class data::g_buffer::LightPass;
+        friend class data::g_buffer::SSAOPass;
 
     public:
         Graphics(GLFWwindow *window, std::string app_name);
@@ -90,16 +109,18 @@ namespace gage::gfx
         const glm::mat4& get_projection() const;
         const glm::mat4& get_view() const;
         const data::Swapchain& get_swapchain() const;
-        const data::GBuffer& get_g_buffer() const;
+        const data::g_buffer::GBuffer& get_g_buffer() const;
         const data::ShadowPipeline& get_shadow_pipeline() const;
         const data::PBRPipeline& get_pbr_pipeline() const;
         const data::AmbientLight& get_final_ambient() const;
         const data::DirectionalLight& get_directional_light() const;
+        const data::SSAO& get_ssao() const;
         const data::PointLight& get_point_light() const;
         GlobalUniform& get_global_uniform();
         VkExtent2D get_scaled_draw_extent();
 
 
+        void set_ssao_bias_and_radius(float bias, float radius);
     private:
         glm::mat4x4 calculate_directional_light_proj_view(const data::Camera& camera, float near, float far);
         void create_default_image_sampler();
@@ -179,11 +200,15 @@ namespace gage::gfx
         uint32_t directional_light_shadow_map_resolution_temp{2048};
         float directional_light_shadow_map_distance{50.0f};
         bool directional_light_shadow_map_resize_requested{};
-        std::unique_ptr<data::GBuffer> g_buffer{};
+        std::unique_ptr<data::g_buffer::GBuffer> geometry_buffer{};
         std::unique_ptr<data::ShadowPipeline> shadow_pipeline{};
         std::unique_ptr<data::PBRPipeline> pbr_pipeline{};
         std::unique_ptr<data::AmbientLight> final_ambient{};
         std::unique_ptr<data::DirectionalLight> directional_light{};
         std::unique_ptr<data::PointLight> point_light{};
+
+        float ssao_bias = 0.025f;
+        float ssao_radius = 0.5f;
+        std::unique_ptr<data::SSAO> ssao{};
     };
 }

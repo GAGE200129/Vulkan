@@ -140,10 +140,19 @@ namespace gage::win
         {
             static int resolution = 1024;
             static float distances[] = {10.0f, 20.0f, 50.0f};
+            static float ssao_radius = 0.5f;
+            static float ssao_bias = 0.025f;
             auto& ubo = window.get_graphics().get_global_uniform();
 
             ImGui::ColorEdit3("Ambient: color", &ubo.ambient_light_color.x);
             ImGui::DragFloat("Ambient: intensity", &ubo.ambient_light_intensity, 0.01f, 0.0f, 10.0f);
+            bool ssao_dirty = false;
+            ssao_dirty |= ImGui::DragFloat("Ambient: SSAO radius", &ssao_radius, 0.01f, 0.001f, 1.0f);
+            ssao_dirty |= ImGui::DragFloat("Ambient: SSAO bias", &ssao_bias, 0.001f, 0.001f, 1.0f);
+            if(ssao_dirty)
+            {
+                window.get_graphics().set_ssao_bias_and_radius(ssao_bias, ssao_radius);
+            }
             ImGui::Separator();
             if(ImGui::DragFloat3("Directional: direction", &ubo.directional_light_direction.x, 0.01f, -1, 1))
             {

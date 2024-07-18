@@ -30,7 +30,7 @@ namespace gage::gfx::draw
         Model(Graphics& gfx, const std::string& file_path, Mode mode = Mode::Binary);
         ~Model();
 
-        void draw(VkCommandBuffer cmd, VkPipelineLayout layout, data::Frustum frustum = {}) const;
+        void draw(VkCommandBuffer cmd, VkPipelineLayout layout, const glm::mat4x4& initial_transform, data::Frustum frustum = {}) const;
     private:
         void load_async(const std::string& file_path);
     private:

@@ -2,7 +2,7 @@
 #include "AmbientLight.hpp"
 
 #include "../Graphics.hpp"
-#include "GBuffer.hpp"
+#include "g_buffer/GBuffer.hpp"
 
 #include <Core/src/utils/FileLoader.hpp>
 #include <Core/src/utils/VulkanHelper.hpp>
@@ -14,7 +14,7 @@ namespace gage::gfx::data
         // Create descriptor set layout
         {
             std::vector<VkDescriptorSetLayoutBinding> bindings{
-                {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
+                {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 2, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
             };
 
             VkDescriptorSetLayoutCreateInfo ci{};
@@ -24,29 +24,6 @@ namespace gage::gfx::data
             vk_check(vkCreateDescriptorSetLayout(gfx.device, &ci, nullptr, &desc_layout));
         }
 
-        // Create default sampler
-        {
-            // Create default sampler
-            VkSamplerCreateInfo sampler_info{};
-            sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-            sampler_info.magFilter = VK_FILTER_NEAREST;
-            sampler_info.minFilter = VK_FILTER_NEAREST;
-            sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            sampler_info.anisotropyEnable = VK_FALSE;
-            sampler_info.maxAnisotropy = 0;
-            sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-            sampler_info.unnormalizedCoordinates = VK_FALSE;
-            sampler_info.compareEnable = VK_FALSE;
-            sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
-            sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-            sampler_info.mipLodBias = 0.0f;
-            sampler_info.minLod = 0.0f;
-            sampler_info.maxLod = 0.0f;
-
-            vk_check(vkCreateSampler(gfx.device, &sampler_info, nullptr, &default_sampler));
-        }
 
         // Allocate descriptor set
         {
@@ -216,7 +193,7 @@ namespace gage::gfx::data
             ci.pDynamicState = &dynamic_state_ci;
             ci.pDepthStencilState = &depth_stencil;
             ci.layout = pipeline_layout;
-            ci.renderPass = gfx.g_buffer->get_finalpass_render_pass();
+            ci.renderPass = gfx.geometry_buffer->get_lightpass_render_pass();
 
             vk_check(vkCreateGraphicsPipelines(gfx.device, VK_NULL_HANDLE, 1, &ci, nullptr, &pipeline));
 
@@ -230,7 +207,6 @@ namespace gage::gfx::data
         vkFreeDescriptorSets(gfx.device, gfx.desc_pool, 1, &desc);
         vkDestroyPipelineLayout(gfx.device, pipeline_layout, nullptr);
         vkDestroyPipeline(gfx.device, pipeline, nullptr);
-        vkDestroySampler(gfx.device, default_sampler, nullptr);
     }
 
     void AmbientLight::process(VkCommandBuffer cmd) const
@@ -268,16 +244,28 @@ namespace gage::gfx::data
         // Link to position g_buffer
         VkDescriptorImageInfo img_info{};
         img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        img_info.sampler = default_sampler;
+        img_info.sampler = gfx.default_sampler;
 
         VkWriteDescriptorSet descriptor_write{};
         descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 
         // Link to albedo g_buffer
-        img_info.imageView = gfx.g_buffer->get_albedo_view();
+        img_info.imageView = gfx.geometry_buffer->get_albedo_view();
         descriptor_write.dstSet = desc;
         descriptor_write.dstBinding = 0;
         descriptor_write.dstArrayElement = 0;
+        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptor_write.descriptorCount = 1;
+        descriptor_write.pBufferInfo = nullptr;
+        descriptor_write.pImageInfo = &img_info;
+        descriptor_write.pTexelBufferView = nullptr;
+        vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
+
+         // Link to albedo g_buffer
+        img_info.imageView = gfx.geometry_buffer->get_ssao_view();
+        descriptor_write.dstSet = desc;
+        descriptor_write.dstBinding = 0;
+        descriptor_write.dstArrayElement = 1;
         descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         descriptor_write.descriptorCount = 1;
         descriptor_write.pBufferInfo = nullptr;

@@ -46,18 +46,28 @@ void main()
     proj_coords.xy = (proj_coords.xy + 1.0) * 0.5;
 
     float current_depth = proj_coords.z;
-    float sampled_depth = texture(directional_light_map, vec3(proj_coords.xy, layer)).r; 
+    //float sampled_depth = texture(directional_light_map, vec3(proj_coords.xy, layer)).r; 
     
     float bias = max(0.01 * (1.0 - dot(n, -ubo.directional_light_direction)), 0.001);
     bias *= 1.0 / (ubo.directional_light_cascade_planes[layer] * 0.5f);
 
-
-    
-    float shadow = 1.0;
-    if(sampled_depth + bias < current_depth)
+    float shadow = 0.0;
+    vec2 texel_size = 1.0 / textureSize(directional_light_map, 0).xy;
+    for(int x = -1; x <= 1; ++x)
     {
-        shadow = 0.0;
+        for(int y = -1; y <= 1; ++y)
+        {
+            float pcf_depth = texture(directional_light_map, vec3(proj_coords.xy + vec2(x, y) * texel_size, layer)).r; 
+            shadow += current_depth - bias > pcf_depth ? 1.0 : 0.0;        
+        }    
     }
+    shadow /= 9.0;
+    
+    // float shadow = 1.0;
+    // if(sampled_depth + bias < current_depth)
+    // {
+    //     shadow = 0.0;
+    // }
 
     //Main pbr 
     vec3 Lo = vec3(0.0);
@@ -83,5 +93,5 @@ void main()
         Lo += (kD * albedo / PI + specular) * radiance * NdotL;
     } 
 
-    out_color = vec4(Lo * shadow, 1);
+    out_color = vec4(Lo * (1.0 - shadow), 1);
 }

@@ -3,7 +3,7 @@
 
 #include "../Graphics.hpp"
 #include "Camera.hpp"
-#include "GBuffer.hpp"
+#include "g_buffer/GBuffer.hpp"
 
 #include <Core/src/utils/FileLoader.hpp>
 #include <Core/src/utils/VulkanHelper.hpp>
@@ -361,7 +361,7 @@ namespace gage::gfx::data
         pipeline_info.pDynamicState = &dynamic_state_ci;
         pipeline_info.pDepthStencilState = &depth_stencil;
         pipeline_info.layout = pipeline_layout;
-        pipeline_info.renderPass = gfx.g_buffer->get_render_pass();
+        pipeline_info.renderPass = gfx.geometry_buffer->get_mainpass_render_pass();
 
         vk_check(vkCreateGraphicsPipelines(gfx.device, nullptr, 1, &pipeline_info, nullptr, &pipeline));
 

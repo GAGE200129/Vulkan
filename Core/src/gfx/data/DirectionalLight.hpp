@@ -27,7 +27,6 @@ namespace gage::gfx::data
         void link_desc_to_g_buffer();
     private:
         Graphics& gfx;
-        VkSampler default_sampler{};
         VkDescriptorSetLayout desc_layout{};
         VkDescriptorSet desc{};
         VkPipelineLayout pipeline_layout{};

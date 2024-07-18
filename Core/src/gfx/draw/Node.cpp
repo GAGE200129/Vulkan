@@ -22,19 +22,19 @@ namespace gage::gfx::draw
     {
     }
 
-    void Node::draw(VkCommandBuffer cmd, VkPipelineLayout layout, const data::Frustum &frustum) const
+    void Node::draw(VkCommandBuffer cmd, VkPipelineLayout layout, const data::Frustum &frustum, glm::mat4x4 accumulated_transform) const
     {
         for (const auto &child : children)
         {
-            model.nodes.at(child)->draw(cmd, layout, frustum);
+            model.nodes.at(child)->draw(cmd, layout, frustum, accumulated_transform);
         }
 
         if (mesh < 0)
             return;
         // Build push constant transform
-        glm::mat4x4 transform = glm::scale(glm::mat4x4(1.0f), scale);
-        transform *= glm::mat4x4(rotation);
-        transform = glm::translate(transform, position);
+        accumulated_transform = glm::scale(accumulated_transform, scale);
+        accumulated_transform *= glm::mat4x4(rotation);
+        accumulated_transform = glm::translate(accumulated_transform, position);
         const auto &mesh_instance = model.meshes.at(mesh);
 
         auto isOnOrForwardPlane = [](const data::Plane &plane, const glm::vec3 &center, float radius)
@@ -48,7 +48,7 @@ namespace gage::gfx::draw
         glm::vec3 translation;
         glm::vec3 skew;
         glm::vec4 perspective;
-        glm::decompose(transform, scale, rotation, translation, skew, perspective);
+        glm::decompose(accumulated_transform, scale, rotation, translation, skew, perspective);
  
 
         // Check Firstly the result that have the most chance
@@ -66,7 +66,7 @@ namespace gage::gfx::draw
             isOnOrForwardPlane(frustum.top, translation, radius) && 
             isOnOrForwardPlane(frustum.bottom, translation, radius)))
         {
-            mesh_instance->draw(cmd, layout, transform);
+            mesh_instance->draw(cmd, layout, accumulated_transform);
         }
     }
 
