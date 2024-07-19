@@ -4,7 +4,6 @@
 #include "Exception.hpp"
 
 #include <Core/src/utils/Cvar.hpp>
-#include <Core/src/log/Log.hpp>
 #include <Core/src/gfx/Graphics.hpp>
 
 namespace gage::win
@@ -17,7 +16,6 @@ namespace gage::win
         p_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
         if(!p_window)
         {
-            logger.error();
             throw WindowException{ "Failed to create window !" };
         }
 

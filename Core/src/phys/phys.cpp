@@ -7,7 +7,6 @@
 #include "ObjectVsBroadPhaseLayerFilter.hpp"
 #include "ObjectLayerPairFilter.hpp"
 
-#include <Core/src/log/Log.hpp>
 
 namespace gage::phys
 {
@@ -23,7 +22,7 @@ namespace gage::phys
         va_end(list);
 
         // Print to the TTY
-        logger.trace(std::string(buffer));
+        //logger.trace(std::string(buffer));
     }
     // Callback for asserts, connect this to your own assert handler if you have one
     static bool AssertFailedImpl(const char *inExpression, const char *inMessage, const char *inFile, uint inLine)
@@ -31,7 +30,7 @@ namespace gage::phys
         // Print to the TTY
         std::stringstream ss;
         ss << inFile << ":" << inLine << ": (" << inExpression << ") " << (inMessage != nullptr ? inMessage : "") << "\n";
-        logger.error(ss.str());
+        //logger.error(ss.str());
         assert(false);
         return true;
     };

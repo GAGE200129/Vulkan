@@ -68,7 +68,7 @@ namespace gage::gfx::data
         VkDescriptorBufferInfo buffer_info{};
         buffer_info.buffer = kernel_buffer->get_buffer_handle();
         buffer_info.offset = 0;
-        buffer_info.range = 64 * sizeof(glm::vec4);
+        buffer_info.range = KERNEL_SIZE * sizeof(glm::vec4);
 
         VkWriteDescriptorSet descriptor_write{};
         descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -333,8 +333,8 @@ namespace gage::gfx::data
         // Generate kernel
         std::uniform_real_distribution<float> random_floats(0.0, 1.0); // random floats between [0.0, 1.0]
         std::default_random_engine generator;
-        kernel.reserve(64);
-        for (unsigned int i = 0; i < 64; ++i)
+        kernel.reserve(KERNEL_SIZE);
+        for (unsigned int i = 0; i < KERNEL_SIZE; ++i)
         {
             glm::vec3 sample(
                 random_floats(generator) * 2.0 - 1.0,

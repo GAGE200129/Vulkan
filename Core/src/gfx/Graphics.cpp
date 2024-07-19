@@ -1,7 +1,7 @@
 #include <pch.hpp>
 #include "Graphics.hpp"
 
-#include <Core/src/log/Log.hpp>
+#include "gfx.hpp"
 #include <Core/src/utils/VulkanHelper.hpp>
 #include <Core/src/utils/FileLoader.hpp>
 
@@ -16,6 +16,8 @@
 #include "data/PointLight.hpp"
 #include "data/SSAO.hpp"
 
+
+
 using namespace std::string_literals;
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
@@ -26,30 +28,31 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 {
     using namespace gage;
     gfx::Graphics *gfx = (gfx::Graphics *)p_user_data;
-    std::stringstream ss;
-    ss << "[Vulkan debug report]: " << p_callback_data->pMessage;
-    std::string str = ss.str();
     switch (message_severity)
     {
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
     {
-        logger.info(gfx->get_app_name());
-        logger.trace(str);
+        log.info("{}", gfx->get_app_name());
+        log.trace("{}", p_callback_data->pMessage);
+
+
         break;
     }
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
     {
-        logger.info(str);
+        log.info("{}", p_callback_data->pMessage);
         break;
     }
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
     {
-        logger.warn(str);
+        log.warn("{}", p_callback_data->pMessage);
         break;
     }
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
     {
-        logger.error(str);
+        utils::StackTrace stack_trace;
+        log.error("{}\n{}", p_callback_data->pMessage, stack_trace.print());
+        
         break;
     }
 
@@ -94,8 +97,7 @@ namespace gage::gfx
             vkb::destroy_debug_utils_messenger(instance, debug_messenger);
 		    vkDestroyInstance(instance, nullptr); });
 
-        vk_check(glfwCreateWindowSurface(instance, window, nullptr, &surface),
-                 "Failed to create window surface !");
+        vk_check(glfwCreateWindowSurface(instance, window, nullptr, &surface));
         delete_stack.push([this]()
                           { vkDestroySurfaceKHR(instance, surface, nullptr); });
 
@@ -127,7 +129,7 @@ namespace gage::gfx
         vkb_check(physical_device_result, "Failed to select physical device: ");
 
         vkb::PhysicalDevice vkb_physical_device = physical_device_result.value();
-        logger.info("Selected physical device: " + vkb_physical_device.name);
+        log.info("Selected physical device: " + vkb_physical_device.name);
 
         vkb::DeviceBuilder deviceBuilder{vkb_physical_device};
         auto vkb_device_result = deviceBuilder.build();
@@ -395,7 +397,7 @@ namespace gage::gfx
         if (VkResult result = vkAcquireNextImageKHR(device, swapchain->get(), 1000000000, present_semaphore, nullptr, &swapchain_image_index);
             result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
         {
-            logger.fatal("Failed to acquire next image: ").vk_result(result);
+            log.critical("Failed to acquire next image: {}", string_VkResult(result));
             throw GraphicsException{};
         }
 
@@ -522,7 +524,7 @@ namespace gage::gfx
         if (VkResult result = vkQueuePresentKHR(queue, &presentInfo);
             result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
         {
-            logger.fatal("Failed to present swapchain image: ").vk_result(result);
+            log.critical("Failed to present swapchain image: {}", string_VkResult(result));
             throw GraphicsException{};
         }
 

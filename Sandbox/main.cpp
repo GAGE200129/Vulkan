@@ -1,6 +1,5 @@
 #include <stdio.h>
 
-#include <Core/src/log/Log.hpp>
 #include <Core/src/win/Window.hpp>
 #include <Core/src/win/ImguiWindow.hpp>
 #include <Core/src/gfx/Exception.hpp>
@@ -21,6 +20,8 @@
 #include <Core/src/phys/phys.hpp>
 #include <Core/src/phys/Physics.hpp>
 
+#include <Core/src/scene/SceneGraph.hpp>
+
 #include <thread>
 #include <iostream>
 
@@ -36,11 +37,12 @@ int main()
 
     try
     {
-        log::init();
+        gfx::init();
         win::init();
         phys::init();
         {
             phys::Physics phys;
+            scene::SceneGraph scene;
 
             win::Window window(800, 600, "Hello world");
             auto &gfx = window.get_graphics();
@@ -56,13 +58,13 @@ int main()
             std::vector<gfx::data::PointLight::Data> point_lights{};
 
             
-            gfx::data::PointLight::Data point_light{};
-             point_light.position.x = 0;
-             point_light.position.z = 0;
-             point_light.position.y = 5;
-             point_light.color = { (float)rand() / (float)RAND_MAX, (float)rand() / (float)RAND_MAX, (float)rand() / (float)RAND_MAX};
+            // gfx::data::PointLight::Data point_light{};
+            //  point_light.position.x = 0;
+            //  point_light.position.z = 0;
+            //  point_light.position.y = 5;
+            //  point_light.color = { (float)rand() / (float)RAND_MAX, (float)rand() / (float)RAND_MAX, (float)rand() / (float)RAND_MAX};
 
-             point_lights.push_back(point_light);
+            //  point_lights.push_back(point_light);
 
             //for(int x = -10; x <= 10; x += 4)
             //{
@@ -82,7 +84,7 @@ int main()
             {
                 win::update();
                 imgui_window.clear();
-                imgui_window.draw(camera, window);
+                imgui_window.draw(camera, window, scene);
                 imgui_window.end_frame();
 
                 auto frustum = camera.create_frustum(gfx.get_scaled_draw_extent().width, gfx.get_scaled_draw_extent().height);
@@ -109,7 +111,6 @@ int main()
                 
                 g_buffer.begin_ssaopass(cmd);
                 gfx.get_ssao().process(cmd);
-
                 g_buffer.end(cmd);
 
 
@@ -135,20 +136,21 @@ int main()
             model3.reset();
 
         }
+        gfx::shutdown();
         win::shutdown();
         phys::shutdown();
     }
     catch (gfx::GraphicsException &e)
     {
-        logger.error("Graphics exception caught: " + std::string(e.what()));
+        std::cerr << "Graphics exception caught: " + std::string(e.what()) << "\n";
     }
     catch (utils::FileLoaderException &e)
     {
-        logger.error("Utils exception caught: " + std::string(e.what()));
+        std::cerr << "File loader exception caught: " + std::string(e.what()) << "\n";
     }
     catch (...)
     {
-        logger.info("Unknown exception caught.");
+        std::cerr << "Unknown exception caught !" << "\n";
     }
 
     return 0;

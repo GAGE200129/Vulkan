@@ -10,6 +10,11 @@ namespace gage::gfx
     }
 }
 
+namespace gage::scene
+{
+    class SceneGraph;
+}
+
 struct GLFWwindow;
 namespace gage::win
 {
@@ -26,7 +31,7 @@ namespace gage::win
         ImguiWindow(gfx::Graphics &gfx);
         ~ImguiWindow();
 
-        void draw(gfx::data::Camera &camera, Window &window);
+        void draw(gfx::data::Camera &camera, Window &window, scene::SceneGraph& scene);
 
         void clear();
         void end_frame();

@@ -6,11 +6,12 @@
 #include <imgui/imgui.h>
 #include <imgui/imgui_impl_opengl3.h>
 #include <imgui/imgui_impl_glfw.h>
-#include <Core/src/log/Log.hpp>
 #include <Core/src/gfx/Graphics.hpp>
 #include <Core/src/gfx/data/Camera.hpp>
 #include <Core/src/gfx/data/Swapchain.hpp>
 #include <Core/src/gfx/data/PBRPipeline.hpp>
+
+#include <Core/src/scene/SceneGraph.hpp>
 
 
 #include "Window.hpp"
@@ -28,7 +29,6 @@ namespace gage::win
         p_window = glfwCreateWindow(800, 600, "ImGui", nullptr, nullptr);
         if (!p_window)
         {
-            logger.error();
             throw WindowException{"Failed to create window !"};
         }
         glfwMakeContextCurrent(p_window);
@@ -79,7 +79,7 @@ namespace gage::win
         glfwSwapBuffers(p_window);
     }
 
-    void ImguiWindow::draw(gfx::data::Camera &camera, Window &window)
+    void ImguiWindow::draw(gfx::data::Camera &camera, Window &window, scene::SceneGraph& scene)
     {
         static int resolutions[] = {1600, 900};
         ImGui::ShowDemoWindow();
@@ -175,6 +175,35 @@ namespace gage::win
 
 
             ImGui::Separator();
+        }
+        ImGui::End();
+
+        if (ImGui::Begin("SceneGraph"))
+        {
+            if(ImGui::Button("New"))
+            {
+                scene.create_node();
+            }
+
+            std::function<void(scene::SceneGraph& scene, const scene::Node* node)>  browse_scene_graph_recursive;
+            browse_scene_graph_recursive = [&browse_scene_graph_recursive](scene::SceneGraph& scene, const scene::Node* node)
+            {
+                const std::string& node_name = node->get_name();
+                std::string id_string = std::to_string(node->get_id());
+                std::string name = !node_name.empty() ? node_name + "|" +  id_string : id_string;
+               
+                if (ImGui::TreeNodeEx(name.c_str()))
+                {
+                    for (const auto& child : node->get_children())
+                    {
+                        browse_scene_graph_recursive(scene, child);
+                    }
+                    ImGui::TreePop();
+                }
+            };
+
+            browse_scene_graph_recursive(scene, scene.get_nodes().at(0).get());
+
         }
         ImGui::End();
     }

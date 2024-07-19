@@ -29,6 +29,7 @@ namespace gage::gfx::data
         void create_pipeline();
         
     private:
+        static constexpr size_t KERNEL_SIZE = 32;
         struct PushConstantFragment
         {
             float radius;

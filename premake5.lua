@@ -18,9 +18,9 @@ project "Core"
    kind "SharedLib"
    targetdir "bin/%{prj.name}/%{cfg.buildcfg}"
    objdir "obj/%{prj.name}/%{cfg.buildcfg}"
+   pchheader "pch.hpp"
 
    
-   pchheader "pch.hpp"
 
    files {
       "%{prj.location}/src/**.hpp",
@@ -36,11 +36,18 @@ project "Core"
    }
    
    
-   links { "glfw", "vulkan", "luajit-5.1", "bfd", "GL", "Jolt"}
+   links { "glfw", "vulkan", "luajit-5.1", "bfd", "GL", "Jolt", "spdlog"}
    includedirs { 
       "%{prj.location}/src",
       "%{prj.location}/ThirdParty",
       "%{wks.location}"
+   }
+
+   defines 
+   {
+      "GLFW_INCLUDE_VULKAN",
+      "GLM_FORCE_DEPTH_ZERO_TO_ONE",
+      "SPDLOG_COMPILED_LIB"
    }
 
    
@@ -83,6 +90,11 @@ project "Core"
       buildoptions 
       {
          "-Wall -Wextra -Wpedantic"
+      }
+
+      defines 
+      {
+         "BACKWARD_SYSTEM_LINUX"
       }
 
    

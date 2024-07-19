@@ -2,6 +2,7 @@
 #include "VulkanHelper.hpp"
 
 #include <Core/src/gfx/Exception.hpp>
+#include <Core/src/gfx/gfx.hpp>
 
 namespace gage::utils
 {   
@@ -41,7 +42,7 @@ namespace gage::utils
                 return i;
             }
         }
-        logger.error();
+        gfx::get_logger().critical("Failed to find memory type: {}", string_VkMemoryPropertyFlags(properties));
         throw gfx::GraphicsException{"Failed to find memory type !"};
     }
 }

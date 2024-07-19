@@ -1,5 +1,3 @@
-
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -10,7 +8,7 @@
 #include <glm/gtx/norm.hpp>
 
 #include <glad/glad.h>
-#define GLFW_INCLUDE_VULKAN
+#define GLFW_INCLUDE_VULKAN //Makes intelisense happy
 #include <GLFW/glfw3.h>
 
 #include <vk_mem_alloc.h>
@@ -55,6 +53,8 @@
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
-
+ 
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 

@@ -26,5 +26,7 @@ void main()
             result += texture(g_buffers[1], fs_uv + offset).r;
         }
     }
+    result /= (8.0);
+
     out_color = vec4(albedo.rgb * ubo.ambient_light_color * ubo.ambient_light_intensity * result, 1); 
 }

@@ -1,7 +1,9 @@
 #include <pch.hpp>
 #include "StackTrace.hpp"
 
+#ifndef NDEBUG
 #define BACKWARD_HAS_BFD 1
+#endif
 #include "backward.hpp"
 
 namespace gage::utils

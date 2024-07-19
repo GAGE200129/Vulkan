@@ -1,6 +1,8 @@
 #version 460 core
 #extension GL_ARB_shading_language_include : require
 
+#define KERNEL_SIZE 32
+
 #include "includes/global_uniform_buffer.inc"
 
 layout(location = 0) out float out_color;
@@ -10,7 +12,7 @@ layout (location = 0) in vec2 fs_uv;
 layout (set = 1, binding = 0) uniform sampler2D g_buffers[];
 layout (set = 1, binding = 1) uniform UniformBlock
 {
-    vec4 samples[64];
+    vec4 samples[KERNEL_SIZE];
 } uniform_block;
 
 
@@ -37,7 +39,7 @@ void main()
     vec3 bitangent = cross(n_view_space, tangent);
     mat3 TBN       = mat3(tangent, bitangent, n_view_space);
     float occlusion = 0.0;
-    for(int i = 0; i < 64; ++i)
+    for(int i = 0; i < KERNEL_SIZE; ++i)
     {
         // get sample position
         vec3 sample_pos = TBN * uniform_block.samples[i].xyz; // from tangent to view-space
@@ -52,11 +54,12 @@ void main()
 
         vec3 sample_pos_view_space = (ubo.view * vec4(texture(g_buffers[0], offset.xy * ps.resolution_scale).xyz, 1.0)).xyz;
         float sample_depth = sample_pos_view_space.z; 
-        occlusion += (sample_depth >= sample_pos.z + ps.bias ? 1.0 : 0.0);
+        float range_check = smoothstep(0.0, 1.0, ps.radius / abs(frag_pos_view_space.z - sample_depth));
+        occlusion += (sample_depth >= sample_pos.z + ps.bias ? 1.0 : 0.0) * range_check;
 
-    } 
+    }    
 
-    occlusion = 1.0 - (occlusion / 64);
+    occlusion = 1.0 - (occlusion / KERNEL_SIZE);
     out_color = occlusion;  
 
 }
