@@ -49,7 +49,7 @@ namespace gage::gfx::data
         {
            .radius = gfx.ssao_radius,
            .bias = gfx.ssao_bias,
-           .noise_scale = glm::vec2(gfx.get_scaled_draw_extent().width / 4.0 , gfx.get_scaled_draw_extent().height / 4.0),
+           .noise_scale = glm::vec2(gfx.draw_extent.width / 4.0 , gfx.draw_extent.height / 4.0),
            .resolution_scale = gfx.draw_extent_scale
         };
 

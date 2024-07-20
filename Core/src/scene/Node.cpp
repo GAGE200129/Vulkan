@@ -32,4 +32,8 @@ namespace gage::scene
     {
         return name;
     }
+    const glm::mat4x4& Node::get_global_transform() const
+    {
+        return global_transform;
+    }
 }

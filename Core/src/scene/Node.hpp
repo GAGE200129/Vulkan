@@ -22,6 +22,9 @@ namespace gage::scene
         uint64_t get_id() const;
         const std::vector<Node*>& get_children() const;
         const std::string& get_name() const;
+
+        const glm::mat4x4& get_global_transform() const;
+
     private:  
         SceneGraph& scene;
         uint64_t id;
@@ -34,5 +37,6 @@ namespace gage::scene
         glm::vec3 position{0.0f, 0.0f, 0.0f};
         glm::vec3 scale{1.0f, 1.0f, 1.0f};
         glm::quat rotation{1.0f, 0.0f, 0.0f, 0.0f};
+        glm::mat4x4 global_transform{0.0f};
     };
 }

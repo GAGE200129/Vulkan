@@ -42,7 +42,7 @@ namespace gage::utils
                 return i;
             }
         }
-        gfx::get_logger().critical("Failed to find memory type: {}", string_VkMemoryPropertyFlags(properties));
+        gfx::log().critical("Failed to find memory type: {}", string_VkMemoryPropertyFlags(properties));
         throw gfx::GraphicsException{"Failed to find memory type !"};
     }
 }

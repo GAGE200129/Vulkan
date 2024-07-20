@@ -5,7 +5,7 @@ namespace spdlog
     class logger;
 }
 
-namespace gage::gfx
+namespace gage::scene
 {
     void init();
     void shutdown();

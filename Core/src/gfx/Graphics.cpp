@@ -32,26 +32,26 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     {
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
     {
-        log.info("{}", gfx->get_app_name());
-        log.trace("{}", p_callback_data->pMessage);
+        gfx::log().info("{}", gfx->get_app_name());
+        gfx::log().trace("{}", p_callback_data->pMessage);
 
 
         break;
     }
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
     {
-        log.info("{}", p_callback_data->pMessage);
+        gfx::log().info("{}", p_callback_data->pMessage);
         break;
     }
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
     {
-        log.warn("{}", p_callback_data->pMessage);
+        gfx::log().warn("{}", p_callback_data->pMessage);
         break;
     }
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
     {
         utils::StackTrace stack_trace;
-        log.error("{}\n{}", p_callback_data->pMessage, stack_trace.print());
+        gfx::log().error("{}\n{}", p_callback_data->pMessage, stack_trace.print());
         
         break;
     }
@@ -129,7 +129,7 @@ namespace gage::gfx
         vkb_check(physical_device_result, "Failed to select physical device: ");
 
         vkb::PhysicalDevice vkb_physical_device = physical_device_result.value();
-        log.info("Selected physical device: " + vkb_physical_device.name);
+        log().info("Selected physical device: " + vkb_physical_device.name);
 
         vkb::DeviceBuilder deviceBuilder{vkb_physical_device};
         auto vkb_device_result = deviceBuilder.build();
@@ -397,7 +397,7 @@ namespace gage::gfx
         if (VkResult result = vkAcquireNextImageKHR(device, swapchain->get(), 1000000000, present_semaphore, nullptr, &swapchain_image_index);
             result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
         {
-            log.critical("Failed to acquire next image: {}", string_VkResult(result));
+            log().critical("Failed to acquire next image: {}", string_VkResult(result));
             throw GraphicsException{};
         }
 
@@ -524,7 +524,7 @@ namespace gage::gfx
         if (VkResult result = vkQueuePresentKHR(queue, &presentInfo);
             result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
         {
-            log.critical("Failed to present swapchain image: {}", string_VkResult(result));
+            log().critical("Failed to present swapchain image: {}", string_VkResult(result));
             throw GraphicsException{};
         }
 

@@ -10,6 +10,7 @@ namespace gage::gfx::data
         gfx(gfx)
     {
         //size_t size_in_bytes = width * height * 4;
+        log().trace("Allocating image: width: {}, height: {}, size_in_bytes: {}", width, height, size_in_bytes);
 
         gfx.uploading_mutex.lock();
         VkImageCreateInfo img_ci = {};
@@ -175,6 +176,7 @@ namespace gage::gfx::data
     }
     Image::~Image()
     {
+        log().trace("Deallocating image");
         vkDestroySampler(gfx.device, sampler, nullptr);
         vmaDestroyImage(gfx.allocator, image, allocation);
         vkDestroyImageView(gfx.device, image_view, nullptr);

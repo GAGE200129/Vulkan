@@ -9,6 +9,7 @@ namespace gage::gfx::data
 {
     GPUBuffer::GPUBuffer(Graphics &gfx, VkBufferUsageFlags flags, size_t size_in_bytes, const void *data) : gfx(gfx)
     {
+        log().trace("Allocating vulkan gpu buffer: size: {} bytes, address: {}, flags: {}", size_in_bytes, data, string_VkBufferUsageFlags(flags));
         gfx.uploading_mutex.lock();
         assert(size_in_bytes != 0 && data != nullptr);
         VkBufferCreateInfo staging_buffer_info = {};
@@ -78,6 +79,7 @@ namespace gage::gfx::data
 
     GPUBuffer::~GPUBuffer()
     {
+        log().trace("Deallocating vulkan gpu buffer: size: {} bytes", info.size);
         vmaDestroyBuffer(gfx.allocator, buffer_handle, allocation);
     }
 

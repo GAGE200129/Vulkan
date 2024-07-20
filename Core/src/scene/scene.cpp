@@ -1,15 +1,14 @@
 #include <pch.hpp>
-#include "gfx.hpp"
+#include "scene.hpp"
 
 
 
-namespace gage::gfx
+namespace gage::scene
 {
     static std::shared_ptr<spdlog::logger> logger; 
     void init()
     {
-        logger = spdlog::stdout_color_mt("Graphics");
-        logger->set_level(spdlog::level::trace);
+        logger = spdlog::stdout_color_mt("Scene");
     }
     void shutdown()
     {
