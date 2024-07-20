@@ -16,7 +16,7 @@
 #include "data/PointLight.hpp"
 #include "data/SSAO.hpp"
 
-
+#include "data/terrain/TerrainPipeline.hpp"
 
 using namespace std::string_literals;
 
@@ -35,7 +35,6 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         gfx::log().info("{}", gfx->get_app_name());
         gfx::log().trace("{}", p_callback_data->pMessage);
 
-
         break;
     }
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
@@ -52,7 +51,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     {
         utils::StackTrace stack_trace;
         gfx::log().error("{}\n{}", p_callback_data->pMessage, stack_trace.print());
-        
+
         break;
     }
 
@@ -296,7 +295,7 @@ namespace gage::gfx
             descriptor_write.pBufferInfo = &buffer_info;
             vkUpdateDescriptorSets(device, 1, &descriptor_write, 0, nullptr);
         }
-        //Create default datas
+        // Create default datas
         create_default_image_sampler();
         delete_stack.push([this]()
                           { destroy_default_image_sampler(); });
@@ -319,15 +318,19 @@ namespace gage::gfx
 
         directional_light = std::make_unique<data::DirectionalLight>(*this);
         delete_stack.push([this]()
-                          { directional_light.reset(); });    
+                          { directional_light.reset(); });
 
         point_light = std::make_unique<data::PointLight>(*this);
         delete_stack.push([this]()
-                          { point_light.reset(); });       
+                          { point_light.reset(); });
+
+        terrain_pipeline = std::make_unique<data::terrain::TerrainPipeline>(*this);
+        delete_stack.push([this]()
+                          { terrain_pipeline.reset(); });
 
         ssao = std::make_unique<data::SSAO>(*this);
         delete_stack.push([this]()
-                          { ssao.reset(); });                       
+                          { ssao.reset(); });
     }
 
     Graphics::~Graphics()
@@ -410,7 +413,7 @@ namespace gage::gfx
         cmd_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
         vk_check(vkBeginCommandBuffer(cmd, &cmd_begin_info));
-        
+
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, final_ambient->get_layout(), 0, 1, &frame_datas[frame_index].global_set, 0, nullptr);
 
         return cmd;
@@ -804,12 +807,12 @@ namespace gage::gfx
         return *geometry_buffer;
     }
 
-    const data::ShadowPipeline& Graphics::get_shadow_pipeline() const
+    const data::ShadowPipeline &Graphics::get_shadow_pipeline() const
     {
         return *shadow_pipeline;
     }
 
-    const data::SSAO& Graphics::get_ssao() const
+    const data::SSAO &Graphics::get_ssao() const
     {
         return *ssao;
     }
@@ -824,12 +827,17 @@ namespace gage::gfx
         return *final_ambient;
     }
 
-    const data::DirectionalLight& Graphics::get_directional_light() const
+    const data::terrain::TerrainPipeline &Graphics::get_terrain_pipeline() const
+    {
+        return *terrain_pipeline;
+    }
+
+    const data::DirectionalLight &Graphics::get_directional_light() const
     {
         return *directional_light;
     }
 
-    const data::PointLight& Graphics::get_point_light() const
+    const data::PointLight &Graphics::get_point_light() const
     {
         return *point_light;
     }

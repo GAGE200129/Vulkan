@@ -47,7 +47,7 @@ namespace gage::scene
 
 
         const data::Model* import_model(gfx::Graphics& gfx, const std::string& file_path, ImportMode mode);
-        void instanciate_model(const data::Model* model);
+        void instanciate_model(const data::Model* model, glm::vec3 initial_position);
 
 
         static void make_parent(Node* parent, Node* child);

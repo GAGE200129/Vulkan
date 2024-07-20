@@ -45,6 +45,11 @@ namespace gage::gfx::data
         class SSAOPass;
     }
 
+    namespace terrain
+    {
+        class TerrainPipeline;
+    }
+
 }
 
 struct GLFWwindow;
@@ -86,6 +91,7 @@ namespace gage::gfx
         friend class data::g_buffer::LightPass;
         friend class data::g_buffer::SSAOPass;
 
+        friend class data::terrain::TerrainPipeline;
     public:
         Graphics(GLFWwindow *window, std::string app_name);
         Graphics(const Graphics &) = delete;
@@ -112,6 +118,7 @@ namespace gage::gfx
         const data::g_buffer::GBuffer& get_g_buffer() const;
         const data::ShadowPipeline& get_shadow_pipeline() const;
         const data::PBRPipeline& get_pbr_pipeline() const;
+        const data::terrain::TerrainPipeline& get_terrain_pipeline() const;
         const data::AmbientLight& get_final_ambient() const;
         const data::DirectionalLight& get_directional_light() const;
         const data::SSAO& get_ssao() const;
@@ -206,6 +213,7 @@ namespace gage::gfx
         std::unique_ptr<data::AmbientLight> final_ambient{};
         std::unique_ptr<data::DirectionalLight> directional_light{};
         std::unique_ptr<data::PointLight> point_light{};
+        std::unique_ptr<data::terrain::TerrainPipeline> terrain_pipeline{};
 
         float ssao_bias = 0.025f;
         float ssao_radius = 0.5f;

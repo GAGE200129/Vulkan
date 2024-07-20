@@ -15,6 +15,7 @@
 #include <Core/src/gfx/data/SSAO.hpp>
 #include <Core/src/gfx/Graphics.hpp>
 #include <Core/src/gfx/data/terrain/Terrain.hpp>
+#include <Core/src/gfx/data/terrain/TerrainPipeline.hpp>
 #include <Core/src/utils/Cvar.hpp>
 
 #include <Core/src/phys/phys.hpp>
@@ -51,14 +52,19 @@ int main()
         win::ImguiWindow imgui_window{gfx};
 
         gfx::data::Camera camera{};
-        camera.far = 100.0f;
+        camera.far = 1000.0f;
+
+        //std::optional<gfx::data::terrain::Terrain> new_terrain;
+        //new_terrain.emplace(gfx, "res/terrains/test.ter");
 
         std::vector<gfx::data::PointLight::Data> point_lights{};
 
-        const scene::data::Model *scene_model = scene->import_model(gfx, "res/models/box_textured.glb", scene::SceneGraph::ImportMode::Binary);
+        const scene::data::Model *scene_model = scene->import_model(gfx, "res/models/box.glb", scene::SceneGraph::ImportMode::Binary);
         const scene::data::Model *sponza_model = scene->import_model(gfx, "res/models/sponza.glb", scene::SceneGraph::ImportMode::Binary);
-        scene->instanciate_model(scene_model);
-        scene->instanciate_model(sponza_model);
+
+
+        scene->instanciate_model(scene_model, {0, 0, 0});
+        scene->instanciate_model(sponza_model, {0, 0, 0});
 
         while (!window.is_closing())
         {
@@ -75,15 +81,20 @@ int main()
             const auto &g_buffer = gfx.get_g_buffer();
             const auto &pbr_pipeline = gfx.get_pbr_pipeline();
             const auto &shadow_pipeline = gfx.get_shadow_pipeline();
+            const auto &terrain_pipeline = gfx.get_terrain_pipeline();
 
             g_buffer.begin_shadowpass(cmd);
             shadow_pipeline.bind(cmd);
             scene->render(gfx, cmd, shadow_pipeline.get_layout());
+            //new_terrain->render(gfx, cmd);
             g_buffer.end(cmd);
 
             g_buffer.begin_mainpass(cmd);
             pbr_pipeline.bind(cmd);
             scene->render(gfx, cmd, pbr_pipeline.get_layout());
+            
+            terrain_pipeline.bind(cmd);
+            //new_terrain->render(gfx, cmd);
             g_buffer.end(cmd);
 
 
@@ -113,6 +124,10 @@ int main()
     catch (gfx::GraphicsException &e)
     {
         std::cerr << "Graphics exception caught: " + std::string(e.what()) << "\n";
+    }
+    catch (scene::SceneException &e)
+    {
+        std::cerr << "Scene exception caught: " + std::string(e.what()) << "\n";
     }
     catch (utils::FileLoaderException &e)
     {

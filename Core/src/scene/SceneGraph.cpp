@@ -79,18 +79,18 @@ namespace gage::scene
 
     void SceneGraph::update(float delta)
     {
-        std::function<void(Node *node, glm::mat4x4 accumulated_transform)> traverse_scene_graph_recursive;
+        std::function<void(Node * node, glm::mat4x4 accumulated_transform)> traverse_scene_graph_recursive;
         traverse_scene_graph_recursive = [&](scene::Node *node, glm::mat4x4 accumulated_transform)
         {
-            //Build node global transform
+            // Build node global transform
+            accumulated_transform = glm::translate(accumulated_transform, node->position);
             accumulated_transform = glm::scale(accumulated_transform, node->scale);
             accumulated_transform *= glm::mat4x4(node->rotation);
-            accumulated_transform = glm::translate(accumulated_transform, node->position);
             node->global_transform = accumulated_transform;
 
-
             
-            for(const auto& component : node->components)
+
+            for (const auto &component : node->components)
             {
                 component->update(delta);
             }
@@ -104,12 +104,12 @@ namespace gage::scene
         traverse_scene_graph_recursive(nodes.at(0).get(), glm::mat4x4(1.0f));
     }
 
-    void SceneGraph::render(gfx::Graphics& gfx, VkCommandBuffer cmd, VkPipelineLayout layout)
+    void SceneGraph::render(gfx::Graphics &gfx, VkCommandBuffer cmd, VkPipelineLayout layout)
     {
         std::function<void(const Node *node)> traverse_scene_graph_recursive;
         traverse_scene_graph_recursive = [&](const scene::Node *node)
         {
-            for(const auto& component : node->components)
+            for (const auto &component : node->components)
             {
                 component->render(gfx, cmd, layout);
             }
@@ -150,7 +150,7 @@ namespace gage::scene
 
         if (!ret)
         {
-            log().critical("Failed to import scene: {} | {} | {}", file_path,  warn , err);
+            log().critical("Failed to import scene: {} | {} | {}", file_path, warn, err);
             throw SceneException{"Failed to import scene: " + file_path + "| " + warn + "| " + err};
         }
         new_model->root_node = gltf_model.scenes.at(gltf_model.defaultScene).nodes.at(0);
@@ -162,8 +162,6 @@ namespace gage::scene
             data::ModelNode model_node{};
             model_node.name = gltf_node.name;
 
-
-
             if (gltf_node.mesh > -1)
             {
                 model_node.has_mesh = true;
@@ -174,7 +172,12 @@ namespace gage::scene
             glm::quat &rotation = model_node.rotation;
             glm::vec3 &scale = model_node.scale;
 
-            assert(gltf_node.matrix.size() == 0);
+            // assert(gltf_node.matrix.size() == 0);
+
+            // if (gltf_node.translation.size() != 0)
+            // {
+
+            // }
 
             if (gltf_node.translation.size() != 0)
             {
@@ -188,7 +191,6 @@ namespace gage::scene
                 scale.x = gltf_node.scale.at(0);
                 scale.y = gltf_node.scale.at(1);
                 scale.z = gltf_node.scale.at(2);
-
             }
 
             if (gltf_node.rotation.size() != 0)
@@ -230,7 +232,7 @@ namespace gage::scene
         return model_ptr;
     }
 
-    void SceneGraph::instanciate_model(const data::Model *model)
+    void SceneGraph::instanciate_model(const data::Model *model, glm::vec3 initial_position)
     {
         assert(model != nullptr);
         log().info("Instanciating model: {}", model->name);
@@ -238,12 +240,15 @@ namespace gage::scene
         std::function<Node *(const data::Model &model, const data::ModelNode &model_node)> instanciate_node_recursive;
         instanciate_node_recursive = [&](const data::Model &model, const data::ModelNode &model_node) -> Node *
         {
+            //if(model.root_node)
+            
             Node *new_node = create_node();
             new_node->name = model_node.name;
             new_node->position = model_node.position;
             new_node->rotation = model_node.rotation;
             new_node->scale = model_node.scale;
-            
+
+
             if (model_node.has_mesh)
             {
                 new_node->components.push_back(std::make_unique<components::MeshRenderer>(*this, *new_node, model, *model.meshes.at(model_node.mesh_index).get()));
@@ -258,7 +263,8 @@ namespace gage::scene
             return new_node;
         };
 
-        instanciate_node_recursive(*model, model->nodes.at(model->root_node));
+        Node* new_node = instanciate_node_recursive(*model, model->nodes.at(model->root_node));
+        new_node->position += initial_position;
     }
 
     // Every node created will be the child of the root node
@@ -424,28 +430,47 @@ namespace gage::scene
 
         auto extract_data_from_primitive = [&](const Primitive &primitive, std::vector<glm::vec3> &positions, std::vector<glm::vec3> &normals, std::vector<glm::vec2> &texcoords)
         {
-            bool attribute_valid = primitive.attributes.find("POSITION") != primitive.attributes.end();
-            attribute_valid |= primitive.attributes.find("NORMAL") != primitive.attributes.end();
-            attribute_valid |= primitive.attributes.find("TEXCOORD_0") != primitive.attributes.end();
-            if (!attribute_valid)
-                throw SceneException{"Model vertex attribute must have POSITION, NORMAL, TEXCOORD_0 attributes"};
+            if (primitive.attributes.find("POSITION") == primitive.attributes.end())
+            {
+                log().critical("Model vertex attribute must have POSITION attributes");
+                throw SceneException{"Model vertex attribute must have POSITION attributes"};
+            }
 
             const auto &position_accessor = gltf_model.accessors.at(primitive.attributes.at("POSITION"));
-            auto position_buffer = extract_buffer_from_accessor(position_accessor);
+            std::vector<unsigned char> position_buffer = extract_buffer_from_accessor(position_accessor);
+            std::vector<unsigned char> normal_buffer;
+            std::vector<unsigned char> texcoord_buffer;
 
-            const auto &normal_accessor = gltf_model.accessors.at(primitive.attributes.at("NORMAL"));
-            auto normal_buffer = extract_buffer_from_accessor(normal_accessor);
+            if(primitive.attributes.find("NORMAL") != primitive.attributes.end())
+            {
+                normal_buffer = extract_buffer_from_accessor(gltf_model.accessors.at(primitive.attributes.at("NORMAL")));
+            }
+            else
+            {
+                //Fill it with zeroes
+                auto vertex_count = position_accessor.count;
+                normal_buffer.resize(vertex_count * sizeof(glm::vec3));
+                std::memset(normal_buffer.data(), 0, normal_buffer.size());
+            }
 
-            const auto &texcoord_accessor = gltf_model.accessors.at(primitive.attributes.at("TEXCOORD_0"));
-            auto texcoord_buffer = extract_buffer_from_accessor(texcoord_accessor);
+            if(primitive.attributes.find("TEXCOORD_0") != primitive.attributes.end())
+            {
+                texcoord_buffer = extract_buffer_from_accessor(gltf_model.accessors.at(primitive.attributes.at("TEXCOORD_0")));
+            }
+            else
+            {
+                //Fill with zeroes
+                auto vertex_count = position_accessor.count;
+                texcoord_buffer.resize(vertex_count * sizeof(glm::vec2));
+                std::memset(texcoord_buffer.data(), 0, texcoord_buffer.size());
+            }
 
-            bool buffer_valid = position_accessor.count == normal_accessor.count && position_accessor.count == texcoord_accessor.count;
-            if (!buffer_valid)
-                throw SceneException{"Buffer invalid !"};
-
-            bool texcoord_valid = texcoord_accessor.componentType == 5126; // float
-            if (!texcoord_valid)
-                throw SceneException{"Texture coord must be float !"};
+            // bool texcoord_valid = texcoord_accessor.componentType == 5126; // float
+            // if (!texcoord_valid)
+            // {
+            //     log().critical("Texture coord must be float !");
+            //     throw SceneException{"Texture coord must be float !"};
+            // }
 
             // Process
             for (uint32_t i = 0; i < position_accessor.count; i++)

@@ -17,6 +17,8 @@ namespace gage::gfx::data::terrain
     {  
     public:
         Terrain(Graphics& gfx, const std::string& file_name);
+
+        void render(Graphics& gfx, VkCommandBuffer cmd);
     protected:
 
         uint32_t size{};
@@ -24,5 +26,6 @@ namespace gage::gfx::data::terrain
 
         std::unique_ptr<GPUBuffer> vertex_buffer{};
         std::unique_ptr<GPUBuffer> index_buffer{};
+        VkDescriptorSet desc_set{};
     };
 }
