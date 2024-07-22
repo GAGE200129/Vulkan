@@ -62,21 +62,24 @@ int main()
         std::optional<scene::SceneGraph> scene;
         scene.emplace(gfx);
 
-        const scene::data::Model& scene_model = scene->import_model("res/models/box.glb", scene::SceneGraph::ImportMode::Binary);
+        const scene::data::Model& scene_model = scene->import_model("res/models/toothless.glb", scene::SceneGraph::ImportMode::Binary);
         const scene::data::Model& sponza_model = scene->import_model("res/models/sponza.glb", scene::SceneGraph::ImportMode::Binary);
 
 
         scene::Node* animated_node = scene->instanciate_model(scene_model, {0, 0, 0});
+        scene::Node* animated_node2 = scene->instanciate_model(scene_model, {2, 0, 0});
         scene->instanciate_model(sponza_model, {0, 0, 0});
 
         scene::components::Animator* animator = (scene::components::Animator*)animated_node->get_requested_component(typeid(scene::components::Animator).name());
+        scene::components::Animator* animator2 = (scene::components::Animator*)animated_node2->get_requested_component(typeid(scene::components::Animator).name());
         
 
 
         scene->init();
 
 
-        animator->set_current_animation("Crazy");
+        animator->set_current_animation("Armature|mixamo.com|Layer0");
+        animator2->set_current_animation("Armature|mixamo.com|Layer0");
         while (!window.is_closing())
         {
             scene->update(0.016f);

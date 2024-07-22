@@ -31,19 +31,23 @@ layout(push_constant, std140) uniform PushConstant {
 void main() 
 {   
     vec4 total_position = model_transform * vec4(in_pos, 1.0);
+    vec3 total_normal = mat3(transpose(inverse(model_transform))) * in_normal;
     if(animation.enabled)
     {
         total_position = vec4(0, 0, 0, 0);
+        total_normal = vec3(0, 0, 0);
         for(uint i = 0 ; i < 4 ; i++)
         {
             vec4 local_position = animation.bone_matrices[in_bone_ids[i]] * vec4(in_pos,1.0f);
             total_position += local_position * in_weights[i];
+            vec3 local_normal = mat3(animation.bone_matrices[in_bone_ids[i]]) * in_normal;
+            total_normal += local_normal * in_weights[i];
         }
     }
 
     vec4 p_view = ubo.view * vec4(total_position.xyz, 1.0);
 	gl_Position = ubo.projection * p_view;
-	vs_out.normal = mat3(transpose(inverse(model_transform))) * in_normal;
+	vs_out.normal = total_normal;
 	vs_out.uv = in_uvs;
     vs_out.world_pos = total_position.xyz;
 }

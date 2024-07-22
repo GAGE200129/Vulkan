@@ -10,9 +10,10 @@
 
 namespace gage::scene::components
 {
-    Animator::Animator(SceneGraph &scene, Node &node, const data::Model &model, const std::vector<std::unique_ptr<data::ModelAnimation>> &model_animations) : IComponent(scene, node),
-                                                                                                                                                              model(model),
-                                                                                                                                                              model_animations(model_animations)
+    Animator::Animator(SceneGraph &scene, Node &node, const data::Model &model, const std::vector<std::unique_ptr<data::ModelAnimation>> &model_animations) : 
+        IComponent(scene, node),
+        model(model),
+        model_animations(model_animations)
 
     {
     }
@@ -45,6 +46,8 @@ namespace gage::scene::components
                 float current_time_rev_to_current_time_point = current_time - current_time_point;
                 float diff = next_time_point - current_time_point;
                 scale_factor = current_time_rev_to_current_time_point / diff;
+
+                //scale_factor = std::foor
                 return scale_factor;
             };
 
@@ -53,10 +56,9 @@ namespace gage::scene::components
                 // Interpolate position
                 if (channel.time_points.size() >= 2)
                 {
-                    glm::vec3 position{0, 0, 0};
                     int index = get_key_frame_index(current_time, channel.time_points);
                     float scale_factor = get_scale_factor(channel.time_points.at(index), channel.time_points.at(index + 1), current_time);
-                    position = glm::mix(channel.positions.at(index), channel.positions.at(index + 1), scale_factor);
+                    glm::vec3 position = glm::mix(channel.positions.at(index), channel.positions.at(index + 1), scale_factor);
                     bone_id_to_joint_map.at(channel.target_node)->set_position(position);
                 }      
             }
@@ -67,10 +69,9 @@ namespace gage::scene::components
                 // Interpolate position
                 if (channel.time_points.size() >= 2)
                 {
-                    glm::vec3 scale{1, 1, 1};
                     int index = get_key_frame_index(current_time, channel.time_points);
                     float scale_factor = get_scale_factor(channel.time_points.at(index), channel.time_points.at(index + 1), current_time);
-                    scale = glm::mix(channel.scales.at(index), channel.scales.at(index + 1), scale_factor);
+                    glm::vec3 scale = glm::mix(channel.scales.at(index), channel.scales.at(index + 1), scale_factor);
                     bone_id_to_joint_map.at(channel.target_node)->set_scale(scale);
                 }
 
@@ -82,10 +83,9 @@ namespace gage::scene::components
                 // Interpolate position
                 if (channel.time_points.size() >= 2)
                 {
-                    glm::quat rotation{1, 0, 0, 0};
                     int index = get_key_frame_index(current_time, channel.time_points);
                     float scale_factor = get_scale_factor(channel.time_points.at(index), channel.time_points.at(index + 1), current_time);
-                    rotation = glm::mix(channel.rotations.at(index), channel.rotations.at(index + 1), scale_factor);
+                    glm::quat rotation = glm::slerp(channel.rotations.at(index), channel.rotations.at(index + 1), scale_factor);
                     bone_id_to_joint_map.at(channel.target_node)->set_rotation(rotation);
                 }
 

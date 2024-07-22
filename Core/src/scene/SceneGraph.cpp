@@ -128,6 +128,8 @@ namespace gage::scene
         std::function<void(Node * node, glm::mat4x4 accumulated_transform)> traverse_scene_graph_recursive;
         traverse_scene_graph_recursive = [&](scene::Node *node, glm::mat4x4 accumulated_transform)
         {
+            
+
             // Build node global transform
             accumulated_transform = glm::translate(accumulated_transform, node->position);
             accumulated_transform = glm::scale(accumulated_transform, node->scale);
