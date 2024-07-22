@@ -9,6 +9,8 @@
 #include <Core/src/gfx/Graphics.hpp>
 #include <Core/src/gfx/data/PBRPipeline.hpp>
 
+#include <Core/src/mem.hpp>
+
 namespace tinygltf
 {
     bool LoadImageData(tinygltf::Image *image, const int /*image_idx*/,

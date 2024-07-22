@@ -12,6 +12,7 @@
 #include <Core/src/gfx/data/PBRPipeline.hpp>
 
 #include <Core/src/scene/SceneGraph.hpp>
+#include <Core/src/mem.hpp>
 
 
 #include "Window.hpp"
@@ -124,6 +125,7 @@ namespace gage::win
             ImGui::Separator();
              static float arr[] = { 0.6f, 0.1f, 1.0f, 0.5f, 0.92f, 0.1f, 0.2f };
             ImGui::Text("Frame time: %f ms", stats.frame_time);
+            ImGui::Text("Mem usage: %u bytes", gage::get_allocated_bytes());
             
         }
         ImGui::End();
@@ -207,44 +209,4 @@ namespace gage::win
         }
         ImGui::End();
     }
-
-   // void ImguiWindow::create_viewport(gfx::Graphics &gfx)
-   // {
-   //     const auto [color_fd, color_size] = gfx.get_swapchain().get_color_image_external();
-   //     const auto [depth_fd, depth_size] = gfx.get_swapchain().get_depth_image_external();
-   //     VkExtent2D extent = gfx.get_scaled_draw_extent();
-//
-   //     glCreateMemoryObjectsEXT(1, &gfx_color_texture_mem);
-   //     glImportMemoryFdEXT(gfx_color_texture_mem, color_size, GL_HANDLE_TYPE_OPAQUE_FD_EXT, color_fd);
-   //     glCreateTextures(GL_TEXTURE_2D, 1, &gfx_color_texture);
-//
-   //     GLint color_swizzle[4] = { //Vulkan using BGRA8 not RGBA8
-   //         GL_BLUE,
-   //         GL_GREEN,
-   //         GL_RED,
-   //         GL_ALPHA
-   //     };
-   //     glTextureParameteriv(gfx_color_texture, GL_TEXTURE_SWIZZLE_RGBA, color_swizzle);
-   //     glTextureStorageMem2DEXT(gfx_color_texture, 1, GL_RGBA8, extent.width, extent.height, gfx_color_texture_mem, 0);
-//
-   //     glCreateMemoryObjectsEXT(1, &gfx_depth_texture_mem);
-   //     glImportMemoryFdEXT(gfx_depth_texture_mem, depth_size, GL_HANDLE_TYPE_OPAQUE_FD_EXT, depth_fd);
-   //     glCreateTextures(GL_TEXTURE_2D, 1, &gfx_depth_texture);
-//
-   //     GLint swizzle[4] = {
-   //         GL_RED,
-   //         GL_RED,
-   //         GL_RED,
-   //         GL_ONE};
-   //     glTextureParameteriv(gfx_depth_texture, GL_TEXTURE_SWIZZLE_RGBA, swizzle);
-   //     glTextureStorageMem2DEXT(gfx_depth_texture, 1, GL_DEPTH_COMPONENT32, extent.width, extent.height, gfx_depth_texture_mem, 0);
-   // }
-   // void ImguiWindow::destroy_viewport()
-   // {
-   //     glDeleteTextures(1, &gfx_color_texture);
-   //     glDeleteMemoryObjectsEXT(1, &gfx_color_texture_mem);
-//
-   //     glDeleteTextures(1, &gfx_depth_texture);
-   //     glDeleteMemoryObjectsEXT(1, &gfx_depth_texture_mem);
-   // }
 }

@@ -86,11 +86,13 @@ project "Core"
 
    
    --Linux--
-   filter { "system:linux" }
+   filter "Debug"
       buildoptions 
       {
-         "-Wall -Wextra -Wpedantic"
+         "-Wall -Wextra -Wpedantic -fsanitize=address -static-libasan"
       }
+
+      linkoptions { "-fsanitize=address -static-libasan" }
 
       defines 
       {
@@ -115,6 +117,15 @@ project "Sandbox"
       "%{prj.location}",
       "%{wks.location}"
    }
+
+   filter "Debug"
+      buildoptions 
+      {
+         "-Wall -Wextra -Wpedantic -fsanitize=address -static-libasan"
+      }
+
+      linkoptions { "-fsanitize=address -static-libasan" }
+
 
 
    

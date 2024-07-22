@@ -98,7 +98,6 @@ int main()
             g_buffer.begin_shadowpass(cmd);
             pbr_pipeline.bind_depth(cmd);
             scene->render_depth(cmd, pbr_pipeline.get_depth_layout());
-            //new_terrain->render(gfx, cmd);
             g_buffer.end(cmd);
 
             g_buffer.begin_mainpass(cmd);
@@ -106,7 +105,6 @@ int main()
             scene->render_geometry(cmd, pbr_pipeline.get_layout());
             
             terrain_pipeline.bind(cmd);
-            //new_terrain->render(gfx, cmd);
             g_buffer.end(cmd);
 
 

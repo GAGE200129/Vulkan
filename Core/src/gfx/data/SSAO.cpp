@@ -364,6 +364,6 @@ namespace gage::gfx::data
 
         image = std::make_unique<Image>(gfx, noises.data(), 4, 4, 12 * 4 * 4, image_ci);
 
-        kernel_buffer = std::make_unique<GPUBuffer>(gfx, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(glm::vec4) * 64, kernel.data());
+        kernel_buffer = std::make_unique<GPUBuffer>(gfx, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(glm::vec4) * KERNEL_SIZE, kernel.data());
     }
 }
