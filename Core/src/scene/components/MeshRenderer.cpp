@@ -82,7 +82,7 @@ namespace gage::scene::components
 
             // Build transform
 
-            const VkDescriptorSet &material_set = model.materials.at(section.material_index)->descriptor_set;
+            const VkDescriptorSet &material_set = model.materials.at(section.material_index).descriptor_set;
             vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), glm::value_ptr(node.get_global_transform()));
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                     pipeline_layout,

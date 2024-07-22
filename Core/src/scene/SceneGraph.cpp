@@ -9,59 +9,59 @@
 #include <Core/src/gfx/Graphics.hpp>
 #include <Core/src/gfx/data/PBRPipeline.hpp>
 
-// namespace tinygltf
-// {
-//     bool LoadImageData(tinygltf::Image *image, const int /*image_idx*/,
-//                        std::string * /*err*/, std::string * /*warn*/,
-//                        int /*req_width*/, int /*req_height*/,
-//                        const unsigned char *bytes, int size, void * /*user_data*/)
-//     {
+namespace tinygltf
+{
+    bool LoadImageData(tinygltf::Image *image, const int /*image_idx*/,
+                       std::string * /*err*/, std::string * /*warn*/,
+                       int /*req_width*/, int /*req_height*/,
+                       const unsigned char *bytes, int size, void * /*user_data*/)
+    {
 
-//         int w = 0, h = 0, comp = 0;
-//         // Try to decode image header
-//         if (stbi_info_from_memory(bytes, size, &w, &h, &comp))
-//         {
-//             stbi_uc *data = stbi_load_from_memory(bytes, size, &w, &h, &comp, STBI_rgb_alpha);
+        int w = 0, h = 0, comp = 0;
+        // Try to decode image header
+        if (stbi_info_from_memory(bytes, size, &w, &h, &comp))
+        {
+            stbi_uc *data = stbi_load_from_memory(bytes, size, &w, &h, &comp, STBI_rgb_alpha);
 
-//             image->width = w;
-//             image->height = h;
-//             image->component = 4;
-//             image->bits = 8;
-//             image->pixel_type = TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE;
-//             image->as_is = false;
-//             image->image.resize(w * h * 4);
-//             std::memcpy(image->image.data(), data, w * h * 4);
+            image->width = w;
+            image->height = h;
+            image->component = 4;
+            image->bits = 8;
+            image->pixel_type = TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE;
+            image->as_is = false;
+            image->image.resize(w * h * 4);
+            std::memcpy(image->image.data(), data, w * h * 4);
 
-//             stbi_image_free(data);
-//         }
-//         else
-//         {
-//             unsigned char image_data[] =
-//                 {
-//                     0, 255, 0, 255, 255, 0, 0, 255,
-//                     255, 255, 0, 255, 255, 0, 255, 255};
-//             image->width = 2;
-//             image->height = 2;
-//             image->component = 4;
-//             image->bits = 8;
-//             image->pixel_type = TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE;
-//             image->as_is = false;
-//             image->image.resize(2 * 2 * 4);
-//             std::copy(image_data, image_data + 2 * 2 * 4, image->image.begin());
-//         }
+            stbi_image_free(data);
+        }
+        else
+        {
+            unsigned char image_data[] =
+                {
+                    0, 255, 0, 255, 255, 0, 0, 255,
+                    255, 255, 0, 255, 255, 0, 255, 255};
+            image->width = 2;
+            image->height = 2;
+            image->component = 4;
+            image->bits = 8;
+            image->pixel_type = TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE;
+            image->as_is = false;
+            image->image.resize(2 * 2 * 4);
+            std::copy(image_data, image_data + 2 * 2 * 4, image->image.begin());
+        }
 
-//         return true;
-//     }
+        return true;
+    }
 
-//     bool WriteImageData(
-//         const std::string * /* basepath */, const std::string * /* filename */,
-//         const tinygltf::Image * /*image*/, bool /* embedImages */,
-//         const tinygltf::FsCallbacks * /* fs_cb */, const tinygltf::URICallbacks * /* uri_cb */,
-//         std::string * /* out_uri */, void * /* user_pointer */)
-//     {
-//         assert(false);
-//     }
-// }
+    bool WriteImageData(
+        const std::string * /* basepath */, const std::string * /* filename */,
+        const tinygltf::Image * /*image*/, bool /* embedImages */,
+        const tinygltf::FsCallbacks * /* fs_cb */, const tinygltf::URICallbacks * /* uri_cb */,
+        std::string * /* out_uri */, void * /* user_pointer */)
+    {
+        assert(false);
+    }
+}
 
 namespace gage::scene
 {
@@ -81,7 +81,7 @@ namespace gage::scene
         {
             for (const auto &material : model->materials)
             {
-                gfx.get_pbr_pipeline().free_descriptor_set(material->descriptor_set);
+                gfx.get_pbr_pipeline().free_descriptor_set(material.descriptor_set);
             }
         }
 
@@ -129,17 +129,18 @@ namespace gage::scene
         traverse_scene_graph_recursive = [&](scene::Node *node, glm::mat4x4 accumulated_transform)
         {
             
-
+            for (const auto &component : node->components)
+            {
+                component->update(delta);
+            }
+            
             // Build node global transform
             accumulated_transform = glm::translate(accumulated_transform, node->position);
             accumulated_transform = glm::scale(accumulated_transform, node->scale);
             accumulated_transform *= glm::mat4x4(node->rotation);
             node->global_transform = accumulated_transform;
 
-            for (const auto &component : node->components)
-            {
-                component->update(delta);
-            }
+            
 
             for (const auto &child : node->get_children())
             {
@@ -282,8 +283,8 @@ namespace gage::scene
         new_model->meshes.reserve(gltf_model.meshes.size());
         for (const auto &gltf_mesh : gltf_model.meshes)
         {
-            auto new_mesh = std::make_unique<data::ModelMesh>();
-            this->process_model_mesh(gltf_model, gltf_mesh, new_mesh.get());
+            auto new_mesh = data::ModelMesh{};
+            this->process_model_mesh(gltf_model, gltf_mesh, new_mesh);
             new_model->meshes.push_back(std::move(new_mesh));
         }
 
@@ -291,8 +292,8 @@ namespace gage::scene
         new_model->materials.reserve(gltf_model.materials.size());
         for (const auto &gltf_material : gltf_model.materials)
         {
-            auto new_material = std::make_unique<data::ModelMaterial>();
-            this->process_model_material(gltf_model, gltf_material, new_material.get());
+            auto new_material = data::ModelMaterial{};
+            this->process_model_material(gltf_model, gltf_material, new_material);
             new_model->materials.push_back(std::move(new_material));
         }
 
@@ -300,8 +301,8 @@ namespace gage::scene
         new_model->animations.reserve(gltf_model.animations.size());
         for (const auto &gltf_animation : gltf_model.animations)
         {
-            auto new_animation = std::make_unique<data::ModelAnimation>();
-            this->process_model_animation(gltf_model, gltf_animation, new_animation.get());
+            auto new_animation = data::ModelAnimation{};
+            this->process_model_animation(gltf_model, gltf_animation, new_animation);
             new_model->animations.push_back(std::move(new_animation));
         }
 
@@ -309,8 +310,8 @@ namespace gage::scene
         new_model->skins.reserve(gltf_model.skins.size());
         for (const auto &gltf_skin : gltf_model.skins)
         {
-            auto new_skin = std::make_unique<data::ModelSkin>();
-            this->process_model_skin(gltf_model, gltf_skin, new_skin.get());
+            auto new_skin = data::ModelSkin{};
+            this->process_model_skin(gltf_model, gltf_skin, new_skin);
             new_model->skins.push_back(std::move(new_skin));
         }
 
@@ -342,9 +343,9 @@ namespace gage::scene
                 const data::ModelSkin* skin = nullptr;
                 if(model_node.has_skin)
                 {
-                    skin = model.skins.at(model_node.skin_index).get();
+                    skin = &model.skins.at(model_node.skin_index);
                 }
-                new_node->components.push_back(std::make_unique<components::MeshRenderer>(*this, *new_node, gfx, model, *model.meshes.at(model_node.mesh_index).get(), skin));
+                new_node->components.push_back(std::make_unique<components::MeshRenderer>(*this, *new_node, gfx, model, model.meshes.at(model_node.mesh_index), skin));
             }
 
             for (const uint32_t &node : model_node.children)
@@ -361,7 +362,7 @@ namespace gage::scene
 
         if (model.animations.size() != 0)
         {
-            new_node->components.push_back(std::make_unique<components::Animator>(*this, *new_node, model, model.animations));
+            new_node->components.emplace_back(std::make_unique<components::Animator>(*this, *new_node, model, model.animations));
         }
 
         return new_node;
@@ -427,9 +428,9 @@ namespace gage::scene
         return nodes;
     }
 
-    void SceneGraph::process_model_material(const tinygltf::Model &gltf_model, const tinygltf::Material &gltf_material, data::ModelMaterial *material)
+    void SceneGraph::process_model_material(const tinygltf::Model &gltf_model, const tinygltf::Material &gltf_material, data::ModelMaterial &material)
     {
-        material->uniform_buffer_data.color = {
+        material.uniform_buffer_data.color = {
             gltf_material.pbrMetallicRoughness.baseColorFactor.at(0),
             gltf_material.pbrMetallicRoughness.baseColorFactor.at(1),
             gltf_material.pbrMetallicRoughness.baseColorFactor.at(2),
@@ -440,57 +441,61 @@ namespace gage::scene
 
         // Has albedo texture ?
         const auto &albedo_texture_index = gltf_material.pbrMetallicRoughness.baseColorTexture.index;
-        material->uniform_buffer_data.has_albedo = albedo_texture_index > -1;
-        if (material->uniform_buffer_data.has_albedo)
+        material.uniform_buffer_data.has_albedo = albedo_texture_index > -1;
+        if (material.uniform_buffer_data.has_albedo)
         {
             const auto &image_src_index = gltf_model.textures.at(albedo_texture_index).source;
             const auto &image = gltf_model.images.at(image_src_index);
             size_t size_in_bytes = image.width * image.height * 4;
-            material->albedo_image.emplace(gfx, image.image.data(), image.width, image.height, size_in_bytes, image_ci);
+            material.albedo_image = std::make_unique<gfx::data::Image>(gfx, image.image.data(), image.width, image.height, size_in_bytes, image_ci);
         }
 
         // Has metalic roughness ?
         const auto &metalic_roughness_texture_index = gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index;
-        material->uniform_buffer_data.has_metalic = metalic_roughness_texture_index > -1;
-        if (material->uniform_buffer_data.has_metalic)
+        material.uniform_buffer_data.has_metalic = metalic_roughness_texture_index > -1;
+        if (material.uniform_buffer_data.has_metalic)
         {
             const auto &image_src_index = gltf_model.textures.at(metalic_roughness_texture_index).source;
             const auto &image = gltf_model.images.at(image_src_index);
             size_t size_in_bytes = image.width * image.height * 4;
-            material->metalic_roughness_image.emplace(gfx, image.image.data(), image.width, image.height, size_in_bytes, image_ci);
+            material.metalic_roughness_image = std::make_unique<gfx::data::Image>(gfx, image.image.data(), image.width, image.height, size_in_bytes, image_ci);
         }
 
         // Has normal map ?
         const auto &normal_texture_index = gltf_material.normalTexture.index;
-        material->uniform_buffer_data.has_normal = normal_texture_index > -1;
-        if (material->uniform_buffer_data.has_normal)
+        material.uniform_buffer_data.has_normal = normal_texture_index > -1;
+        if (material.uniform_buffer_data.has_normal)
         {
             const auto &image_src_index = gltf_model.textures.at(normal_texture_index).source;
             const auto &image = gltf_model.images.at(image_src_index);
             size_t size_in_bytes = image.width * image.height * 4;
-            material->normal_image.emplace(gfx, image.image.data(), image.width, image.height, size_in_bytes, image_ci);
+            material.normal_image = std::make_unique<gfx::data::Image>(gfx, image.image.data(), image.width, image.height, size_in_bytes, image_ci);
         }
 
-        material->uniform_buffer.emplace(gfx, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(data::ModelMaterial::UniformBuffer), &material->uniform_buffer_data);
-        material->descriptor_set = gfx.get_pbr_pipeline().allocate_material_set(
-            sizeof(data::ModelMaterial::UniformBuffer), material->uniform_buffer.value().get_buffer_handle(),
-            material->albedo_image.has_value() ? material->albedo_image.value().get_image_view() : VK_NULL_HANDLE,
-            material->albedo_image.has_value() ? material->albedo_image.value().get_sampler() : VK_NULL_HANDLE,
-            material->metalic_roughness_image.has_value() ? material->metalic_roughness_image.value().get_image_view() : VK_NULL_HANDLE,
-            material->metalic_roughness_image.has_value() ? material->metalic_roughness_image.value().get_sampler() : VK_NULL_HANDLE,
-            material->normal_image.has_value() ? material->normal_image.value().get_image_view() : VK_NULL_HANDLE,
-            material->normal_image.has_value() ? material->normal_image.value().get_sampler() : VK_NULL_HANDLE);
+        material.uniform_buffer = std::make_unique<gfx::data::CPUBuffer>(gfx, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(data::ModelMaterial::UniformBuffer), &material.uniform_buffer_data);
+        
+        gfx::data::PBRPipeline::MaterialSetAllocInfo alloc_info{
+            .size_in_bytes = sizeof(data::ModelMaterial::UniformBuffer),
+            .buffer = material.uniform_buffer->get_buffer_handle(),
+            .albedo_view = material.albedo_image ? material.albedo_image->get_image_view() : VK_NULL_HANDLE,
+            .albedo_sampler = material.albedo_image ? material.albedo_image->get_sampler() : VK_NULL_HANDLE,
+            .metalic_roughness_view = material.metalic_roughness_image ? material.metalic_roughness_image->get_image_view() : VK_NULL_HANDLE,
+            .metalic_roughness_sampler = material.metalic_roughness_image ? material.metalic_roughness_image->get_sampler() : VK_NULL_HANDLE,
+            .normal_view = material.normal_image ? material.normal_image->get_image_view() : VK_NULL_HANDLE,
+            .normal_sampler = material.normal_image ? material.normal_image->get_sampler() : VK_NULL_HANDLE
+        };
+        material.descriptor_set = gfx.get_pbr_pipeline().allocate_material_set(alloc_info);
     }
 
-    void SceneGraph::process_model_skin(const tinygltf::Model &gltf_model, const tinygltf::Skin &gltf_skin, data::ModelSkin *skin)
+    void SceneGraph::process_model_skin(const tinygltf::Model &gltf_model, const tinygltf::Skin &gltf_skin, data::ModelSkin &skin)
     {
         for(const auto& joint : gltf_skin.joints)
         {
-            skin->joints.push_back(joint);
+            skin.joints.push_back(joint);
         }
     }
 
-    void SceneGraph::process_model_mesh(const tinygltf::Model &gltf_model, const tinygltf::Mesh &gltf_mesh, data::ModelMesh *mesh)
+    void SceneGraph::process_model_mesh(const tinygltf::Model &gltf_model, const tinygltf::Mesh &gltf_mesh, data::ModelMesh &mesh)
     {
         using namespace tinygltf;
         auto extract_buffer_from_accessor = [&](const Accessor &accessor)
@@ -665,7 +670,7 @@ namespace gage::scene
             return (gltf_primitive.attributes.find("WEIGHTS_0") != gltf_primitive.attributes.end()) && (gltf_primitive.attributes.find("JOINTS_0") != gltf_primitive.attributes.end());
         };
 
-        mesh->sections.reserve(gltf_mesh.primitives.size());
+        mesh.sections.reserve(gltf_mesh.primitives.size());
         for (const auto &primitive : gltf_mesh.primitives)
         {
             std::vector<glm::vec3> positions{};
@@ -687,7 +692,7 @@ namespace gage::scene
                 std::make_unique<gfx::data::GPUBuffer>(gfx, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(glm::vec4) * bone_weights.size(), bone_weights.data()),
                 (int32_t)primitive.material,
                 detect_skin(primitive)};
-            mesh->sections.push_back(std::move(section));
+            mesh.sections.push_back(std::move(section));
         }
     }
 
@@ -711,9 +716,9 @@ namespace gage::scene
         traverse_scene_graph_recursive(root, glm::mat4x4(1.0f));
     }
 
-    void SceneGraph::process_model_animation(const tinygltf::Model &gltf_model, const tinygltf::Animation &gltf_animation, data::ModelAnimation *animation)
+    void SceneGraph::process_model_animation(const tinygltf::Model &gltf_model, const tinygltf::Animation &gltf_animation, data::ModelAnimation &animation)
     {
-        animation->name = gltf_animation.name;
+        animation.name = gltf_animation.name;
         try
         {
             log().trace("Animation name: {}", gltf_animation.name);
@@ -730,13 +735,13 @@ namespace gage::scene
                 return result;
             };
 
-            animation->duration = std::numeric_limits<float>::min();
+            animation.duration = std::numeric_limits<float>::min();
             for (const auto &gltf_channel : gltf_animation.channels)
             {
                 const auto &gltf_sampler = gltf_animation.samplers.at(gltf_channel.sampler);
                 const auto &time_point_accessor = gltf_model.accessors.at(gltf_sampler.input);
                 auto time_points = extract_buffer_from_accessor(time_point_accessor); // .size() in bytes
-                animation->duration = std::max(animation->duration, time_point_accessor.maxValues.at(0));
+                animation.duration = std::max(animation.duration, time_point_accessor.maxValues.at(0));
                 if (gltf_channel.target_path.compare("translation") == 0)
                 {
                     data::ModelAnimation::PositionChannel channel{};
@@ -751,7 +756,7 @@ namespace gage::scene
                     std::memcpy(channel.time_points.data(), time_points.data(), time_point_accessor.count * sizeof(float));
                     std::memcpy(channel.positions.data(), data.data(), data_accessor.count * sizeof(glm::vec3));
 
-                    animation->pos_channels.push_back(std::move(channel));
+                    animation.pos_channels.push_back(std::move(channel));
                 }
                 else if (gltf_channel.target_path.compare("scale") == 0)
                 {
@@ -767,7 +772,7 @@ namespace gage::scene
                     std::memcpy(channel.time_points.data(), time_points.data(), time_point_accessor.count * sizeof(float));
                     std::memcpy(channel.scales.data(), data.data(), data_accessor.count * sizeof(glm::vec3));
 
-                    animation->scale_channels.push_back(std::move(channel));
+                    animation.scale_channels.push_back(std::move(channel));
                 }
 
                 else if (gltf_channel.target_path.compare("rotation") == 0)
@@ -798,10 +803,10 @@ namespace gage::scene
                         throw SceneException{};
                     }
 
-                    animation->rotation_channels.push_back(std::move(channel));
+                    animation.rotation_channels.push_back(std::move(channel));
                 }
             }
-            log().trace("Animation duration: {}", animation->duration);
+            log().trace("Animation duration: {}", animation.duration);
         }
         catch (std::out_of_range &e)
         {

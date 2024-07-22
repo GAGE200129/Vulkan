@@ -5,7 +5,6 @@
 #include <Core/src/gfx/Exception.hpp>
 #include <Core/src/utils/FileLoader.hpp>
 #include <Core/src/gfx/data/Camera.hpp>
-#include <Core/src/gfx/draw/Model.hpp>
 #include <Core/src/gfx/data/g_buffer/GBuffer.hpp>
 #include <Core/src/gfx/data/PBRPipeline.hpp>
 #include <Core/src/gfx/data/ShadowPipeline.hpp>

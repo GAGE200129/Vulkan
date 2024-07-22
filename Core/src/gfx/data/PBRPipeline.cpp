@@ -115,10 +115,7 @@ namespace gage::gfx::data
         vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), &transform);
     }
 
-    VkDescriptorSet PBRPipeline::allocate_material_set(size_t size_in_bytes, VkBuffer buffer,
-                                                              VkImageView albedo_view, VkSampler albedo_sampler,
-                                                              VkImageView metalic_roughness_view, VkSampler metalic_roughness_sampler,
-                                                              VkImageView normal_view, VkSampler normal_sampler) const
+    VkDescriptorSet PBRPipeline::allocate_material_set(const MaterialSetAllocInfo& info) const
     {
         gfx.uploading_mutex.lock();
         VkDescriptorSet res{};
@@ -131,9 +128,9 @@ namespace gage::gfx::data
 
         // uniform buffer
         VkDescriptorBufferInfo buffer_desc_info{};
-        buffer_desc_info.buffer = buffer;
+        buffer_desc_info.buffer = info.buffer;
         buffer_desc_info.offset = 0;
-        buffer_desc_info.range = size_in_bytes;
+        buffer_desc_info.range = info.size_in_bytes;
 
         VkWriteDescriptorSet descriptor_write{};
         descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -150,8 +147,8 @@ namespace gage::gfx::data
         // Albedo texture
         VkDescriptorImageInfo albedo_img_info{};
         albedo_img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        albedo_img_info.imageView = albedo_view ? albedo_view : gfx.default_image_view;
-        albedo_img_info.sampler = albedo_sampler ? albedo_sampler : gfx.default_sampler;
+        albedo_img_info.imageView = info.albedo_view ? info.albedo_view : gfx.default_image_view;
+        albedo_img_info.sampler = info.albedo_sampler ? info.albedo_sampler : gfx.default_sampler;
 
         descriptor_write.dstSet = res;
         descriptor_write.dstBinding = 1;
@@ -166,8 +163,8 @@ namespace gage::gfx::data
         // Metalic roughness texture
         VkDescriptorImageInfo metalic_roughness_img_info{};
         metalic_roughness_img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        metalic_roughness_img_info.imageView = metalic_roughness_view ? metalic_roughness_view : gfx.default_image_view;
-        metalic_roughness_img_info.sampler = metalic_roughness_sampler ? metalic_roughness_sampler : gfx.default_sampler;
+        metalic_roughness_img_info.imageView = info.metalic_roughness_view ? info.metalic_roughness_view : gfx.default_image_view;
+        metalic_roughness_img_info.sampler = info.metalic_roughness_sampler ? info.metalic_roughness_sampler : gfx.default_sampler;
 
         descriptor_write.dstSet = res;
         descriptor_write.dstBinding = 1;
@@ -182,8 +179,8 @@ namespace gage::gfx::data
         // Normal map texture
         VkDescriptorImageInfo normal_img_info{};
         normal_img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        normal_img_info.imageView = normal_view ? normal_view : gfx.default_image_view;
-        normal_img_info.sampler = normal_sampler ? normal_sampler : gfx.default_sampler;
+        normal_img_info.imageView = info.normal_view ? info.normal_view : gfx.default_image_view;
+        normal_img_info.sampler = info.normal_sampler ? info.normal_sampler : gfx.default_sampler;
 
         descriptor_write.dstSet = res;
         descriptor_write.dstBinding = 1;

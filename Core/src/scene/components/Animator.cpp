@@ -10,7 +10,7 @@
 
 namespace gage::scene::components
 {
-    Animator::Animator(SceneGraph &scene, Node &node, const data::Model &model, const std::vector<std::unique_ptr<data::ModelAnimation>> &model_animations) : 
+    Animator::Animator(SceneGraph &scene, Node &node, const data::Model &model, const std::vector<data::ModelAnimation> &model_animations) : 
         IComponent(scene, node),
         model(model),
         model_animations(model_animations)
@@ -161,12 +161,12 @@ namespace gage::scene::components
 
         for (const auto &model_animation : model_animations)
         {
-            log().trace("Searching animation: {}", model_animation->name);
-            if (model_animation->name.compare(name) == 0)
+            log().trace("Searching animation: {}", model_animation.name);
+            if (model_animation.name.compare(name) == 0)
             {
-                current_animation = model_animation.get();
+                current_animation = &model_animation;
                 // Link all joints
-                link_bone_id_recursive(bone_id_to_joint_map, *model_animation, &this->node);
+                link_bone_id_recursive(bone_id_to_joint_map, model_animation, &this->node);
                 link_skeleton_id(skeleton_id_to_joint_map, bone_id_to_joint_map, p_mesh_renderer->get_skin()->joints);
                 break;
             }

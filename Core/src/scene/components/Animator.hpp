@@ -19,7 +19,7 @@ namespace gage::scene::components
     class Animator final : public IComponent
     {
     public:
-        Animator(SceneGraph& scene, Node& node, const data::Model& model, const std::vector<std::unique_ptr<data::ModelAnimation>>& model_animations);
+        Animator(SceneGraph& scene, Node& node, const data::Model& model, const std::vector<data::ModelAnimation>& model_animations);
 
         void init() final;
         void update(float delta) final;
@@ -30,12 +30,12 @@ namespace gage::scene::components
         void set_current_animation(const std::string& name);
     private:
         const data::Model& model;
-        const std::vector<std::unique_ptr<data::ModelAnimation>>& model_animations;
+        const std::vector<data::ModelAnimation>& model_animations;
 
         MeshRenderer* p_mesh_renderer{};
         double current_time{};
         std::map<uint32_t, Node*> bone_id_to_joint_map{};
         std::map<uint32_t, Node*> skeleton_id_to_joint_map{};
-        data::ModelAnimation* current_animation{};
+        const data::ModelAnimation* current_animation{};
     };
 }

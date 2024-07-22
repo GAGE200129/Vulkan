@@ -60,10 +60,10 @@ namespace gage::scene::data
             uint32_t has_normal{};
         } uniform_buffer_data{};
 
-        std::optional<gfx::data::CPUBuffer> uniform_buffer;
-        std::optional<gfx::data::Image> albedo_image;
-        std::optional<gfx::data::Image> metalic_roughness_image;
-        std::optional<gfx::data::Image> normal_image;
+        std::unique_ptr<gfx::data::CPUBuffer> uniform_buffer;
+        std::unique_ptr<gfx::data::Image> albedo_image;
+        std::unique_ptr<gfx::data::Image> metalic_roughness_image;
+        std::unique_ptr<gfx::data::Image> normal_image;
         VkDescriptorSet descriptor_set{};
     };
 
@@ -108,9 +108,9 @@ namespace gage::scene::data
         std::string name{};
         std::vector<ModelNode> nodes{};
         uint32_t root_node{};
-        std::vector<std::unique_ptr<ModelMesh>> meshes{};
-        std::vector<std::unique_ptr<ModelMaterial>> materials{};
-        std::vector<std::unique_ptr<ModelAnimation>> animations{};
-        std::vector<std::unique_ptr<ModelSkin>> skins{};
+        std::vector<ModelMesh> meshes{};
+        std::vector<ModelMaterial> materials{};
+        std::vector<ModelAnimation> animations{};
+        std::vector<ModelSkin> skins{};
     };
 }
