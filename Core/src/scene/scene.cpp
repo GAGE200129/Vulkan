@@ -9,6 +9,7 @@ namespace gage::scene
     void init()
     {
         logger = spdlog::stdout_color_mt("Scene");
+        logger->set_level(spdlog::level::trace);
     }
     void shutdown()
     {

@@ -12,7 +12,13 @@ namespace gage::gfx::data
     {
         log().trace("Allocating vulkan cpu buffer: size: {} bytes, address: {}, flags: {}", size_in_bytes, data, string_VkBufferUsageFlags(flags));
         gfx.uploading_mutex.lock();
-        assert(size_in_bytes != 0 && data != nullptr);
+        assert(size_in_bytes != 0);
+        std::vector<unsigned char> null_buffer(size_in_bytes, 0xAA);
+        if(data == nullptr)
+        {
+            data = null_buffer.data();
+        }
+
         VkBufferCreateInfo staging_buffer_info = {};
         staging_buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         staging_buffer_info.size = size_in_bytes;

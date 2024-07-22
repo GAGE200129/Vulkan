@@ -31,6 +31,7 @@ namespace gage::gfx::data
         Graphics& gfx;
         VkPipelineLayout pipeline_layout{};
         VkPipeline pipeline{};
+        VkDescriptorSetLayout desc_layout{};
 
     };
 }

@@ -2,29 +2,42 @@
 
 #include "IComponent.hpp"
 
+#include <Core/src/gfx/data/CPUBuffer.hpp>
+
 namespace gage::scene::data
 {
     class Model;
     class ModelMesh;
+    class ModelSkin;
 }
+
 
 namespace gage::scene::components
 {
     class MeshRenderer final : public IComponent
     {
     public:
-        MeshRenderer(SceneGraph& scene, Node& node, const data::Model& model, const data::ModelMesh& model_mesh) :
-            IComponent(scene, node),
-            model(model),
-            model_mesh(model_mesh)
-        {}
+        MeshRenderer(SceneGraph& scene, Node& node, gfx::Graphics& gfx, const data::Model& model, const data::ModelMesh& model_mesh, const data::ModelSkin* model_skin);
 
         void init() final;
         void update(float delta) final;
-        void render(gfx::Graphics& gfx, VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) final;
+        void render_depth(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) final;
+        void render_geometry(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) final;
         void shutdown() final;
+
+        glm::mat4x4* get_bone_matrices();
+        const data::ModelSkin* get_skin();
     private:
+        struct AnimationBuffer
+        {
+            glm::mat4x4 bone_matrices[100]{};
+            uint32_t enabled{}; 
+        };
+        gfx::Graphics& gfx;
         const data::Model& model;
         const data::ModelMesh& model_mesh;
+        const data::ModelSkin* model_skin{};
+        gfx::data::CPUBuffer bone_matrices_buffer;
+        VkDescriptorSet animation_desc{};
     };
 }

@@ -18,15 +18,15 @@ void main()
     //Blur the kernel
     vec2 texel_size = 1.0 / vec2(textureSize(g_buffers[1], 0));
     float result = 0.0;
-    for (int x = -2; x < 2; ++x) 
+    for (int x = -1; x <= 1; ++x) 
     {
-        for (int y = -2; y < 2; ++y) 
+        for (int y = -1; y <= 1; ++y) 
         {
             vec2 offset = vec2(float(x), float(y)) * texel_size;
             result += texture(g_buffers[1], fs_uv + offset).r;
         }
     }
-    result /= (8.0);
+    result /= (9.0);
 
     out_color = vec4(albedo.rgb * ubo.ambient_light_color * ubo.ambient_light_intensity * result, 1); 
 }

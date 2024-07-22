@@ -23,6 +23,7 @@
 
 #include <Core/src/scene/scene.hpp>
 #include <Core/src/scene/SceneGraph.hpp>
+#include <Core/src/scene/components/Animator.hpp>
 
 #include <thread>
 #include <iostream>
@@ -44,8 +45,7 @@ int main()
     {
 
         phys::Physics phys;
-        std::optional<scene::SceneGraph> scene;
-        scene.emplace();
+        
 
         win::Window window(800, 600, "Hello world");
         auto &gfx = window.get_graphics();
@@ -59,13 +59,24 @@ int main()
 
         std::vector<gfx::data::PointLight::Data> point_lights{};
 
-        const scene::data::Model *scene_model = scene->import_model(gfx, "res/models/box.glb", scene::SceneGraph::ImportMode::Binary);
-        const scene::data::Model *sponza_model = scene->import_model(gfx, "res/models/sponza.glb", scene::SceneGraph::ImportMode::Binary);
+        std::optional<scene::SceneGraph> scene;
+        scene.emplace(gfx);
+
+        const scene::data::Model& scene_model = scene->import_model("res/models/box.glb", scene::SceneGraph::ImportMode::Binary);
+        const scene::data::Model& sponza_model = scene->import_model("res/models/sponza.glb", scene::SceneGraph::ImportMode::Binary);
 
 
-        scene->instanciate_model(scene_model, {0, 0, 0});
+        scene::Node* animated_node = scene->instanciate_model(scene_model, {0, 0, 0});
         scene->instanciate_model(sponza_model, {0, 0, 0});
 
+        scene::components::Animator* animator = (scene::components::Animator*)animated_node->get_requested_component(typeid(scene::components::Animator).name());
+        
+
+
+        scene->init();
+
+
+        animator->set_current_animation("Crazy");
         while (!window.is_closing())
         {
             scene->update(0.016f);
@@ -80,18 +91,17 @@ int main()
 
             const auto &g_buffer = gfx.get_g_buffer();
             const auto &pbr_pipeline = gfx.get_pbr_pipeline();
-            const auto &shadow_pipeline = gfx.get_shadow_pipeline();
             const auto &terrain_pipeline = gfx.get_terrain_pipeline();
 
             g_buffer.begin_shadowpass(cmd);
-            shadow_pipeline.bind(cmd);
-            scene->render(gfx, cmd, shadow_pipeline.get_layout());
+            pbr_pipeline.bind_depth(cmd);
+            scene->render_depth(cmd, pbr_pipeline.get_depth_layout());
             //new_terrain->render(gfx, cmd);
             g_buffer.end(cmd);
 
             g_buffer.begin_mainpass(cmd);
             pbr_pipeline.bind(cmd);
-            scene->render(gfx, cmd, pbr_pipeline.get_layout());
+            scene->render_geometry(cmd, pbr_pipeline.get_layout());
             
             terrain_pipeline.bind(cmd);
             //new_terrain->render(gfx, cmd);

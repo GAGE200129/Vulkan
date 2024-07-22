@@ -23,7 +23,8 @@ namespace gage::scene::components
 
         virtual void init() = 0;
         virtual void update(float delta) = 0;
-        virtual void render(gfx::Graphics& gfx, VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) = 0;
+        virtual void render_depth(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) = 0;
+        virtual void render_geometry(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) = 0;
         virtual void shutdown() = 0;
     protected:
         SceneGraph& scene;

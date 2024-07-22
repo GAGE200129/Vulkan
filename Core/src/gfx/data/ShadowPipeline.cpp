@@ -16,7 +16,6 @@ namespace gage::gfx::data
 
         create_pipeline_layout();
         create_pipeline();
-
     }
 
     ShadowPipeline::~ShadowPipeline()
@@ -51,22 +50,38 @@ namespace gage::gfx::data
 
     void ShadowPipeline::create_pipeline_layout()
     {
-        VkPushConstantRange push_constant{
-            VK_SHADER_STAGE_ALL,
-            0,
-            sizeof(glm::mat4x4)};
+        // PER INSTANCE SET LAYOUT
+        std::vector<VkDescriptorSetLayoutBinding> instance_bindings{
+            {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
+            {.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 3, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
+        };
 
+        VkDescriptorSetLayoutCreateInfo layout_ci{};
+        layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layout_ci.bindingCount = instance_bindings.size();
+        layout_ci.pBindings = instance_bindings.data();
+        layout_ci.flags = 0;
+        vk_check(vkCreateDescriptorSetLayout(gfx.device, &layout_ci, nullptr, &desc_layout));
+        std::vector<VkPushConstantRange> push_constants{
+            VkPushConstantRange{
+                VK_SHADER_STAGE_ALL,
+                0,
+                sizeof(glm::mat4x4)}};
+
+        std::vector<VkDescriptorSetLayout> layouts = {gfx.global_set_layout, desc_layout};
         VkPipelineLayoutCreateInfo pipeline_layout_info = {};
         pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipeline_layout_info.pushConstantRangeCount = 1;
-        pipeline_layout_info.pPushConstantRanges = &push_constant;
-        pipeline_layout_info.pSetLayouts = &gfx.global_set_layout;
-        pipeline_layout_info.setLayoutCount = 1;
+        pipeline_layout_info.pushConstantRangeCount = push_constants.size();
+        pipeline_layout_info.pPushConstantRanges = push_constants.data();
+        pipeline_layout_info.pSetLayouts = layouts.data();
+        pipeline_layout_info.setLayoutCount = layouts.size();
         vk_check(vkCreatePipelineLayout(gfx.device, &pipeline_layout_info, nullptr, &pipeline_layout));
+
     }
     void ShadowPipeline::destroy_pipeline_layout()
     {
         vkDestroyPipelineLayout(gfx.device, pipeline_layout, nullptr);
+        vkDestroyDescriptorSetLayout(gfx.device, desc_layout, nullptr);
     }
 
     void ShadowPipeline::create_pipeline()

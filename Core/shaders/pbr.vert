@@ -6,6 +6,8 @@
 layout(location = 0) in vec3 in_pos;
 layout(location = 1) in vec3 in_normal;
 layout(location = 2) in vec2 in_uvs;
+layout(location = 3) in uvec4 in_bone_ids;
+layout(location = 4) in vec4 in_weights;
 
 layout(location = 0) out VSOutput
 {
@@ -13,6 +15,13 @@ layout(location = 0) out VSOutput
     vec3 normal;
     vec2 uv;
 } vs_out;
+
+layout(set = 2, binding = 0) uniform Animation
+{
+    mat4x4 bone_matrices[100];
+    bool enabled;
+} animation;
+
  
 
 layout(push_constant, std140) uniform PushConstant {
@@ -21,10 +30,20 @@ layout(push_constant, std140) uniform PushConstant {
 
 void main() 
 {   
-    vec4 p = model_transform * vec4(in_pos, 1.0f);
-    vec4 p_view = ubo.view * vec4(p.xyz, 1.0);
+    vec4 total_position = model_transform * vec4(in_pos, 1.0);
+    if(animation.enabled)
+    {
+        total_position = vec4(0, 0, 0, 0);
+        for(uint i = 0 ; i < 4 ; i++)
+        {
+            vec4 local_position = animation.bone_matrices[in_bone_ids[i]] * vec4(in_pos,1.0f);
+            total_position += local_position * in_weights[i];
+        }
+    }
+
+    vec4 p_view = ubo.view * vec4(total_position.xyz, 1.0);
 	gl_Position = ubo.projection * p_view;
 	vs_out.normal = mat3(transpose(inverse(model_transform))) * in_normal;
 	vs_out.uv = in_uvs;
-    vs_out.world_pos = p.xyz;
+    vs_out.world_pos = total_position.xyz;
 }

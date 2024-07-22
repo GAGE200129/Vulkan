@@ -116,7 +116,6 @@ namespace gage::gfx
         const glm::mat4& get_view() const;
         const data::Swapchain& get_swapchain() const;
         const data::g_buffer::GBuffer& get_g_buffer() const;
-        const data::ShadowPipeline& get_shadow_pipeline() const;
         const data::PBRPipeline& get_pbr_pipeline() const;
         const data::terrain::TerrainPipeline& get_terrain_pipeline() const;
         const data::AmbientLight& get_final_ambient() const;
@@ -208,7 +207,6 @@ namespace gage::gfx
         float directional_light_shadow_map_distance{50.0f};
         bool directional_light_shadow_map_resize_requested{};
         std::unique_ptr<data::g_buffer::GBuffer> geometry_buffer{};
-        std::unique_ptr<data::ShadowPipeline> shadow_pipeline{};
         std::unique_ptr<data::PBRPipeline> pbr_pipeline{};
         std::unique_ptr<data::AmbientLight> final_ambient{};
         std::unique_ptr<data::DirectionalLight> directional_light{};

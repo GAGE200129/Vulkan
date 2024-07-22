@@ -195,6 +195,8 @@ namespace gage::gfx
         delete_stack.push([this]()
                           { vkDestroyDescriptorSetLayout(device, global_set_layout, nullptr); });
 
+
+
         // use vkbootstrap to get a Graphics queue family
         auto queue_family_result = vkb_device.get_queue_index(vkb::QueueType::graphics);
         vkb_check(queue_family_result);
@@ -304,9 +306,6 @@ namespace gage::gfx
         delete_stack.push([this]()
                           { geometry_buffer.reset(); });
 
-        shadow_pipeline = std::make_unique<data::ShadowPipeline>(*this);
-        delete_stack.push([this]()
-                          { shadow_pipeline.reset(); });
 
         pbr_pipeline = std::make_unique<data::PBRPipeline>(*this);
         delete_stack.push([this]()
@@ -807,10 +806,6 @@ namespace gage::gfx
         return *geometry_buffer;
     }
 
-    const data::ShadowPipeline &Graphics::get_shadow_pipeline() const
-    {
-        return *shadow_pipeline;
-    }
 
     const data::SSAO &Graphics::get_ssao() const
     {

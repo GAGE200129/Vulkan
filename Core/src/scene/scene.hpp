@@ -11,7 +11,7 @@ namespace gage::scene
     void shutdown();
 
     spdlog::logger& log();
- 
+    
 }
 
 

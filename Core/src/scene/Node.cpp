@@ -3,17 +3,14 @@
 
 namespace gage::scene
 {
-    Node::Node(SceneGraph& scene, uint64_t id) :
-        scene(scene),
-        id(id)
+    Node::Node(SceneGraph &scene, uint64_t id) : scene(scene),
+                                                 id(id)
     {
-
     }
     Node::~Node()
     {
-
     }
-    void Node::set_name(const std::string& name)
+    void Node::set_name(const std::string &name)
     {
         this->name = name;
     }
@@ -23,17 +20,84 @@ namespace gage::scene
         return id;
     }
 
-    const std::vector<Node*>& Node::get_children() const
+    void *Node::get_requested_component(const char *typeid_name)
+    {
+        for (auto &component : components)
+        {
+            log().trace("Searching for component: {}", typeid(*component.get()).name());
+            if (typeid(*component.get()).name() == typeid_name)
+            {
+                return component.get();
+            }
+        }
+        log().error("Unknown requested component: {}", typeid_name);
+        return nullptr;
+    }
+
+    void* Node::get_requested_component_recursive(const char* typeid_name)
+    {
+        log().trace("get_requested_component_recursive: {}", this->name);
+        for(const auto& child : children)
+        {
+            log().trace("Searching for component in child: {}", child->name);
+            auto component = child->get_requested_component(typeid_name);
+            if(component != nullptr)
+            {
+                return component;
+            }
+
+            return child->get_requested_component_recursive(typeid_name);
+        }
+        return nullptr;
+    }
+
+    const std::vector<Node *> &Node::get_children() const
     {
         return children;
-    } 
+    }
 
-    const std::string& Node::get_name() const
+    const std::string &Node::get_name() const
     {
         return name;
     }
-    const glm::mat4x4& Node::get_global_transform() const
+    const glm::mat4x4 &Node::get_global_transform() const
     {
         return global_transform;
+    }
+    const glm::mat4x4 &Node::get_inverse_bind_transform() const
+    {
+        return inverse_bind_transform;
+    }
+
+    uint32_t Node::get_bone_id() const
+    {
+        return bone_id;
+    }
+
+    const glm::vec3& Node::get_position()
+    {
+        return position;
+    }
+    const glm::vec3& Node::get_scale   ()
+    {
+        return scale;
+    }
+    const glm::quat& Node::get_rotation()
+    {
+        return rotation;
+    }
+
+
+    void Node::set_position(const glm::vec3& position)
+    {
+        this->position = position;
+    }
+    void Node::set_scale(const glm::vec3& scale)
+    {
+        this->scale = scale;
+    }
+    void Node::set_rotation(const glm::quat& rotation)
+    {
+        this->rotation = rotation;
     }
 }
