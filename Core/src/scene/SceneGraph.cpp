@@ -72,7 +72,7 @@ namespace gage::scene
         // Create root node
         id = 0;
         auto node = std::make_unique<Node>(*this, id);
-        node->name = "Root";
+        node->name = ROOT_NAME;
         nodes.push_back(std::move(node));
         id++;
     }

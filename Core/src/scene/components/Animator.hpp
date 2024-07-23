@@ -33,9 +33,9 @@ namespace gage::scene::components
         const std::vector<data::ModelAnimation>& model_animations;
 
         MeshRenderer* p_mesh_renderer{};
-        double current_time{};
+        double current_time{0.0};
         std::map<uint32_t, Node*> bone_id_to_joint_map{};
         std::map<uint32_t, Node*> skeleton_id_to_joint_map{};
-        const data::ModelAnimation* current_animation{};
+        const data::ModelAnimation* current_animation{nullptr};
     };
 }

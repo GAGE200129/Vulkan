@@ -19,7 +19,7 @@ layout(location = 0) out VSOutput
 layout(set = 2, binding = 0) uniform Animation
 {
     mat4x4 bone_matrices[100];
-    bool enabled;
+    uint enabled;
 } animation;
 
  
@@ -32,8 +32,8 @@ void main()
 {   
     vec4 total_position = model_transform * vec4(in_pos, 1.0);
     vec3 total_normal = mat3(transpose(inverse(model_transform))) * in_normal;
-    if(animation.enabled)
-    {
+    if(animation.enabled == 1)
+    { 
         total_position = vec4(0, 0, 0, 0);
         total_normal = vec3(0, 0, 0);
         for(uint i = 0 ; i < 4 ; i++)

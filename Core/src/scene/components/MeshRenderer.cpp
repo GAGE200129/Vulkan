@@ -105,10 +105,9 @@ namespace gage::scene::components
         gfx.get_pbr_pipeline().free_descriptor_set(animation_desc);
     }
 
-    glm::mat4x4* MeshRenderer::get_bone_matrices()
+    MeshRenderer::AnimationBuffer* MeshRenderer::get_animation_buffer()
     {
-        AnimationBuffer* animation_buffer = (AnimationBuffer*)bone_matrices_buffer.get_mapped();
-        return animation_buffer->bone_matrices;
+        return (AnimationBuffer*)bone_matrices_buffer.get_mapped();
     }
 
     const data::ModelSkin* MeshRenderer::get_skin()

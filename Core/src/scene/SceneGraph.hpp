@@ -7,6 +7,7 @@
 #include <vector>
 #include <cstdint>
 #include <memory>
+#include <string_view>
 
 #include <Core/src/utils/Exception.hpp>
 
@@ -37,6 +38,7 @@ namespace gage::scene
             Binary,
             ASCII
         };
+        static constexpr std::string_view ROOT_NAME = "ROOT";
     public:
         SceneGraph(gfx::Graphics& gfx);
         ~SceneGraph();
@@ -65,6 +67,7 @@ namespace gage::scene
         void process_model_skin(const tinygltf::Model& gltf_model, const tinygltf::Skin& gltf_skin, data::ModelSkin& skin);
         void process_model_calculate_inverse_bind_transform(data::Model& model, data::ModelNode& root);
     private:
+        
         gfx::Graphics& gfx;
         uint64_t id{0};
         std::vector<std::unique_ptr<Node>> nodes{};

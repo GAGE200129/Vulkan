@@ -67,10 +67,13 @@ int main()
 
         scene::Node* animated_node = scene->instanciate_model(scene_model, {0, 0, 0});
         scene::Node* animated_node2 = scene->instanciate_model(scene_model, {2, 0, 0});
+        scene::Node* animated_node3 = scene->instanciate_model(scene_model, {-2, 0, 0});
         scene->instanciate_model(sponza_model, {0, 0, 0});
+
 
         scene::components::Animator* animator = (scene::components::Animator*)animated_node->get_requested_component(typeid(scene::components::Animator).name());
         scene::components::Animator* animator2 = (scene::components::Animator*)animated_node2->get_requested_component(typeid(scene::components::Animator).name());
+        scene::components::Animator* animator3 = (scene::components::Animator*)animated_node3->get_requested_component(typeid(scene::components::Animator).name());
         
 
 
@@ -79,6 +82,7 @@ int main()
 
         animator->set_current_animation("Armature|mixamo.com|Layer0");
         animator2->set_current_animation("Armature|mixamo.com|Layer0");
+        //animator3->set_current_animation("Armature|mixamo.com|Layer0");
         while (!window.is_closing())
         {
             scene->update(0.016f);

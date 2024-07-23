@@ -180,6 +180,8 @@ namespace gage::win
         }
         ImGui::End();
 
+
+        static scene::Node* selected_node = nullptr;
         if (ImGui::Begin("SceneGraph"))
         {
             if(ImGui::Button("New"))
@@ -187,15 +189,19 @@ namespace gage::win
                 scene.create_node();
             }
 
-            std::function<void(scene::SceneGraph& scene, const scene::Node* node)>  browse_scene_graph_recursive;
-            browse_scene_graph_recursive = [&browse_scene_graph_recursive](scene::SceneGraph& scene, const scene::Node* node)
+            std::function<void(scene::SceneGraph& scene, scene::Node* node)>  browse_scene_graph_recursive;
+            browse_scene_graph_recursive = [&browse_scene_graph_recursive](scene::SceneGraph& scene, scene::Node* node)
             {
                 const std::string& node_name = node->get_name();
                 std::string id_string = std::to_string(node->get_id());
                 std::string name = !node_name.empty() ? node_name + "|" +  id_string : id_string;
                
-                if (ImGui::TreeNodeEx(name.c_str()))
+                if (ImGui::TreeNodeEx(name.c_str(), selected_node == node ? ImGuiTreeNodeFlags_Selected : 0))
                 {
+                    if (ImGui::IsItemClicked())
+                    {
+                        selected_node = node;
+                    }
                     for (const auto& child : node->get_children())
                     {
                         browse_scene_graph_recursive(scene, child);
@@ -205,6 +211,16 @@ namespace gage::win
             };
 
             browse_scene_graph_recursive(scene, scene.get_nodes().at(0).get());
+
+        }
+        ImGui::End();
+
+        if (ImGui::Begin("Node Inspector"))
+        {
+            if(selected_node)
+            {
+                selected_node->render_imgui();
+            }
 
         }
         ImGui::End();

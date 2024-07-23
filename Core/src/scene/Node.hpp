@@ -19,6 +19,8 @@ namespace gage::scene
         Node(SceneGraph& scene, uint64_t id);
         ~Node();
 
+        void render_imgui();
+
         void set_name(const std::string& name);
         uint64_t get_id() const;
         const std::vector<Node*>& get_children() const;

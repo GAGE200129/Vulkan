@@ -1,6 +1,11 @@
 #include <pch.hpp>
 #include "Node.hpp"
 
+#include <imgui/imgui.h>
+#include <glm/gtc/type_ptr.hpp>
+
+#include "SceneGraph.hpp"
+
 namespace gage::scene
 {
     Node::Node(SceneGraph &scene, uint64_t id) : scene(scene),
@@ -10,6 +15,22 @@ namespace gage::scene
     Node::~Node()
     {
     }
+
+    void Node::render_imgui()
+    {
+        if(this->name.compare(SceneGraph::ROOT_NAME) == 0)
+            return;
+        
+        ImGui::Text("Transform");
+        ImGui::DragFloat3("position", &position.x, 0.1f);
+        ImGui::DragFloat3("scale", &scale.x, 0.1f);
+        ImGui::DragFloat4("rotation", glm::value_ptr(rotation), 0.01f, -1.0f, 1.0f);
+
+        ImGui::Separator();
+
+        
+    }
+
     void Node::set_name(const std::string &name)
     {
         this->name = name;

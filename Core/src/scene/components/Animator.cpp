@@ -26,8 +26,10 @@ namespace gage::scene::components
     }
     void Animator::update(float delta)
     {
+        p_mesh_renderer->get_animation_buffer()->enabled = false;  
         if (current_animation != nullptr)
         {
+            p_mesh_renderer->get_animation_buffer()->enabled = true;  
             current_time += delta;
 
             auto get_key_frame_index = [](double current_time, const std::vector<float> &key_frames) -> int32_t
@@ -93,7 +95,7 @@ namespace gage::scene::components
 
             for(const auto& [skeleton_id, joint] : skeleton_id_to_joint_map)
             {       
-                p_mesh_renderer->get_bone_matrices()[skeleton_id] = joint->get_global_transform() * joint->get_inverse_bind_transform();
+                p_mesh_renderer->get_animation_buffer()->bone_matrices[skeleton_id] = joint->get_global_transform() * joint->get_inverse_bind_transform();
             }
 
             current_time = std::fmod(current_time, current_animation->duration);
@@ -114,6 +116,7 @@ namespace gage::scene::components
     void Animator::set_current_animation(const std::string &name)
     {
         bone_id_to_joint_map.clear();
+        skeleton_id_to_joint_map.clear();
         current_animation = nullptr;
 
         std::function<void(std::map<uint32_t, Node *> & out_joints, const data::ModelAnimation &animation, Node *node)> link_bone_id_recursive;
