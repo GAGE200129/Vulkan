@@ -23,6 +23,7 @@
 #include <Core/src/scene/scene.hpp>
 #include <Core/src/scene/SceneGraph.hpp>
 #include <Core/src/scene/components/Animator.hpp>
+#include <Core/src/scene/components/CharacterController.hpp>
 
 #include <thread>
 #include <iostream>
@@ -67,24 +68,24 @@ int main()
 
         scene::Node* animated_node = scene->instanciate_model(scene_model, {0, 0, 0});
         scene::Node* animated_node2 = scene->instanciate_model(scene_model, {2, 0, 0});
-        scene::Node* animated_node3 = scene->instanciate_model(scene_model, {-2, 0, 0});
         scene->instanciate_model(sponza_model, {0, 0, 0});
-
-
         scene::components::Animator* animator = (scene::components::Animator*)animated_node->get_requested_component(typeid(scene::components::Animator).name());
         scene::components::Animator* animator2 = (scene::components::Animator*)animated_node2->get_requested_component(typeid(scene::components::Animator).name());
-        scene::components::Animator* animator3 = (scene::components::Animator*)animated_node3->get_requested_component(typeid(scene::components::Animator).name());
-        
 
+        //Create player
+        scene::Node* player = scene->create_node();
+        player->set_position({0, 5, 0});
+        player->add_component(std::make_unique<scene::components::CharacterController>(scene.value(), *player, phys));
+        
 
         scene->init();
 
 
         animator->set_current_animation("Armature|mixamo.com|Layer0");
         animator2->set_current_animation("Armature|mixamo.com|Layer0");
-        //animator3->set_current_animation("Armature|mixamo.com|Layer0");
         while (!window.is_closing())
         {
+            phys.update(0.016f);
             scene->update(0.016f);
 
             win::update();

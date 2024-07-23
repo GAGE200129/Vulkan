@@ -31,6 +31,11 @@ namespace gage::scene
         
     }
 
+    void Node::add_component(std::unique_ptr<components::IComponent> component)
+    {
+        components.push_back(std::move(component));
+    }
+
     void Node::set_name(const std::string &name)
     {
         this->name = name;

@@ -30,7 +30,7 @@ namespace gage::scene
         const glm::mat4x4& get_inverse_bind_transform() const;
         uint32_t get_bone_id() const;
 
-
+        void add_component(std::unique_ptr<components::IComponent> component);
         void* get_requested_component(const char* typeid_name);
         void* get_requested_component_recursive(const char* typeid_name);
 
