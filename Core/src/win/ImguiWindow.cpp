@@ -125,7 +125,7 @@ namespace gage::win
             ImGui::Separator();
              static float arr[] = { 0.6f, 0.1f, 1.0f, 0.5f, 0.92f, 0.1f, 0.2f };
             ImGui::Text("Frame time: %f ms", stats.frame_time);
-            ImGui::Text("Mem usage: %u bytes", gage::get_allocated_bytes());
+            ImGui::Text("Mem allocated: %u bytes", gage::get_allocated_bytes());
             
         }
         ImGui::End();
