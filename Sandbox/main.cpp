@@ -25,6 +25,9 @@
 #include <Core/src/scene/components/Animator.hpp>
 #include <Core/src/scene/components/FPSCharacterController.hpp>
 
+#include <Core/src/hid/hid.hpp>
+#include <Core/src/hid/Keyboard.hpp>
+
 #include <thread>
 #include <iostream>
 
@@ -41,6 +44,7 @@ int main()
     win::init();
     phys::init();
     scene::init();
+    hid::init();
     try
     {
 
@@ -48,6 +52,14 @@ int main()
         
 
         win::Window window(800, 600, "Hello world");
+        hid::Keyboard keyboard(window.get_handle());
+        keyboard.register_action(hid::KeyCodes::W, "FORWARD");
+        keyboard.register_action(hid::KeyCodes::A, "LEFT");
+        keyboard.register_action(hid::KeyCodes::S, "BACKWARD");
+        keyboard.register_action(hid::KeyCodes::D, "RIGHT");
+        keyboard.register_action(hid::KeyCodes::SPACE, "JUMP");
+
+
         auto &gfx = window.get_graphics();
         win::ImguiWindow imgui_window{gfx};
 
@@ -83,7 +95,7 @@ int main()
         while (!window.is_closing())
         {
             phys.update(0.016f);
-            scene->update(0.016f);
+            scene->update(0.016f, keyboard);
 
             win::update();
             imgui_window.clear();
@@ -150,7 +162,7 @@ int main()
     {
         std::cerr << "Unknown exception caught !" << "\n";
     }
-
+    hid::shutdown();
     scene::shutdown();
     gfx::shutdown();
     win::shutdown();

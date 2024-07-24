@@ -24,7 +24,7 @@ namespace gage::scene::components
         assert(p_mesh_renderer->get_skin() != nullptr);
 
     }
-    void Animator::update(float delta)
+    void Animator::update(float delta, const hid::Keyboard& keyboard)
     {
         p_mesh_renderer->get_animation_buffer()->enabled = false;  
         if (current_animation != nullptr)

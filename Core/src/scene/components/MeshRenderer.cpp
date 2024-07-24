@@ -26,7 +26,7 @@ namespace gage::scene::components
     void MeshRenderer::init()
     {
     }
-    void MeshRenderer::update(float delta)
+    void MeshRenderer::update(float delta, const hid::Keyboard& keyboard)
     {
         
     }

@@ -31,6 +31,7 @@ namespace gage::win
         void resize(WindowMode mode, int width, int height);
 
         gfx::Graphics& get_graphics();
+        GLFWwindow* get_handle() const;
     private:
         GLFWwindow* p_window{};
         std::unique_ptr<gfx::Graphics> p_graphics{};

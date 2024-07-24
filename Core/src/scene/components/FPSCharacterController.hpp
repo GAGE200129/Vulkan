@@ -15,7 +15,7 @@ namespace gage::scene::components
         FPSCharacterController(SceneGraph& scene, Node& node, phys::Physics& phys, gfx::data::Camera& camera);
 
         void init() final;
-        void update(float delta) final;
+        void update(float delta, const hid::Keyboard& keyboard) final;
         void shutdown() final;
 
         void render_imgui() final;

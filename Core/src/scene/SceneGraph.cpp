@@ -125,7 +125,7 @@ namespace gage::scene
         traverse_scene_graph_recursive(nodes.at(0).get());
     }
 
-    void SceneGraph::update(float delta)
+    void SceneGraph::update(float delta, const hid::Keyboard& keyboard)
     {
         std::function<void(Node * node, glm::mat4x4 accumulated_transform)> traverse_scene_graph_recursive;
         traverse_scene_graph_recursive = [&](scene::Node *node, glm::mat4x4 accumulated_transform)
@@ -133,7 +133,7 @@ namespace gage::scene
             
             for (const auto &component : node->components)
             {
-                component->update(delta);
+                component->update(delta, keyboard);
             }
             
             // Build node global transform

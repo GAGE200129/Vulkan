@@ -20,8 +20,9 @@ namespace gage::scene::components
     void CharacterController::init()
     {
     }
-    void CharacterController::update(float)
+    void CharacterController::update(float delta, const hid::Keyboard& keyboard)
     {
+        character->PostSimulation(0.1f);
         auto position = character->GetPosition(false);
         node.set_position({position.GetX(), position.GetY(), position.GetZ()});
     }

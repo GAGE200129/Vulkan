@@ -34,14 +34,14 @@ namespace gage::scene::data
     {
         struct MeshSection
         {
-            uint32_t vertex_count;
-            std::unique_ptr<gfx::data::GPUBuffer> index_buffer; 
-            std::unique_ptr<gfx::data::GPUBuffer> position_buffer; 
-            std::unique_ptr<gfx::data::GPUBuffer> normal_buffer; 
-            std::unique_ptr<gfx::data::GPUBuffer> texcoord_buffer;
-            std::unique_ptr<gfx::data::GPUBuffer> bone_id_buffer;
-            std::unique_ptr<gfx::data::GPUBuffer> bone_weight_buffer;
-            int32_t material_index;
+            uint32_t vertex_count{};
+            std::unique_ptr<gfx::data::GPUBuffer> index_buffer{}; 
+            std::unique_ptr<gfx::data::GPUBuffer> position_buffer{}; 
+            std::unique_ptr<gfx::data::GPUBuffer> normal_buffer{}; 
+            std::unique_ptr<gfx::data::GPUBuffer> texcoord_buffer{};
+            std::unique_ptr<gfx::data::GPUBuffer> bone_id_buffer{};
+            std::unique_ptr<gfx::data::GPUBuffer> bone_weight_buffer{};
+            int32_t material_index{};
             bool has_skin{};
         };
         std::vector<MeshSection> sections{};

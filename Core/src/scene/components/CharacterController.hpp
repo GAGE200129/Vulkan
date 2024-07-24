@@ -21,13 +21,13 @@ namespace gage::scene::components
         CharacterController(SceneGraph& scene, Node& node, phys::Physics& phys);
 
         void init() override;
-        void update(float delta) override;
+        void update(float delta, const hid::Keyboard& keyboard) override;
         inline void render_depth(VkCommandBuffer, VkPipelineLayout) final {}
         inline void render_geometry(VkCommandBuffer, VkPipelineLayout) final {}
         void shutdown() override;
 
         void render_imgui() override;
-    private:
+    protected:
         phys::Physics& phys;
         JPH::Character* character;
 

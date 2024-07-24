@@ -69,6 +69,11 @@ namespace gage::win
         return *p_graphics;
     }
 
+    GLFWwindow* Window::get_handle() const
+    {
+        return p_window;
+    }
+
     void init()
     {
         glfwInit();

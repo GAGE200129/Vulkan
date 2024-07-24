@@ -13,6 +13,11 @@ namespace gage::scene
     class Node;
 }
 
+namespace gage::hid
+{
+    class Keyboard;
+}
+
 namespace gage::scene::components
 {
     class IComponent
@@ -22,7 +27,7 @@ namespace gage::scene::components
         virtual ~IComponent() = default;
 
         virtual void init() = 0;
-        virtual void update(float delta) = 0;
+        virtual void update(float delta, const hid::Keyboard& keyboard) = 0;
         virtual void render_depth(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) = 0;
         virtual void render_geometry(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) = 0;
         virtual void shutdown() = 0;

@@ -44,7 +44,7 @@ namespace gage::scene
         ~SceneGraph();
 
         void init();
-        void update(float delta);
+        void update(float delta, const hid::Keyboard& keyboard);
         void render_depth(VkCommandBuffer cmd, VkPipelineLayout layout);
         void render_geometry(VkCommandBuffer cmd, VkPipelineLayout layout);
 
