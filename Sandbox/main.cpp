@@ -23,7 +23,7 @@
 #include <Core/src/scene/scene.hpp>
 #include <Core/src/scene/SceneGraph.hpp>
 #include <Core/src/scene/components/Animator.hpp>
-#include <Core/src/scene/components/CharacterController.hpp>
+#include <Core/src/scene/components/FPSCharacterController.hpp>
 
 #include <thread>
 #include <iostream>
@@ -54,9 +54,6 @@ int main()
         gfx::data::Camera camera{};
         camera.far = 1000.0f;
 
-        //std::optional<gfx::data::terrain::Terrain> new_terrain;
-        //new_terrain.emplace(gfx, "res/terrains/test.ter");
-
         std::vector<gfx::data::PointLight::Data> point_lights{};
 
         std::optional<scene::SceneGraph> scene;
@@ -74,9 +71,9 @@ int main()
 
         //Create player
         scene::Node* player = scene->create_node();
-        player->set_position({0, 5, 0});
-        player->add_component(std::make_unique<scene::components::CharacterController>(scene.value(), *player, phys));
-        
+        player->set_position({0, 30, 0});
+        player->add_component(std::make_unique<scene::components::FPSCharacterController>(scene.value(), *player, phys, camera));
+        player->set_name("Player");
 
         scene->init();
 
@@ -93,7 +90,8 @@ int main()
             imgui_window.draw(camera, window, *scene);
             imgui_window.end_frame();
 
-            auto frustum = camera.create_frustum(gfx.get_scaled_draw_extent().width, gfx.get_scaled_draw_extent().height);
+            
+
             auto cmd = gfx.clear(camera);
 
             const auto &g_buffer = gfx.get_g_buffer();

@@ -63,20 +63,13 @@ namespace gage::phys
         // Now create a dynamic body to bounce on the floor
         // Note that this uses the shorthand version of creating and adding a body to the world
         JPH::BodyCreationSettings floor_settings(new JPH::BoxShapeSettings(JPH::Vec3(100.0f, 1.0f, 100.0f)),
-             JPH::RVec3(0.0_r, 0.0_r, 0.0_r), JPH::Quat::sIdentity(), JPH::EMotionType::Static, Layers::NON_MOVING);
+             JPH::RVec3(0.0_r, -1.0_r, 0.0_r), JPH::Quat::sIdentity(), JPH::EMotionType::Static, Layers::NON_MOVING);
 
         auto new_floor = std::make_unique<JPH::BodyID>();
         *new_floor = p_body_interface->CreateAndAddBody(floor_settings, JPH::EActivation::DontActivate);
         floor = new_floor.get();
         bodies.push_back(std::move(new_floor));
 
-        JPH::BodyCreationSettings sphere_settings(new JPH::SphereShape(1.0f),
-             JPH::RVec3(0.0_r, 2.0_r, 0.0_r), JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic, Layers::MOVING);
-
-        auto new_sphere = std::make_unique<JPH::BodyID>();
-        *new_sphere = p_body_interface->CreateAndAddBody(sphere_settings, JPH::EActivation::Activate);
-        sphere = new_sphere.get();
-        bodies.push_back(std::move(new_sphere));
 
     }
  
@@ -99,13 +92,11 @@ namespace gage::phys
 
     JPH::Character* Physics::create_character(const glm::vec3& position, const glm::quat& rotation)
     {
-
-
-            // Create 'player' character
+        // Create 'player' character
         JPH::Ref<JPH::CharacterSettings> settings = new JPH::CharacterSettings();
         settings->mMaxSlopeAngle = JPH::DegreesToRadians(45.0f);
         settings->mLayer = Layers::MOVING;
-        settings->mShape = JPH::CapsuleShapeSettings(1.0f, 0.1f).Create().Get();
+        settings->mShape = JPH::CapsuleShapeSettings(0.9f, 0.1f).Create().Get();
         settings->mFriction = 0.5f;
         
         std::unique_ptr<JPH::Character> character = std::make_unique<JPH::Character>(
@@ -129,23 +120,4 @@ namespace gage::phys
         characters.erase(std::remove_if(characters.begin(), characters.end(), 
                        [&](const std::unique_ptr<JPH::Character>& c) { return c.get() == character; }), characters.end());
     }
-
-    // glm::mat4x4 Physics::character_get_transform(const JPH::Character* character);
-    // {
-    //     JPH::BodyLockInterface lock_interface = physics_system.GetBodyLockInterface(); // Or GetBodyLockInterfaceNoLock
-    //     JPH::BodyID body_id = ...; // Obtain ID to body
-
-    //     // Scoped lock
-    //     {
-    //         JPH::BodyLockRead lock(lock_interface, body_id);
-    //         if (lock.Succeeded()) // body_id may no longer be valid
-    //         {
-    //             const JPH::Body &body = lock.GetBody();
-
-    //             // Do something with body
-    //             ...
-    //         }
-    //     }
-    //     return {1.0f};
-    // }
 }

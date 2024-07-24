@@ -195,8 +195,12 @@ namespace gage::win
                 const std::string& node_name = node->get_name();
                 std::string id_string = std::to_string(node->get_id());
                 std::string name = !node_name.empty() ? node_name + "|" +  id_string : id_string;
-               
-                if (ImGui::TreeNodeEx(name.c_str(), selected_node == node ? ImGuiTreeNodeFlags_Selected : 0))
+
+                ImGuiTreeNodeFlags flags = 0;
+                flags |= selected_node == node ? ImGuiTreeNodeFlags_Selected : 0;
+                flags |= node->get_children().empty() ? ImGuiTreeNodeFlags_Leaf : 0;
+
+                if (ImGui::TreeNodeEx(name.c_str(), flags))
                 {
                     if (ImGui::IsItemClicked())
                     {

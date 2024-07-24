@@ -14,20 +14,22 @@ namespace gage::phys
 
 namespace gage::scene::components
 {
-    class CharacterController final : public IComponent
+    class CharacterController : public IComponent
     {
 
     public:
         CharacterController(SceneGraph& scene, Node& node, phys::Physics& phys);
 
-        void init() final;
-        void update(float delta);
-        void render_depth(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) final;
-        void render_geometry(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) final;
-        void shutdown() final;
+        void init() override;
+        void update(float delta) override;
+        inline void render_depth(VkCommandBuffer, VkPipelineLayout) final {}
+        inline void render_geometry(VkCommandBuffer, VkPipelineLayout) final {}
+        void shutdown() override;
 
+        void render_imgui() override;
     private:
         phys::Physics& phys;
         JPH::Character* character;
+
     };
 }

@@ -31,6 +31,8 @@ namespace gage::scene::components
         void render_geometry(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) final;
         void shutdown() final;
 
+        inline void render_imgui() final {};
+
         AnimationBuffer* get_animation_buffer();
         const data::ModelSkin* get_skin();
     private:

@@ -28,6 +28,10 @@ namespace gage::scene
 
         ImGui::Separator();
 
+        for(auto& component : components)
+        {
+            component->render_imgui();
+        }
         
     }
 
