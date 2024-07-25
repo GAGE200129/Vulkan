@@ -49,7 +49,6 @@ namespace gage::hid
 
     private:
         GLFWwindow* p_window;
-        std::bitset<500> key_pressed;
         std::unordered_map<std::string, KeyCodes> action_map{};
     };
 }

@@ -49,7 +49,6 @@ int main()
     {
 
         phys::Physics phys;
-        
 
         win::Window window(800, 600, "Hello world");
         hid::Keyboard keyboard(window.get_handle());
@@ -58,7 +57,6 @@ int main()
         keyboard.register_action(hid::KeyCodes::S, "BACKWARD");
         keyboard.register_action(hid::KeyCodes::D, "RIGHT");
         keyboard.register_action(hid::KeyCodes::SPACE, "JUMP");
-
 
         auto &gfx = window.get_graphics();
         win::ImguiWindow imgui_window{gfx};
@@ -71,38 +69,49 @@ int main()
         std::optional<scene::SceneGraph> scene;
         scene.emplace(gfx);
 
-        const scene::data::Model& scene_model = scene->import_model("res/models/toothless.glb", scene::SceneGraph::ImportMode::Binary);
-        const scene::data::Model& sponza_model = scene->import_model("res/models/sponza.glb", scene::SceneGraph::ImportMode::Binary);
+        const scene::data::Model &scene_model = scene->import_model("res/models/toothless.glb", scene::SceneGraph::ImportMode::Binary);
+        const scene::data::Model &sponza_model = scene->import_model("res/models/sponza.glb", scene::SceneGraph::ImportMode::Binary);
 
-
-        scene::Node* animated_node = scene->instanciate_model(scene_model, {0, 0, 0});
-        scene::Node* animated_node2 = scene->instanciate_model(scene_model, {2, 0, 0});
+        scene::Node *animated_node = scene->instanciate_model(scene_model, {0, 0, 0});
+        scene::Node *animated_node2 = scene->instanciate_model(scene_model, {2, 0, 0});
         scene->instanciate_model(sponza_model, {0, 0, 0});
-        scene::components::Animator* animator = (scene::components::Animator*)animated_node->get_requested_component(typeid(scene::components::Animator).name());
-        scene::components::Animator* animator2 = (scene::components::Animator*)animated_node2->get_requested_component(typeid(scene::components::Animator).name());
+        scene::components::Animator *animator = (scene::components::Animator *)animated_node->get_requested_component(typeid(scene::components::Animator).name());
+        scene::components::Animator *animator2 = (scene::components::Animator *)animated_node2->get_requested_component(typeid(scene::components::Animator).name());
 
-        //Create player
-        scene::Node* player = scene->create_node();
+        // Create player
+        scene::Node *player = scene->create_node();
         player->set_position({0, 30, 0});
         player->add_component(std::make_unique<scene::components::FPSCharacterController>(scene.value(), *player, phys, camera));
         player->set_name("Player");
 
         scene->init();
 
-
         animator->set_current_animation("Armature|mixamo.com|Layer0");
         animator2->set_current_animation("Armature|mixamo.com|Layer0");
+
+        auto previous = std::chrono::high_resolution_clock::now();
+        uint64_t lag = 0;
+
+        double frame_time_in_seconds = 1.0 / 60.0;
+        uint64_t frame_time_in_nanoseconds = frame_time_in_seconds * 1E9;
+
         while (!window.is_closing())
         {
-            phys.update(0.016f);
-            scene->update(0.016f, keyboard);
+            auto current = std::chrono::high_resolution_clock::now();
+            auto elapsed =  std::chrono::nanoseconds(current - previous);
+            previous = current;
+            lag += elapsed.count();
 
+            while (lag >= frame_time_in_nanoseconds)
+            {
+                phys.update(frame_time_in_seconds);
+                scene->update(frame_time_in_seconds, keyboard);
+                lag -= frame_time_in_nanoseconds;
+            }
             win::update();
             imgui_window.clear();
             imgui_window.draw(camera, window, *scene);
             imgui_window.end_frame();
-
-            
 
             auto cmd = gfx.clear(camera);
 
@@ -118,10 +127,9 @@ int main()
             g_buffer.begin_mainpass(cmd);
             pbr_pipeline.bind(cmd);
             scene->render_geometry(cmd, pbr_pipeline.get_layout());
-            
+
             terrain_pipeline.bind(cmd);
             g_buffer.end(cmd);
-
 
             g_buffer.begin_ssaopass(cmd);
             gfx.get_ssao().process(cmd);

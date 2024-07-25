@@ -56,7 +56,7 @@ namespace gage::scene::components
         }
 
         auto velocity = character->GetLinearVelocity(false);
-        if(glm::length2(dir) != 0.0f && velocity.LengthSq() < glm::pow(2.0f, 2.0f))
+        if(glm::length2(dir) != 0.0f && velocity.LengthSq() < glm::pow(4.0f, 2.0f) && character->GetGroundState() == JPH::CharacterBase::EGroundState::OnGround)
         {
             dir = glm::normalize(dir);
             character->AddLinearVelocity(JPH::Vec3(dir.x, 0, dir.y) * 30.0f * delta, true);
