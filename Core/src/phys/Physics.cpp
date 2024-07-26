@@ -16,6 +16,7 @@
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyActivationListener.h>
 #include <Jolt/Physics/Character/Character.h>
@@ -96,7 +97,7 @@ namespace gage::phys
         JPH::Ref<JPH::CharacterSettings> settings = new JPH::CharacterSettings();
         settings->mMaxSlopeAngle = JPH::DegreesToRadians(45.0f);
         settings->mLayer = Layers::MOVING;
-        settings->mShape = JPH::CapsuleShapeSettings(0.9f, 0.1f).Create().Get();
+        settings->mShape = JPH::RotatedTranslatedShapeSettings(JPH::Vec3(0, 0.9f, 0.0), JPH::Quat(0, 0, 0, 1), JPH::CapsuleShapeSettings(0.9f, 0.1f).Create().Get()).Create().Get();
         settings->mFriction = 5.0f;
         
         std::unique_ptr<JPH::Character> character = std::make_unique<JPH::Character>(

@@ -125,29 +125,40 @@ namespace gage::scene
         traverse_scene_graph_recursive(nodes.at(0).get());
     }
 
-    void SceneGraph::update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse)
+    void SceneGraph::update(float delta, const hid::Keyboard &keyboard, const hid::Mouse &mouse)
     {
         std::function<void(Node * node, glm::mat4x4 accumulated_transform)> traverse_scene_graph_recursive;
         traverse_scene_graph_recursive = [&](scene::Node *node, glm::mat4x4 accumulated_transform)
         {
-            
             for (const auto &component : node->components)
             {
                 component->update(delta, keyboard, mouse);
             }
-            
+
             // Build node global transform
             accumulated_transform = glm::translate(accumulated_transform, node->position);
             accumulated_transform = glm::scale(accumulated_transform, node->scale);
             accumulated_transform *= glm::mat4x4(node->rotation);
             node->global_transform = accumulated_transform;
 
-             for (const auto &component : node->components)
+            for (const auto &child : node->get_children())
+            {
+                traverse_scene_graph_recursive(child, accumulated_transform);
+            }
+        };
+
+        traverse_scene_graph_recursive(nodes.at(0).get(), glm::mat4x4(1.0f));
+    }
+
+    void SceneGraph::late_update(float delta, const hid::Keyboard &keyboard, const hid::Mouse &mouse)
+    {
+        std::function<void(Node * node, glm::mat4x4 accumulated_transform)> traverse_scene_graph_recursive;
+        traverse_scene_graph_recursive = [&](scene::Node *node, glm::mat4x4 accumulated_transform)
+        {
+            for (const auto &component : node->components)
             {
                 component->late_update(delta, keyboard, mouse);
             }
-
-            
 
             for (const auto &child : node->get_children())
             {
@@ -244,7 +255,7 @@ namespace gage::scene
                 model_node.mesh_index = gltf_node.mesh;
             }
 
-            if(gltf_node.skin > -1)
+            if (gltf_node.skin > -1)
             {
                 model_node.has_skin = true;
                 model_node.skin_index = gltf_node.skin;
@@ -347,8 +358,8 @@ namespace gage::scene
 
             if (model_node.has_mesh)
             {
-                const data::ModelSkin* skin = nullptr;
-                if(model_node.has_skin)
+                const data::ModelSkin *skin = nullptr;
+                if (model_node.has_skin)
                 {
                     skin = &model.skins.at(model_node.skin_index);
                 }
@@ -480,7 +491,7 @@ namespace gage::scene
         }
 
         material.uniform_buffer = std::make_unique<gfx::data::CPUBuffer>(gfx, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(data::ModelMaterial::UniformBuffer), &material.uniform_buffer_data);
-        
+
         gfx::data::PBRPipeline::MaterialSetAllocInfo alloc_info{
             .size_in_bytes = sizeof(data::ModelMaterial::UniformBuffer),
             .buffer = material.uniform_buffer->get_buffer_handle(),
@@ -489,14 +500,13 @@ namespace gage::scene
             .metalic_roughness_view = material.metalic_roughness_image ? material.metalic_roughness_image->get_image_view() : VK_NULL_HANDLE,
             .metalic_roughness_sampler = material.metalic_roughness_image ? material.metalic_roughness_image->get_sampler() : VK_NULL_HANDLE,
             .normal_view = material.normal_image ? material.normal_image->get_image_view() : VK_NULL_HANDLE,
-            .normal_sampler = material.normal_image ? material.normal_image->get_sampler() : VK_NULL_HANDLE
-        };
+            .normal_sampler = material.normal_image ? material.normal_image->get_sampler() : VK_NULL_HANDLE};
         material.descriptor_set = gfx.get_pbr_pipeline().allocate_material_set(alloc_info);
     }
 
     void SceneGraph::process_model_skin(const tinygltf::Model &gltf_model, const tinygltf::Skin &gltf_skin, data::ModelSkin &skin)
     {
-        for(const auto& joint : gltf_skin.joints)
+        for (const auto &joint : gltf_skin.joints)
         {
             skin.joints.push_back(joint);
         }

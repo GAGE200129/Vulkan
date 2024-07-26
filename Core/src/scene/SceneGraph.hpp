@@ -51,6 +51,7 @@ namespace gage::scene
 
         void init();
         void update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse);
+        void late_update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse);
         void render_depth(VkCommandBuffer cmd, VkPipelineLayout layout);
         void render_geometry(VkCommandBuffer cmd, VkPipelineLayout layout);
 

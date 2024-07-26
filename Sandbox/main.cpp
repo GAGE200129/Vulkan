@@ -76,7 +76,7 @@ int main()
         std::optional<scene::SceneGraph> scene;
         scene.emplace(gfx);
 
-        const scene::data::Model &scene_model = scene->import_model("res/models/human_base_no_head.glb", scene::SceneGraph::ImportMode::Binary);
+        const scene::data::Model &scene_model = scene->import_model("res/models/human_base.glb", scene::SceneGraph::ImportMode::Binary);
         const scene::data::Model &sponza_model = scene->import_model("res/models/sponza.glb", scene::SceneGraph::ImportMode::Binary);
 
         scene::Node *animated_node = scene->instanciate_model(scene_model, {0, 0, 0});
@@ -93,7 +93,7 @@ int main()
         auto previous = std::chrono::high_resolution_clock::now();
         uint64_t lag = 0;
 
-        double frame_time_in_seconds = 1.0 / 64.0;
+        double frame_time_in_seconds = 1.0 / 128.0;
         uint64_t frame_time_in_nanoseconds = frame_time_in_seconds * 1E9;
 
         while (!window.is_closing())
@@ -103,15 +103,18 @@ int main()
             previous = current;
             lag += elapsed.count();
 
+           
+
             while (lag >= frame_time_in_nanoseconds)
             {
-                scene->update(frame_time_in_seconds, keyboard, mouse);
                 phys.update(frame_time_in_seconds);
+                scene->update(frame_time_in_seconds, keyboard, mouse);
+                scene->late_update(frame_time_in_seconds, keyboard, mouse);
                 lag -= frame_time_in_nanoseconds;
             }
+           
             mouse.update();
             win::update();
-           
             
 
             imgui_window.clear();
@@ -124,6 +127,7 @@ int main()
             const auto &pbr_pipeline = gfx.get_pbr_pipeline();
             const auto &terrain_pipeline = gfx.get_terrain_pipeline();
 
+            
             g_buffer.begin_shadowpass(cmd);
             pbr_pipeline.bind_depth(cmd);
             scene->render_depth(cmd, pbr_pipeline.get_depth_layout());

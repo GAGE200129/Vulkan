@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/norm.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
+#include <glm/common.hpp>
 
 #include <Core/src/gfx/data/Camera.hpp>
 #include <Core/src/hid/Keyboard.hpp>
@@ -29,13 +30,15 @@ namespace gage::scene::components
         spine = this->node.search_child_by_name("mixamorig:Spine");
         hips = this->node.search_child_by_name("mixamorig:Hips");
 
+        hips->set_position({0.0f, -0.8f, 0.0f});
+
     }
     void FPSCharacterController::update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse)
     {
         CharacterController::update(delta, keyboard, mouse);
 
-        this->pitch -= mouse.get_delta().y * 0.7f;
-        this->yaw -= mouse.get_delta().x * 0.7f;
+        this->pitch -= mouse.get_delta().y * 0.3f;
+        this->yaw -= mouse.get_delta().x * 0.3f;
 
 
         if(pitch > 90.0f) pitch = 90.0f;
@@ -54,8 +57,12 @@ namespace gage::scene::components
             target_roll += 30.0f;
         }
         roll = std::lerp(roll, target_roll, delta * 5.0f);
-        
 
+        camera.rotation.x = pitch;
+        camera.rotation.y = yaw;
+        camera.rotation.z = -roll;
+
+        
         glm::vec2 dir{0, 0};
         if(keyboard.get_action("FORWARD"))
         {
@@ -123,11 +130,10 @@ namespace gage::scene::components
         glm::vec3 skew;
         glm::vec4 perspective;
         glm::decompose(head_global_transform, scale, rotation, translation, skew, perspective);
+        camera.position = translation;
 
-        camera.position = glm::vec3{translation.x, translation.y, translation.z};
-        camera.rotation.x = pitch;
-        camera.rotation.y = yaw;
-        camera.rotation.z = -roll;
+        //
+       
     }
 
     void FPSCharacterController::shutdown()

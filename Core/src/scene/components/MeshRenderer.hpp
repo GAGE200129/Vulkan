@@ -2,6 +2,7 @@
 
 #include "IComponent.hpp"
 
+#include <Core/src/gfx/Graphics.hpp>
 #include <Core/src/gfx/data/CPUBuffer.hpp>
 
 namespace gage::scene::data
@@ -43,7 +44,7 @@ namespace gage::scene::components
         const data::Model& model;
         const data::ModelMesh& model_mesh;
         const data::ModelSkin* model_skin{};
-        gfx::data::CPUBuffer bone_matrices_buffer;
-        VkDescriptorSet animation_desc{};
+        std::unique_ptr<gfx::data::CPUBuffer> animation_buffers[gfx::Graphics::FRAMES_IN_FLIGHT]{};
+        VkDescriptorSet animation_descs[gfx::Graphics::FRAMES_IN_FLIGHT]{};
     };
 }

@@ -112,6 +112,7 @@ namespace gage::gfx
         //Shadowmap size
         void resize_shadow_map(uint32_t shadow_map_size);
 
+        uint32_t get_current_frame_index() const;
         const glm::mat4& get_projection() const;
         const glm::mat4& get_view() const;
         const data::Swapchain& get_swapchain() const;

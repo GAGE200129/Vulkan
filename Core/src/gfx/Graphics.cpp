@@ -837,6 +837,11 @@ namespace gage::gfx
         return *point_light;
     }
 
+    uint32_t Graphics::get_current_frame_index() const
+    {
+        return frame_index;
+    }
+
     void Graphics::resize(int width, int height)
     {
         draw_extent_temp.width = width;
