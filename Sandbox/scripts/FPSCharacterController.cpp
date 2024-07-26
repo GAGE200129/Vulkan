@@ -24,21 +24,36 @@ namespace gage::scene::components
     void FPSCharacterController::init()
     {
         CharacterController::init();
-        head_node = this->node.search_child_by_name("mixamorig:HeadTop_End");
+        head_node = this->node.search_child_by_name("mixamorig:Head");
+        spine1 = this->node.search_child_by_name("mixamorig:Spine1");
+        spine = this->node.search_child_by_name("mixamorig:Spine");
+        hips = this->node.search_child_by_name("mixamorig:Hips");
 
     }
     void FPSCharacterController::update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse)
     {
         CharacterController::update(delta, keyboard, mouse);
 
-        this->pitch -= mouse.get_delta().y;
-        this->yaw -= mouse.get_delta().x;
+        this->pitch -= mouse.get_delta().y * 0.7f;
+        this->yaw -= mouse.get_delta().x * 0.7f;
+
 
         if(pitch > 90.0f) pitch = 90.0f;
         else if(pitch < -90.0) pitch = -90.0f;
 
         if(yaw > 360.0f) yaw = -360.0f;
         else if(yaw < -360.0f) yaw = 360.0f;
+
+        target_roll = 0;
+        if(keyboard.get_action("LEAN_LEFT"))
+        {
+            target_roll -= 30.0f;
+        }
+        if(keyboard.get_action("LEAN_RIGHT"))
+        {
+            target_roll += 30.0f;
+        }
+        roll = std::lerp(roll, target_roll, delta * 5.0f);
         
 
         glm::vec2 dir{0, 0};
@@ -50,6 +65,8 @@ namespace gage::scene::components
         {
             dir += glm::vec2(glm::sin(glm::radians(yaw)), glm::cos(glm::radians(yaw)));
         }
+
+       
 
         if(keyboard.get_action("LEFT"))
         {
@@ -88,6 +105,17 @@ namespace gage::scene::components
             CharacterController::add_velocity(glm::vec3{dir.x, 0.0f, dir.y} * 30.0f * delta);
         }
         
+      
+
+        //camera.position = translation;
+        spine->set_rotation(glm::quat(glm::vec3(glm::radians(-pitch), 0.0f, glm::radians(roll))));
+        hips->set_rotation(glm::quat(glm::vec3(0.0f, glm::pi<float>() + glm::radians(yaw), 0.0f)));
+    }
+
+    void FPSCharacterController::late_update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse)
+    {
+        CharacterController::late_update(delta, keyboard, mouse);
+        
         auto head_global_transform = head_node->get_global_transform();
         glm::vec3 scale;
         glm::quat rotation;
@@ -96,12 +124,10 @@ namespace gage::scene::components
         glm::vec4 perspective;
         glm::decompose(head_global_transform, scale, rotation, translation, skew, perspective);
 
-        //camera.position = translation;
-
+        camera.position = glm::vec3{translation.x, translation.y, translation.z};
         camera.rotation.x = pitch;
         camera.rotation.y = yaw;
-        camera.position = glm::vec3{this->node.get_position().x, this->node.get_position().y + camera_y_offset, this->node.get_position().z};
-
+        camera.rotation.z = -roll;
     }
 
     void FPSCharacterController::shutdown()
@@ -112,8 +138,8 @@ namespace gage::scene::components
     void FPSCharacterController::render_imgui()
     {
         CharacterController::render_imgui();
-        ImGui::Text("FPSCharacterController");
         ImGui::DragFloat("Camera y offset", &camera_y_offset, 0.01f, -10.0f, 10.0f);
-        ImGui::Separator();
+
+        
     }
 }

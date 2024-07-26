@@ -16,16 +16,23 @@ namespace gage::scene::components
 
         void init() final;
         void update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse) final;
+        void late_update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse) final;
         void shutdown() final;
 
         void render_imgui() final;
+        inline const char* get_name() const final { return "FPSCharacterController"; };
     private:
         gfx::data::Camera& camera;
-        Node* head_node;
+        Node* head_node{};
+        Node* spine1{};
+        Node* spine{};
+        Node* hips{};
 
         float current_speed = {2.0f};
         float camera_y_offset{0.9f};
         float pitch{};
         float yaw{};
+        float target_roll{};
+        float roll{};
     };
 }

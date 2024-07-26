@@ -29,11 +29,13 @@ namespace gage::scene::components
 
         void init() override;
         void update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse) override;
+        inline void late_update(float, const hid::Keyboard&, const hid::Mouse&) override {};
         inline void render_depth(VkCommandBuffer, VkPipelineLayout) final {}
         inline void render_geometry(VkCommandBuffer, VkPipelineLayout) final {}
         void shutdown() override;
 
         void render_imgui() override;
+        inline const char* get_name() const override { return "CharacterController"; };
 
         void add_velocity(const glm::vec3& vel);
         glm::vec3 get_velocity() const;

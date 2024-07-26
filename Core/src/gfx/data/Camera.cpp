@@ -8,6 +8,7 @@ namespace gage::gfx::data
     {
         glm::mat4x4 view = glm::mat4x4(1.0f);
         view = glm::rotate(view, glm::radians(-rotation.x), {1.0f, 0.0f, 0.0f});
+        view = glm::rotate(view, glm::radians(-rotation.z), {0.0f, 0.0f, 1.0f});
         view = glm::rotate(view, glm::radians(-rotation.y), {0.0f, 1.0f, 0.0f});
         view = glm::translate(view, -position);
 

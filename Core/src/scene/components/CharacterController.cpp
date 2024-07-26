@@ -20,12 +20,13 @@ namespace gage::scene::components
     void CharacterController::init()
     {
     }
-    void CharacterController::update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse)
+    void CharacterController::update(float, const hid::Keyboard&, const hid::Mouse&)
     {
         character->PostSimulation(0.1f);
         auto position = character->GetPosition(false);
         node.set_position({position.GetX(), position.GetY(), position.GetZ()});
     }
+
 
     void CharacterController::shutdown()
     {
@@ -34,9 +35,7 @@ namespace gage::scene::components
 
     void CharacterController::render_imgui()
     {
-        ImGui::Text("CharacterController");
 
-        ImGui::Separator();
     }
 
     void CharacterController::add_velocity(const glm::vec3& vel)
@@ -56,6 +55,7 @@ namespace gage::scene::components
         {
             case JPH::CharacterBase::EGroundState::InAir: return GroundState::AIR;
             case JPH::CharacterBase::EGroundState::OnGround: return GroundState::GROUND;
+            default: return GroundState::AIR;
         }
 
         return GroundState::AIR;

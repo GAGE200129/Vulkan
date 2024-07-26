@@ -24,7 +24,6 @@
 #include <Core/src/scene/SceneGraph.hpp>
 #include <Core/src/scene/components/Animator.hpp>
 #include "scripts/FPSCharacterController.hpp"
-#include "scripts/CameraAttachmentTest.hpp"
 
 #include <Core/src/hid/hid.hpp>
 #include <Core/src/hid/Keyboard.hpp>
@@ -61,6 +60,8 @@ int main()
         keyboard.register_action(hid::KeyCodes::SPACE, "JUMP");
         keyboard.register_action(hid::KeyCodes::LEFT_SHIFT, "SPRINT");
         keyboard.register_action(hid::KeyCodes::LEFT_ALT, "WALK");
+        keyboard.register_action(hid::KeyCodes::Q, "LEAN_LEFT");
+        keyboard.register_action(hid::KeyCodes::E, "LEAN_RIGHT");
         hid::Mouse mouse(window.get_handle());
 
         auto &gfx = window.get_graphics();
@@ -68,30 +69,31 @@ int main()
 
         gfx::data::Camera camera{};
         camera.far = 1000.0f;
+        camera.field_of_view = 80.0f;
 
         std::vector<gfx::data::PointLight::Data> point_lights{};
 
         std::optional<scene::SceneGraph> scene;
         scene.emplace(gfx);
 
-        const scene::data::Model &scene_model = scene->import_model("res/models/toothless.glb", scene::SceneGraph::ImportMode::Binary);
+        const scene::data::Model &scene_model = scene->import_model("res/models/human_base_no_head.glb", scene::SceneGraph::ImportMode::Binary);
         const scene::data::Model &sponza_model = scene->import_model("res/models/sponza.glb", scene::SceneGraph::ImportMode::Binary);
 
         scene::Node *animated_node = scene->instanciate_model(scene_model, {0, 0, 0});
         scene->instanciate_model(sponza_model, {0, 0, 0});
-        scene::components::Animator *animator = (scene::components::Animator *)animated_node->get_requested_component(typeid(scene::components::Animator).name());
         animated_node->set_position({0, 30, 0});
         animated_node->add_component(std::make_unique<scene::components::FPSCharacterController>(scene.value(), *animated_node, phys, camera));
-        animated_node->set_name("Player");
+        animated_node->set_name("Player"); 
 
         scene->init();
 
-        animator->set_current_animation("Armature|mixamo.com|Layer0");
+        scene::components::Animator *animator = (scene::components::Animator *)animated_node->get_requested_component(typeid(scene::components::Animator).name());
+        animator->set_current_animation("Test1");
 
         auto previous = std::chrono::high_resolution_clock::now();
         uint64_t lag = 0;
 
-        double frame_time_in_seconds = 1.0 / 60.0;
+        double frame_time_in_seconds = 1.0 / 64.0;
         uint64_t frame_time_in_nanoseconds = frame_time_in_seconds * 1E9;
 
         while (!window.is_closing())
@@ -101,15 +103,15 @@ int main()
             previous = current;
             lag += elapsed.count();
 
-
             while (lag >= frame_time_in_nanoseconds)
             {
-                phys.update(frame_time_in_seconds);
                 scene->update(frame_time_in_seconds, keyboard, mouse);
+                phys.update(frame_time_in_seconds);
                 lag -= frame_time_in_nanoseconds;
             }
             mouse.update();
             win::update();
+           
             
 
             imgui_window.clear();
@@ -152,6 +154,8 @@ int main()
             g_buffer.end(cmd);
 
             gfx.end_frame(cmd);
+
+           
         }
 
         gfx.wait();

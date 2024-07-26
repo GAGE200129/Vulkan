@@ -22,11 +22,14 @@ namespace gage::scene::components
 
         void init() final;
         void update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse) final;
-        inline void render_depth(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) final {}
-        inline void render_geometry(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) final {}
+        void late_update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse) final;
+        inline void render_depth(VkCommandBuffer, VkPipelineLayout) final {}
+        inline void render_geometry(VkCommandBuffer, VkPipelineLayout) final {}
         inline void shutdown() final {}
 
         inline void render_imgui() final {};
+        inline const char* get_name() const final { return "Animator"; };
+
 
         void set_current_animation(const std::string &name);
 
@@ -34,7 +37,7 @@ namespace gage::scene::components
         const data::Model &model;
         const std::vector<data::ModelAnimation> &model_animations;
 
-        MeshRenderer *p_mesh_renderer{};
+        std::vector<MeshRenderer*> p_mesh_renderers{};
         double current_time{0.0};
         std::map<uint32_t, Node *> bone_id_to_joint_map{};
         std::map<uint32_t, Node *> skeleton_id_to_joint_map{};

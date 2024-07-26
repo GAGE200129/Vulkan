@@ -142,6 +142,11 @@ namespace gage::scene
             accumulated_transform *= glm::mat4x4(node->rotation);
             node->global_transform = accumulated_transform;
 
+             for (const auto &component : node->components)
+            {
+                component->late_update(delta, keyboard, mouse);
+            }
+
             
 
             for (const auto &child : node->get_children())

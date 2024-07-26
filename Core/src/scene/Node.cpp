@@ -18,9 +18,9 @@ namespace gage::scene
 
     void Node::render_imgui()
     {
-        if(this->name.compare(SceneGraph::ROOT_NAME) == 0)
+        if (this->name.compare(SceneGraph::ROOT_NAME) == 0)
             return;
-        
+
         ImGui::Text("Transform");
         ImGui::DragFloat3("position", &position.x, 0.1f);
         ImGui::DragFloat3("scale", &scale.x, 0.1f);
@@ -28,11 +28,12 @@ namespace gage::scene
 
         ImGui::Separator();
 
-        for(auto& component : components)
+        for (auto &component : components)
         {
+            ImGui::Text("%s", component->get_name());
             component->render_imgui();
+            ImGui::Separator();
         }
-        
     }
 
     void Node::add_component(std::unique_ptr<components::IComponent> component)
@@ -64,33 +65,51 @@ namespace gage::scene
         return nullptr;
     }
 
-    void* Node::get_requested_component_recursive(const char* typeid_name)
+    void *Node::get_requested_component_recursive(const char *typeid_name)
     {
         log().trace("get_requested_component_recursive: {}", this->name);
-        for(const auto& child : children)
+        auto component = this->get_requested_component(typeid_name);
+        if (component != nullptr)
+        {
+            return component;
+        }
+
+        for (const auto &child : children)
         {
             log().trace("Searching for component in child: {}", child->name);
-            auto component = child->get_requested_component(typeid_name);
-            if(component != nullptr)
-            {
-                return component;
-            }
-
             return child->get_requested_component_recursive(typeid_name);
         }
         return nullptr;
     }
 
-    Node* Node::search_child_by_name(const std::string& name) 
+    void Node::get_requested_component_accumulate_recursive(const char* typeid_name, std::vector<void*>& out_components)
     {
-        if(this->name.compare(name) == 0)
+        log().trace("get_requested_component_accumulate_recursive: {}", this->name);
+        for (auto &component : this->components)
+        {
+            if (typeid(*component.get()).name() == typeid_name)
+            {
+                out_components.push_back(component.get());
+            }
+        }
+
+        for (const auto &child : children)
+        {
+            child->get_requested_component_accumulate_recursive(typeid_name, out_components);
+        }
+    }
+
+    Node *Node::search_child_by_name(const std::string &name)
+    {
+        if (this->name.compare(name) == 0)
         {
             return this;
         }
-        for(const auto& child : this->children)
+        for (const auto &child : this->children)
         {
             auto result = child->search_child_by_name(name);
-            if (result) {
+            if (result)
+            {
                 return result;
             }
         }
@@ -120,29 +139,28 @@ namespace gage::scene
         return bone_id;
     }
 
-    const glm::vec3& Node::get_position()
+    const glm::vec3 &Node::get_position()
     {
         return position;
     }
-    const glm::vec3& Node::get_scale   ()
+    const glm::vec3 &Node::get_scale()
     {
         return scale;
     }
-    const glm::quat& Node::get_rotation()
+    const glm::quat &Node::get_rotation()
     {
         return rotation;
     }
 
-
-    void Node::set_position(const glm::vec3& position)
+    void Node::set_position(const glm::vec3 &position)
     {
         this->position = position;
     }
-    void Node::set_scale(const glm::vec3& scale)
+    void Node::set_scale(const glm::vec3 &scale)
     {
         this->scale = scale;
     }
-    void Node::set_rotation(const glm::quat& rotation)
+    void Node::set_rotation(const glm::quat &rotation)
     {
         this->rotation = rotation;
     }

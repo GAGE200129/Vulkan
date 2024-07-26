@@ -33,6 +33,7 @@ namespace gage::scene
         void add_component(std::unique_ptr<components::IComponent> component);
         void* get_requested_component(const char* typeid_name);
         void* get_requested_component_recursive(const char* typeid_name);
+        void get_requested_component_accumulate_recursive(const char* typeid_name, std::vector<void*>& out_components);
 
         void set_position(const glm::vec3& position);
         void set_scale(const glm::vec3& scale);

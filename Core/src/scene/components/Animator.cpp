@@ -10,98 +10,110 @@
 
 namespace gage::scene::components
 {
-    Animator::Animator(SceneGraph &scene, Node &node, const data::Model &model, const std::vector<data::ModelAnimation> &model_animations) : 
-        IComponent(scene, node),
-        model(model),
-        model_animations(model_animations)
+    Animator::Animator(SceneGraph &scene, Node &node, const data::Model &model, const std::vector<data::ModelAnimation> &model_animations) : IComponent(scene, node),
+                                                                                                                                             model(model),
+                                                                                                                                             model_animations(model_animations)
 
     {
     }
 
     void Animator::init()
     {
-        p_mesh_renderer = (MeshRenderer *)node.get_requested_component_recursive(typeid(MeshRenderer).name());
-        assert(p_mesh_renderer->get_skin() != nullptr);
+        std::vector<void *> mesh_renderers{};
+        node.get_requested_component_accumulate_recursive(typeid(MeshRenderer).name(), mesh_renderers);
 
-    }
-    void Animator::update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse)
-    {
-        p_mesh_renderer->get_animation_buffer()->enabled = false;  
-        if (current_animation != nullptr)
+        for (void *ptrs : mesh_renderers)
         {
-            p_mesh_renderer->get_animation_buffer()->enabled = true;  
-            current_time += delta;
+            p_mesh_renderers.push_back((MeshRenderer *)ptrs);
+        }
 
-            auto get_key_frame_index = [](double current_time, const std::vector<float> &key_frames) -> int32_t
+        log().trace("Animator found {} meshes with skin.", mesh_renderers.size());
+    }
+    void Animator::update(float delta, const hid::Keyboard &, const hid::Mouse &)
+    {
+        for (const auto mesh_renderer : p_mesh_renderers)
+        {
+            mesh_renderer->get_animation_buffer()->enabled = (current_animation != nullptr);
+        }
+        if (current_animation == nullptr)
+            return;
+
+        current_time += delta;
+
+        auto get_key_frame_index = [](double current_time, const std::vector<float> &key_frames) -> int32_t
+        {
+            for (int32_t index = 0; index < ((int64_t)key_frames.size() - 1); index++)
             {
-                for (int32_t index = 0; index < ((int64_t)key_frames.size() - 1); index++)
-                {
-                    if (current_time < key_frames.at(index + 1))
-                        return index;
-                }
-                return 0;
-            };
-
-            auto get_scale_factor = [](float current_time_point, float next_time_point, float current_time)
-            {
-                float scale_factor = 0.0f;
-                float current_time_rev_to_current_time_point = current_time - current_time_point;
-                float diff = next_time_point - current_time_point;
-                scale_factor = current_time_rev_to_current_time_point / diff;
-
-                //scale_factor = std::foor
-                return scale_factor;
-            };
-
-            for (const auto &channel : current_animation->pos_channels)
-            {
-                // Interpolate position
-                if (channel.time_points.size() >= 2)
-                {
-                    int index = get_key_frame_index(current_time, channel.time_points);
-                    float scale_factor = get_scale_factor(channel.time_points.at(index), channel.time_points.at(index + 1), current_time);
-                    glm::vec3 position = glm::mix(channel.positions.at(index), channel.positions.at(index + 1), scale_factor);
-                    bone_id_to_joint_map.at(channel.target_node)->set_position(position);
-                }      
+                if (current_time < key_frames.at(index + 1))
+                    return index;
             }
+            return 0;
+        };
 
-            for (const auto &channel : current_animation->scale_channels)
+        auto get_scale_factor = [](float current_time_point, float next_time_point, float current_time)
+        {
+            float scale_factor = 0.0f;
+            float current_time_rev_to_current_time_point = current_time - current_time_point;
+            float diff = next_time_point - current_time_point;
+            scale_factor = current_time_rev_to_current_time_point / diff;
+
+            // scale_factor = std::foor
+            return scale_factor;
+        };
+
+        for (const auto &channel : current_animation->pos_channels)
+        {
+            // Interpolate position
+            if (channel.time_points.size() >= 2)
             {
-
-                // Interpolate position
-                if (channel.time_points.size() >= 2)
-                {
-                    int index = get_key_frame_index(current_time, channel.time_points);
-                    float scale_factor = get_scale_factor(channel.time_points.at(index), channel.time_points.at(index + 1), current_time);
-                    glm::vec3 scale = glm::mix(channel.scales.at(index), channel.scales.at(index + 1), scale_factor);
-                    bone_id_to_joint_map.at(channel.target_node)->set_scale(scale);
-                }
-
+                int index = get_key_frame_index(current_time, channel.time_points);
+                float scale_factor = get_scale_factor(channel.time_points.at(index), channel.time_points.at(index + 1), current_time);
+                glm::vec3 position = glm::mix(channel.positions.at(index), channel.positions.at(index + 1), scale_factor);
+                bone_id_to_joint_map.at(channel.target_node)->set_position(position);
             }
+        }
 
-            for (const auto &channel : current_animation->rotation_channels)
+        for (const auto &channel : current_animation->scale_channels)
+        {
+
+            // Interpolate position
+            if (channel.time_points.size() >= 2)
             {
-
-                // Interpolate position
-                if (channel.time_points.size() >= 2)
-                {
-                    int index = get_key_frame_index(current_time, channel.time_points);
-                    float scale_factor = get_scale_factor(channel.time_points.at(index), channel.time_points.at(index + 1), current_time);
-                    glm::quat rotation = glm::slerp(channel.rotations.at(index), channel.rotations.at(index + 1), scale_factor);
-                    bone_id_to_joint_map.at(channel.target_node)->set_rotation(rotation);
-                }
-
+                int index = get_key_frame_index(current_time, channel.time_points);
+                float scale_factor = get_scale_factor(channel.time_points.at(index), channel.time_points.at(index + 1), current_time);
+                glm::vec3 scale = glm::mix(channel.scales.at(index), channel.scales.at(index + 1), scale_factor);
+                bone_id_to_joint_map.at(channel.target_node)->set_scale(scale);
             }
+        }
 
-            for(const auto& [skeleton_id, joint] : skeleton_id_to_joint_map)
-            {       
-                p_mesh_renderer->get_animation_buffer()->bone_matrices[skeleton_id] = joint->get_global_transform() * joint->get_inverse_bind_transform();
+        for (const auto &channel : current_animation->rotation_channels)
+        {
+
+            // Interpolate position
+            if (channel.time_points.size() >= 2)
+            {
+                int index = get_key_frame_index(current_time, channel.time_points);
+                float scale_factor = get_scale_factor(channel.time_points.at(index), channel.time_points.at(index + 1), current_time);
+                glm::quat rotation = glm::slerp(channel.rotations.at(index), channel.rotations.at(index + 1), scale_factor);
+                bone_id_to_joint_map.at(channel.target_node)->set_rotation(rotation);
             }
+        }
 
-            current_time = std::fmod(current_time, current_animation->duration);
+        current_time = std::fmod(current_time, current_animation->duration);
+    }
+
+    void Animator::late_update(float, const hid::Keyboard &, const hid::Mouse &)
+    {
+        if (current_animation == nullptr)
+            return;
+        for (const auto &[skeleton_id, joint] : skeleton_id_to_joint_map)
+        {
+            for (const auto mesh_renderer : p_mesh_renderers)
+            {
+                mesh_renderer->get_animation_buffer()->bone_matrices[skeleton_id] = joint->get_global_transform() * joint->get_inverse_bind_transform();
+            }
         }
     }
-
 
     void Animator::set_current_animation(const std::string &name)
     {
@@ -127,9 +139,9 @@ namespace gage::scene::components
                 bone_ids.insert(channel.target_node);
             }
 
-            for(uint32_t bone_id : bone_ids)
+            for (uint32_t bone_id : bone_ids)
             {
-                if(bone_id == node->get_bone_id())
+                if (bone_id == node->get_bone_id())
                 {
                     out_joints.insert({bone_id, node});
                 }
@@ -140,13 +152,13 @@ namespace gage::scene::components
             }
         };
 
-        std::function<void(std::map<uint32_t, Node *> & out_joints, const std::map<uint32_t, Node *> & in_joints, const std::vector<uint32_t>& skeleton_joint_indices)> link_skeleton_id;
-        link_skeleton_id = [&link_skeleton_id](std::map<uint32_t, Node *> & out_joints, const std::map<uint32_t, Node *> & in_joints, const std::vector<uint32_t>& skeleton_joint_indices)
+        std::function<void(std::map<uint32_t, Node *> & out_joints, const std::map<uint32_t, Node *> &in_joints, const std::vector<uint32_t> &skeleton_joint_indices)> link_skeleton_id;
+        link_skeleton_id = [&link_skeleton_id](std::map<uint32_t, Node *> &out_joints, const std::map<uint32_t, Node *> &in_joints, const std::vector<uint32_t> &skeleton_joint_indices)
         {
             uint32_t i = 0;
-            for(uint32_t index : skeleton_joint_indices)
+            for (uint32_t index : skeleton_joint_indices)
             {
-                Node* joint = in_joints.at(index);
+                Node *joint = in_joints.at(index);
                 out_joints.insert({i, joint});
                 i++;
             }
@@ -160,7 +172,14 @@ namespace gage::scene::components
                 current_animation = &model_animation;
                 // Link all joints
                 link_bone_id_recursive(bone_id_to_joint_map, model_animation, &this->node);
-                link_skeleton_id(skeleton_id_to_joint_map, bone_id_to_joint_map, p_mesh_renderer->get_skin()->joints);
+
+                for (const auto mesh_renderer : p_mesh_renderers)
+                {
+                    link_skeleton_id(skeleton_id_to_joint_map, bone_id_to_joint_map, mesh_renderer->get_skin()->joints);
+                }
+
+                log().trace("skeleton_id_to_joint_map.size(): {}", skeleton_id_to_joint_map.size() );
+
                 break;
             }
         }
