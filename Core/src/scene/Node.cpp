@@ -81,6 +81,22 @@ namespace gage::scene
         return nullptr;
     }
 
+    Node* Node::search_child_by_name(const std::string& name) 
+    {
+        if(this->name.compare(name) == 0)
+        {
+            return this;
+        }
+        for(const auto& child : this->children)
+        {
+            auto result = child->search_child_by_name(name);
+            if (result) {
+                return result;
+            }
+        }
+        return nullptr;
+    }
+
     const std::vector<Node *> &Node::get_children() const
     {
         return children;

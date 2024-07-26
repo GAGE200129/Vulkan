@@ -25,8 +25,8 @@ namespace gage::scene::components
     public:
         MeshRenderer(SceneGraph& scene, Node& node, gfx::Graphics& gfx, const data::Model& model, const data::ModelMesh& model_mesh, const data::ModelSkin* model_skin);
 
-        void init() final;
-        void update(float delta, const hid::Keyboard& keyboard) final;
+        inline void init() final {}
+        inline void update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse) final {}
         void render_depth(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) final;
         void render_geometry(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) final;
         void shutdown() final;

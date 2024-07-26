@@ -23,10 +23,12 @@
 #include <Core/src/scene/scene.hpp>
 #include <Core/src/scene/SceneGraph.hpp>
 #include <Core/src/scene/components/Animator.hpp>
-#include <Core/src/scene/components/FPSCharacterController.hpp>
+#include "scripts/FPSCharacterController.hpp"
+#include "scripts/CameraAttachmentTest.hpp"
 
 #include <Core/src/hid/hid.hpp>
 #include <Core/src/hid/Keyboard.hpp>
+#include <Core/src/hid/Mouse.hpp>
 
 #include <thread>
 #include <iostream>
@@ -57,6 +59,9 @@ int main()
         keyboard.register_action(hid::KeyCodes::S, "BACKWARD");
         keyboard.register_action(hid::KeyCodes::D, "RIGHT");
         keyboard.register_action(hid::KeyCodes::SPACE, "JUMP");
+        keyboard.register_action(hid::KeyCodes::LEFT_SHIFT, "SPRINT");
+        keyboard.register_action(hid::KeyCodes::LEFT_ALT, "WALK");
+        hid::Mouse mouse(window.get_handle());
 
         auto &gfx = window.get_graphics();
         win::ImguiWindow imgui_window{gfx};
@@ -73,21 +78,15 @@ int main()
         const scene::data::Model &sponza_model = scene->import_model("res/models/sponza.glb", scene::SceneGraph::ImportMode::Binary);
 
         scene::Node *animated_node = scene->instanciate_model(scene_model, {0, 0, 0});
-        scene::Node *animated_node2 = scene->instanciate_model(scene_model, {2, 0, 0});
         scene->instanciate_model(sponza_model, {0, 0, 0});
         scene::components::Animator *animator = (scene::components::Animator *)animated_node->get_requested_component(typeid(scene::components::Animator).name());
-        scene::components::Animator *animator2 = (scene::components::Animator *)animated_node2->get_requested_component(typeid(scene::components::Animator).name());
-
-        // Create player
-        scene::Node *player = scene->create_node();
-        player->set_position({0, 30, 0});
-        player->add_component(std::make_unique<scene::components::FPSCharacterController>(scene.value(), *player, phys, camera));
-        player->set_name("Player");
+        animated_node->set_position({0, 30, 0});
+        animated_node->add_component(std::make_unique<scene::components::FPSCharacterController>(scene.value(), *animated_node, phys, camera));
+        animated_node->set_name("Player");
 
         scene->init();
 
         animator->set_current_animation("Armature|mixamo.com|Layer0");
-        animator2->set_current_animation("Armature|mixamo.com|Layer0");
 
         auto previous = std::chrono::high_resolution_clock::now();
         uint64_t lag = 0;
@@ -102,13 +101,17 @@ int main()
             previous = current;
             lag += elapsed.count();
 
+
             while (lag >= frame_time_in_nanoseconds)
             {
                 phys.update(frame_time_in_seconds);
-                scene->update(frame_time_in_seconds, keyboard);
+                scene->update(frame_time_in_seconds, keyboard, mouse);
                 lag -= frame_time_in_nanoseconds;
             }
+            mouse.update();
             win::update();
+            
+
             imgui_window.clear();
             imgui_window.draw(camera, window, *scene);
             imgui_window.end_frame();

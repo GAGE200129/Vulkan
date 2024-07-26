@@ -24,7 +24,7 @@ namespace gage::scene::components
         assert(p_mesh_renderer->get_skin() != nullptr);
 
     }
-    void Animator::update(float delta, const hid::Keyboard& keyboard)
+    void Animator::update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse)
     {
         p_mesh_renderer->get_animation_buffer()->enabled = false;  
         if (current_animation != nullptr)
@@ -102,16 +102,6 @@ namespace gage::scene::components
         }
     }
 
-    void Animator::render_depth(VkCommandBuffer, VkPipelineLayout)
-    {
-    }
-    void Animator::render_geometry(VkCommandBuffer, VkPipelineLayout)
-    {
-    }
-
-    void Animator::shutdown()
-    {
-    }
 
     void Animator::set_current_animation(const std::string &name)
     {

@@ -42,6 +42,7 @@ namespace gage::scene
         const glm::vec3& get_scale   ();
         const glm::quat& get_rotation();
         
+        Node* search_child_by_name(const std::string& name);
 
     private:  
         SceneGraph& scene;

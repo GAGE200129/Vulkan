@@ -25,6 +25,12 @@ namespace tinygltf
     class Material;
 }
 
+namespace gage::hid
+{
+    class Keyboard;
+    class Mouse;
+}
+
 namespace gage::scene
 {
 
@@ -44,7 +50,7 @@ namespace gage::scene
         ~SceneGraph();
 
         void init();
-        void update(float delta, const hid::Keyboard& keyboard);
+        void update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse);
         void render_depth(VkCommandBuffer cmd, VkPipelineLayout layout);
         void render_geometry(VkCommandBuffer cmd, VkPipelineLayout layout);
 

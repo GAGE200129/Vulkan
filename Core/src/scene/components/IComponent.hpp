@@ -16,6 +16,7 @@ namespace gage::scene
 namespace gage::hid
 {
     class Keyboard;
+    class Mouse;
 }
 
 namespace gage::scene::components
@@ -27,7 +28,7 @@ namespace gage::scene::components
         virtual ~IComponent() = default;
 
         virtual void init() = 0;
-        virtual void update(float delta, const hid::Keyboard& keyboard) = 0;
+        virtual void update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse) = 0;
         virtual void render_depth(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) = 0;
         virtual void render_geometry(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) = 0;
         virtual void shutdown() = 0;

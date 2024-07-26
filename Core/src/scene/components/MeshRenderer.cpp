@@ -23,13 +23,6 @@ namespace gage::scene::components
         animation_desc = gfx.get_pbr_pipeline().allocate_animation_set(sizeof(AnimationBuffer), bone_matrices_buffer.get_buffer_handle());
     }
 
-    void MeshRenderer::init()
-    {
-    }
-    void MeshRenderer::update(float delta, const hid::Keyboard& keyboard)
-    {
-        
-    }
 
     void MeshRenderer::render_depth(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout)
     {

@@ -21,10 +21,10 @@ namespace gage::scene::components
         Animator(SceneGraph &scene, Node &node, const data::Model &model, const std::vector<data::ModelAnimation> &model_animations);
 
         void init() final;
-        void update(float delta, const hid::Keyboard& keyboard) final;
-        void render_depth(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) final;
-        void render_geometry(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) final;
-        void shutdown() final;
+        void update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse) final;
+        inline void render_depth(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) final {}
+        inline void render_geometry(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) final {}
+        inline void shutdown() final {}
 
         inline void render_imgui() final {};
 

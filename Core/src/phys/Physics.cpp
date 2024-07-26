@@ -97,7 +97,7 @@ namespace gage::phys
         settings->mMaxSlopeAngle = JPH::DegreesToRadians(45.0f);
         settings->mLayer = Layers::MOVING;
         settings->mShape = JPH::CapsuleShapeSettings(0.9f, 0.1f).Create().Get();
-        settings->mFriction = 1.0f;
+        settings->mFriction = 5.0f;
         
         std::unique_ptr<JPH::Character> character = std::make_unique<JPH::Character>(
             settings, 

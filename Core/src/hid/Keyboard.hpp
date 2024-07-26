@@ -1,6 +1,7 @@
 #pragma once
 
 #include <bitset>
+#include <unordered_map>
 
 struct GLFWwindow;
 namespace gage::hid
@@ -34,6 +35,8 @@ namespace gage::hid
         Y = 89,
         Z = 90,
         SPACE = 32,
+        LEFT_SHIFT = 340,
+        LEFT_ALT = 342,
     };
     class Keyboard
     {
