@@ -76,6 +76,8 @@ int main()
         std::optional<scene::SceneGraph> scene;
         scene.emplace(gfx, phys);
 
+        gfx::data::terrain::Terrain terrain(gfx, "res/terrains/test.ter");
+
         const scene::data::Model &scene_model = scene->import_model("res/models/human_base.glb", scene::SceneGraph::ImportMode::Binary);
         const scene::data::Model &sponza_model = scene->import_model("res/models/sponza.glb", scene::SceneGraph::ImportMode::Binary);
         scene->instanciate_model(sponza_model, {0, 0, 0});
@@ -88,17 +90,16 @@ int main()
 
         scene->init();
 
-        
         auto previous = std::chrono::high_resolution_clock::now();
         uint64_t lag = 0;
 
-        double tick_time_in_seconds = 1.0 / 128.0;
+        double tick_time_in_seconds = 1.0 / 64.0;
         uint64_t tick_time_in_nanoseconds = tick_time_in_seconds * 1E9;
 
         while (!window.is_closing())
         {
             auto current = std::chrono::high_resolution_clock::now();
-            auto elapsed =  std::chrono::nanoseconds(current - previous);
+            auto elapsed = std::chrono::nanoseconds(current - previous);
             previous = current;
             lag += elapsed.count();
 
@@ -115,10 +116,10 @@ int main()
                 scene->get_animation().late_update(tick_time_in_seconds);
                 lag -= tick_time_in_nanoseconds;
             }
-           
+            // double elapsed_time_in_seconds = (double)elapsed.count() * 1E-9;
+
             mouse.update();
             win::update();
-            
 
             imgui_window.clear();
             imgui_window.draw(camera, window, *scene);
@@ -130,7 +131,6 @@ int main()
             const auto &pbr_pipeline = gfx.get_pbr_pipeline();
             const auto &terrain_pipeline = gfx.get_terrain_pipeline();
 
-            
             g_buffer.begin_shadowpass(cmd);
             pbr_pipeline.bind_depth(cmd);
             scene->get_renderer().render_depth(cmd, pbr_pipeline.get_depth_layout());
@@ -141,6 +141,7 @@ int main()
             scene->get_renderer().render_geometry(cmd, pbr_pipeline.get_layout());
 
             terrain_pipeline.bind(cmd);
+            terrain.render(gfx, cmd);
             g_buffer.end(cmd);
 
             g_buffer.begin_ssaopass(cmd);
@@ -161,8 +162,6 @@ int main()
             g_buffer.end(cmd);
 
             gfx.end_frame(cmd);
-
-           
         }
 
         gfx.wait();

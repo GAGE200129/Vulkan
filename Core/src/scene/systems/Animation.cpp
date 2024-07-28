@@ -38,7 +38,7 @@ namespace gage::scene::systems
         {
             for (const auto mesh_renderer : animator->p_mesh_renderers)
             {
-                mesh_renderer->get_animation_buffer()->enabled = (animator->current_animation != nullptr);
+                mesh_renderer->get_animation_buffer().enabled = (animator->current_animation != nullptr);
             }
             if (animator->current_animation == nullptr)
                 return;
@@ -62,7 +62,7 @@ namespace gage::scene::systems
                 float diff = next_time_point - current_time_point;
                 scale_factor = current_time_rev_to_current_time_point / diff;
 
-                // scale_factor = std::foor
+                //scale_factor = std::floor(scale_factor);
                 return scale_factor;
             };
 
@@ -117,7 +117,7 @@ namespace gage::scene::systems
             {
                 for (const auto mesh_renderer : animator->p_mesh_renderers)
                 {
-                    mesh_renderer->get_animation_buffer()->bone_matrices[skeleton_id] = joint->get_global_transform() * joint->get_inverse_bind_transform();
+                    mesh_renderer->get_animation_buffer().bone_matrices[skeleton_id] = joint->get_global_transform() * joint->get_inverse_bind_transform();
                 }
             }
         }

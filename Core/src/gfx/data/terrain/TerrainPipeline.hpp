@@ -16,8 +16,6 @@ namespace gage::gfx::data::terrain
         ~TerrainPipeline();
 
         void bind(VkCommandBuffer cmd) const;
- 
-        //void set_push_constant(VkCommandBuffer cmd,  const glm::mat4x4& transform);
 
         VkPipelineLayout get_layout() const;
         void reset();

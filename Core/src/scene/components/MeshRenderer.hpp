@@ -35,7 +35,7 @@ namespace gage::scene::components
         inline void render_imgui() final {};
         inline const char* get_name() const final { return "MeshRenderer"; };
 
-        AnimationBuffer* get_animation_buffer();
+        AnimationBuffer& get_animation_buffer();
         const data::ModelSkin* get_skin();
     private:
         
@@ -43,6 +43,8 @@ namespace gage::scene::components
         const data::Model& model;
         const data::ModelMesh& model_mesh;
         const data::ModelSkin* model_skin{};
+
+        AnimationBuffer animation_buffer_data{};
         std::unique_ptr<gfx::data::CPUBuffer> animation_buffers[gfx::Graphics::FRAMES_IN_FLIGHT]{};
         VkDescriptorSet animation_descs[gfx::Graphics::FRAMES_IN_FLIGHT]{};
     };

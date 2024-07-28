@@ -50,7 +50,7 @@ namespace gage::scene::systems
 
      void Physics::character_add_velocity(components::CharacterController* character, const glm::vec3& vel)
     {
-        character->character->AddLinearVelocity(JPH::Vec3(vel.x, vel.y, vel.z), true);
+        character->character->AddLinearVelocity(JPH::Vec3(vel.x, vel.y, vel.z), false);
     }
     glm::vec3 Physics::character_get_velocity(components::CharacterController* character)
     {

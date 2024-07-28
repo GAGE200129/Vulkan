@@ -19,9 +19,9 @@ namespace gage::scene::components
     {}
 
 
-    MeshRenderer::AnimationBuffer* MeshRenderer::get_animation_buffer()
+    MeshRenderer::AnimationBuffer& MeshRenderer::get_animation_buffer()
     {
-        return (AnimationBuffer*)animation_buffers[gfx.get_current_frame_index()]->get_mapped();
+        return animation_buffer_data;
     }
 
     const data::ModelSkin* MeshRenderer::get_skin()

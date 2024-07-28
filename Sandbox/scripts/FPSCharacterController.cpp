@@ -40,6 +40,30 @@ void FPSCharacterController::init()
 }
 void FPSCharacterController::update(float delta, const hid::Keyboard &keyboard, const hid::Mouse &mouse)
 {
+    this->pitch -= mouse.get_delta().y * 0.3f;
+    this->yaw -= mouse.get_delta().x * 0.3f;
+
+    if (pitch > 90.0f)
+        pitch = 90.0f;
+    else if (pitch < -90.0)
+        pitch = -90.0f;
+
+    if (yaw > 360.0f)
+        yaw = -360.0f;
+    else if (yaw < -360.0f)
+        yaw = 360.0f;
+
+    target_roll = 0;
+    if (keyboard.get_action("LEAN_LEFT"))
+    {
+        target_roll -= 30.0f;
+    }
+    if (keyboard.get_action("LEAN_RIGHT"))
+    {
+        target_roll += 30.0f;
+    }
+    roll = std::lerp(roll, target_roll, delta * 5.0f);
+    
     glm::vec2 dir{0, 0};
     if (keyboard.get_action("FORWARD"))
     {
@@ -104,30 +128,6 @@ void FPSCharacterController::late_update(float delta, const hid::Keyboard &keybo
     glm::vec4 perspective;
     glm::decompose(head_global_transform, scale, rotation, translation, skew, perspective);
     
-
-    this->pitch -= mouse.get_delta().y * 0.3f;
-    this->yaw -= mouse.get_delta().x * 0.3f;
-
-    if (pitch > 90.0f)
-        pitch = 90.0f;
-    else if (pitch < -90.0)
-        pitch = -90.0f;
-
-    if (yaw > 360.0f)
-        yaw = -360.0f;
-    else if (yaw < -360.0f)
-        yaw = 360.0f;
-
-    target_roll = 0;
-    if (keyboard.get_action("LEAN_LEFT"))
-    {
-        target_roll -= 30.0f;
-    }
-    if (keyboard.get_action("LEAN_RIGHT"))
-    {
-        target_roll += 30.0f;
-    }
-    roll = std::lerp(roll, target_roll, delta * 5.0f);
 
     camera.rotation.x = pitch;
     camera.rotation.y = yaw;

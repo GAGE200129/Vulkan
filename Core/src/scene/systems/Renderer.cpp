@@ -32,6 +32,8 @@ namespace gage::scene::systems
     {
         for (const auto &mesh : mesh_renderers)
         {
+            //Update animation buffer
+            std::memcpy(mesh->animation_buffers[gfx.get_current_frame_index()]->get_mapped(), &mesh->animation_buffer_data, sizeof(components::MeshRenderer::AnimationBuffer));
             for (const auto &section : mesh->model_mesh.sections)
             {
                 if (section.material_index < 0)
@@ -63,6 +65,8 @@ namespace gage::scene::systems
     {
         for (const auto &mesh : mesh_renderers)
         {
+            //Update animation buffer
+            std::memcpy(mesh->animation_buffers[gfx.get_current_frame_index()]->get_mapped(), &mesh->animation_buffer_data, sizeof(components::MeshRenderer::AnimationBuffer));
             for (const auto &section : mesh->model_mesh.sections)
             {
                 if (section.material_index < 0)

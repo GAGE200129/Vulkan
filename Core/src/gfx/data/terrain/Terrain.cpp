@@ -31,7 +31,7 @@ namespace gage::gfx::data::terrain
         for(uint32_t y = 0; y < size; y++)
             for(uint32_t x = 0; x < size; x++)
             {
-                vertex_data.push_back({{x * 10.0f, height_map.at(index++) * 0.6f, y * 10.0f}});
+                vertex_data.push_back({{x * 2.0f, height_map.at(index++) * 0.6f - 50.0f, y * 2.0f}});
 
             }
 
