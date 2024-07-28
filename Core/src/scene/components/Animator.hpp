@@ -12,26 +12,24 @@ namespace gage::scene::data
     class ModelAnimation;
 }
 
+namespace gage::scene::systems
+{
+    class Animation;
+}
+
 namespace gage::scene::components
 {
     class MeshRenderer;
     class Animator final : public IComponent
     {
+        friend class systems::Animation;
     public:
         Animator(SceneGraph &scene, Node &node, const data::Model &model, const std::vector<data::ModelAnimation> &model_animations);
 
-        void init() final;
-        void update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse) final;
-        void late_update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse) final;
-        inline void render_depth(VkCommandBuffer, VkPipelineLayout) final {}
-        inline void render_geometry(VkCommandBuffer, VkPipelineLayout) final {}
-        inline void shutdown() final {}
-
+    
         inline void render_imgui() final {};
         inline const char* get_name() const final { return "Animator"; };
 
-
-        void set_current_animation(const std::string &name);
 
     private:
         const data::Model &model;

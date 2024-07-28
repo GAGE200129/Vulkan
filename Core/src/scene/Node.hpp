@@ -30,7 +30,7 @@ namespace gage::scene
         const glm::mat4x4& get_inverse_bind_transform() const;
         uint32_t get_bone_id() const;
 
-        void add_component(std::unique_ptr<components::IComponent> component);
+        void add_component_ptr(components::IComponent* component);
         void* get_requested_component(const char* typeid_name);
         void* get_requested_component_recursive(const char* typeid_name);
         void get_requested_component_accumulate_recursive(const char* typeid_name, std::vector<void*>& out_components);
@@ -49,7 +49,7 @@ namespace gage::scene
         SceneGraph& scene;
         uint64_t id;
         std::string name;
-        std::vector<std::unique_ptr<components::IComponent>> components{};
+        std::vector<components::IComponent*> component_ptrs;
 
         Node* parent = nullptr;
         std::vector<Node*> children{};
@@ -58,7 +58,7 @@ namespace gage::scene
         glm::vec3 scale{1.0f, 1.0f, 1.0f};
         glm::quat rotation{1.0f, 0.0f, 0.0f, 0.0f};
         glm::mat4x4 global_transform{0.0f};
-
+    
         //Animation
         glm::mat4x4 inverse_bind_transform{1.0};
         uint32_t bone_id{};

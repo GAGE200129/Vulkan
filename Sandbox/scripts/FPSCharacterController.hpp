@@ -1,38 +1,44 @@
 #pragma once
 
+#include <Core/src/scene/components/Script.hpp>
 #include <Core/src/scene/components/CharacterController.hpp>
+
 namespace gage::gfx::data
 {
     class Camera;
 }
 
-namespace gage::scene::components
+namespace gage::phys
 {
-    class FPSCharacterController final : public CharacterController
-    {
-
-    public:
-        FPSCharacterController(SceneGraph& scene, Node& node, phys::Physics& phys, gfx::data::Camera& camera);
-
-        void init() final;
-        void update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse) final;
-        void late_update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse) final;
-        void shutdown() final;
-
-        void render_imgui() final;
-        inline const char* get_name() const final { return "FPSCharacterController"; };
-    private:
-        gfx::data::Camera& camera;
-        Node* head_node{};
-        Node* spine1{};
-        Node* spine{};
-        Node* hips{};
-
-        float current_speed = {2.0f};
-        float camera_y_offset{0.9f};
-        float pitch{};
-        float yaw{};
-        float target_roll{};
-        float roll{};
-    };
+    class Physics;
 }
+
+
+class FPSCharacterController final : public gage::scene::components::Script
+{
+
+public:
+    FPSCharacterController(gage::scene::SceneGraph &scene, gage::scene::Node &node, gage::phys::Physics &phys, gage::gfx::data::Camera &camera);
+
+    void init() final;
+    void update(float delta, const gage::hid::Keyboard &keyboard, const gage::hid::Mouse &mouse) final;
+    void late_update(float delta, const gage::hid::Keyboard &keyboard, const gage::hid::Mouse &mouse) final;
+    void shutdown() final;
+
+
+private:
+    gage::gfx::data::Camera &camera;
+
+    gage::scene::components::CharacterController* character_controller{};
+    gage::scene::Node *head_node{};
+    gage::scene::Node *spine1{};
+    gage::scene::Node *spine{};
+    gage::scene::Node *hips{};
+
+    float current_speed = {2.0f};
+    float camera_y_offset{0.9f};
+    float pitch{};
+    float yaw{};
+    float target_roll{};
+    float roll{};
+};

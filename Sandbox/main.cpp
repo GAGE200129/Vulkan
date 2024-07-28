@@ -74,27 +74,26 @@ int main()
         std::vector<gfx::data::PointLight::Data> point_lights{};
 
         std::optional<scene::SceneGraph> scene;
-        scene.emplace(gfx);
+        scene.emplace(gfx, phys);
 
         const scene::data::Model &scene_model = scene->import_model("res/models/human_base.glb", scene::SceneGraph::ImportMode::Binary);
         const scene::data::Model &sponza_model = scene->import_model("res/models/sponza.glb", scene::SceneGraph::ImportMode::Binary);
+        scene->instanciate_model(sponza_model, {0, 0, 0});
 
         scene::Node *animated_node = scene->instanciate_model(scene_model, {0, 0, 0});
-        scene->instanciate_model(sponza_model, {0, 0, 0});
         animated_node->set_position({0, 30, 0});
-        animated_node->add_component(std::make_unique<scene::components::FPSCharacterController>(scene.value(), *animated_node, phys, camera));
-        animated_node->set_name("Player"); 
+        animated_node->set_name("Player");
+        scene->add_component(animated_node, scene::SceneGraph::SystemType::Physics, std::make_unique<scene::components::CharacterController>(*scene, *animated_node, phys));
+        scene->add_component(animated_node, scene::SceneGraph::SystemType::Generic, std::make_unique<FPSCharacterController>(*scene, *animated_node, phys, camera));
 
         scene->init();
 
-        scene::components::Animator *animator = (scene::components::Animator *)animated_node->get_requested_component(typeid(scene::components::Animator).name());
-        animator->set_current_animation("Test1");
-
+        
         auto previous = std::chrono::high_resolution_clock::now();
         uint64_t lag = 0;
 
-        double frame_time_in_seconds = 1.0 / 128.0;
-        uint64_t frame_time_in_nanoseconds = frame_time_in_seconds * 1E9;
+        double tick_time_in_seconds = 1.0 / 128.0;
+        uint64_t tick_time_in_nanoseconds = tick_time_in_seconds * 1E9;
 
         while (!window.is_closing())
         {
@@ -103,14 +102,18 @@ int main()
             previous = current;
             lag += elapsed.count();
 
-           
-
-            while (lag >= frame_time_in_nanoseconds)
+            while (lag >= tick_time_in_nanoseconds)
             {
-                phys.update(frame_time_in_seconds);
-                scene->update(frame_time_in_seconds, keyboard, mouse);
-                scene->late_update(frame_time_in_seconds, keyboard, mouse);
-                lag -= frame_time_in_nanoseconds;
+                phys.update(tick_time_in_seconds);
+                scene->get_physics().update(tick_time_in_seconds);
+                scene->get_animation().update(tick_time_in_seconds);
+                scene->get_generic().update(tick_time_in_seconds, keyboard, mouse);
+
+                scene->build_node_transform();
+
+                scene->get_generic().late_update(tick_time_in_seconds, keyboard, mouse);
+                scene->get_animation().late_update(tick_time_in_seconds);
+                lag -= tick_time_in_nanoseconds;
             }
            
             mouse.update();
@@ -130,12 +133,12 @@ int main()
             
             g_buffer.begin_shadowpass(cmd);
             pbr_pipeline.bind_depth(cmd);
-            scene->render_depth(cmd, pbr_pipeline.get_depth_layout());
+            scene->get_renderer().render_depth(cmd, pbr_pipeline.get_depth_layout());
             g_buffer.end(cmd);
 
             g_buffer.begin_mainpass(cmd);
             pbr_pipeline.bind(cmd);
-            scene->render_geometry(cmd, pbr_pipeline.get_layout());
+            scene->get_renderer().render_geometry(cmd, pbr_pipeline.get_layout());
 
             terrain_pipeline.bind(cmd);
             g_buffer.end(cmd);

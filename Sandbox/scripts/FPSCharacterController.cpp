@@ -10,142 +10,132 @@
 #include <Core/src/hid/Mouse.hpp>
 #include <Core/ThirdParty/imgui/imgui.h>
 #include <Core/src/scene/Node.hpp>
+#include <Core/src/scene/components/Animator.hpp>
 
+#include <Core/src/scene/systems/Animation.hpp>
+#include <Core/src/scene/systems/Physics.hpp>
 
+using namespace gage;
 
-namespace gage::scene::components
+FPSCharacterController::FPSCharacterController(scene::SceneGraph &scene, scene::Node &node, phys::Physics &phys, gfx::data::Camera &camera) : 
+    Script(scene, node),
+    camera(camera)
 {
-    FPSCharacterController::FPSCharacterController(SceneGraph& scene, Node& node, phys::Physics& phys, gfx::data::Camera& camera) :
-        CharacterController(scene, node, phys),
-        camera(camera)
-    {
+}
 
+void FPSCharacterController::init()
+{
+    character_controller = (scene::components::CharacterController*)this->node.get_requested_component(typeid(scene::components::CharacterController).name());
+
+    head_node = this->node.search_child_by_name("mixamorig:Head");
+    spine1 = this->node.search_child_by_name("mixamorig:Spine1");
+    spine = this->node.search_child_by_name("mixamorig:Spine");
+    hips = this->node.search_child_by_name("mixamorig:Hips");
+
+    //hips->set_position({0.0f, -0.8f, 0.0f});
+
+    scene::components::Animator *animator = (scene::components::Animator *)node.get_requested_component(typeid(scene::components::Animator).name());
+
+    scene::systems::Animation::set_animator_animation(animator, "Test1");
+}
+void FPSCharacterController::update(float delta, const hid::Keyboard &keyboard, const hid::Mouse &mouse)
+{
+    glm::vec2 dir{0, 0};
+    if (keyboard.get_action("FORWARD"))
+    {
+        dir -= glm::vec2(glm::sin(glm::radians(yaw)), glm::cos(glm::radians(yaw)));
+    }
+    if (keyboard.get_action("BACKWARD"))
+    {
+        dir += glm::vec2(glm::sin(glm::radians(yaw)), glm::cos(glm::radians(yaw)));
     }
 
-    void FPSCharacterController::init()
+    if (keyboard.get_action("LEFT"))
     {
-        CharacterController::init();
-        head_node = this->node.search_child_by_name("mixamorig:Head");
-        spine1 = this->node.search_child_by_name("mixamorig:Spine1");
-        spine = this->node.search_child_by_name("mixamorig:Spine");
-        hips = this->node.search_child_by_name("mixamorig:Hips");
-
-        hips->set_position({0.0f, -0.8f, 0.0f});
-
+        dir -= glm::vec2(glm::sin(glm::radians(yaw + 90.0)), glm::cos(glm::radians(yaw + 90.0)));
     }
-    void FPSCharacterController::update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse)
+    if (keyboard.get_action("RIGHT"))
     {
-        CharacterController::update(delta, keyboard, mouse);
+        dir += glm::vec2(glm::sin(glm::radians(yaw + 90.0)), glm::cos(glm::radians(yaw + 90.0)));
+    }
 
-        this->pitch -= mouse.get_delta().y * 0.3f;
-        this->yaw -= mouse.get_delta().x * 0.3f;
-
-
-        if(pitch > 90.0f) pitch = 90.0f;
-        else if(pitch < -90.0) pitch = -90.0f;
-
-        if(yaw > 360.0f) yaw = -360.0f;
-        else if(yaw < -360.0f) yaw = 360.0f;
-
-        target_roll = 0;
-        if(keyboard.get_action("LEAN_LEFT"))
-        {
-            target_roll -= 30.0f;
-        }
-        if(keyboard.get_action("LEAN_RIGHT"))
-        {
-            target_roll += 30.0f;
-        }
-        roll = std::lerp(roll, target_roll, delta * 5.0f);
-
-        camera.rotation.x = pitch;
-        camera.rotation.y = yaw;
-        camera.rotation.z = -roll;
-
+    if (keyboard.get_action("JUMP"))
+    {
         
-        glm::vec2 dir{0, 0};
-        if(keyboard.get_action("FORWARD"))
+        if (scene::systems::Physics::character_get_ground_state(character_controller) == scene::systems::Physics::GroundState::GROUND)
         {
-            dir -= glm::vec2(glm::sin(glm::radians(yaw)), glm::cos(glm::radians(yaw)));
+            scene::systems::Physics::character_add_velocity(character_controller, glm::vec3{0.0f, 100.0f, 0.0f} * 1.0f * delta);
         }
-        if(keyboard.get_action("BACKWARD"))
-        {
-            dir += glm::vec2(glm::sin(glm::radians(yaw)), glm::cos(glm::radians(yaw)));
-        }
-
-       
-
-        if(keyboard.get_action("LEFT"))
-        {
-            dir -= glm::vec2(glm::sin(glm::radians(yaw + 90.0)), glm::cos(glm::radians(yaw + 90.0)));
-        }
-        if(keyboard.get_action("RIGHT"))
-        {
-            dir += glm::vec2(glm::sin(glm::radians(yaw + 90.0)), glm::cos(glm::radians(yaw + 90.0)));
-        }
-
-        if(keyboard.get_action("JUMP"))
-        {
-            if(CharacterController::get_ground_state() == CharacterController::GroundState::GROUND)
-            {
-                CharacterController::add_velocity(glm::vec3{0.0f, 100.0f, 0.0f} * 1.0f * delta); 
-            }
-        }
-
-        if(keyboard.get_action("SPRINT"))
-        {
-            current_speed = 4.0f;
-        }
-        else if(keyboard.get_action("WALK"))
-        {
-            current_speed = 0.5f;
-        }
-        else
-        {
-            current_speed = 2.0f;
-        }
-
-        auto velocity = CharacterController::get_velocity();
-        if(glm::length2(dir) != 0.0f && glm::length2(velocity) < glm::pow(current_speed, 2.0f) && CharacterController::get_ground_state() == CharacterController::GroundState::GROUND)
-        {
-            dir = glm::normalize(dir);
-            CharacterController::add_velocity(glm::vec3{dir.x, 0.0f, dir.y} * 30.0f * delta);
-        }
-        
-      
-
-        //camera.position = translation;
-        spine->set_rotation(glm::quat(glm::vec3(glm::radians(-pitch), 0.0f, glm::radians(roll))));
-        hips->set_rotation(glm::quat(glm::vec3(0.0f, glm::pi<float>() + glm::radians(yaw), 0.0f)));
     }
 
-    void FPSCharacterController::late_update(float delta, const hid::Keyboard& keyboard, const hid::Mouse& mouse)
+    if (keyboard.get_action("SPRINT"))
     {
-        CharacterController::late_update(delta, keyboard, mouse);
-        
-        auto head_global_transform = head_node->get_global_transform();
-        glm::vec3 scale;
-        glm::quat rotation;
-        glm::vec3 translation;
-        glm::vec3 skew;
-        glm::vec4 perspective;
-        glm::decompose(head_global_transform, scale, rotation, translation, skew, perspective);
-        camera.position = translation;
-
-        //
-       
+        current_speed = 4.0f;
     }
-
-    void FPSCharacterController::shutdown()
+    else if (keyboard.get_action("WALK"))
     {
-        CharacterController::shutdown();
+        current_speed = 0.5f;
     }
-
-    void FPSCharacterController::render_imgui()
+    else
     {
-        CharacterController::render_imgui();
-        ImGui::DragFloat("Camera y offset", &camera_y_offset, 0.01f, -10.0f, 10.0f);
-
-        
+        current_speed = 2.0f;
     }
+
+    auto velocity = scene::systems::Physics::character_get_velocity(character_controller);
+    if (glm::length2(dir) != 0.0f && glm::length2(velocity) < glm::pow(current_speed, 2.0f) &&
+         scene::systems::Physics::character_get_ground_state(character_controller) == scene::systems::Physics::GroundState::GROUND)
+    {
+        dir = glm::normalize(dir);
+        scene::systems::Physics::character_add_velocity(character_controller, glm::vec3{dir.x, 0.0f, dir.y} * 30.0f * delta);
+    }
+
+    // camera.position = translation;
+    spine->set_rotation(glm::quat(glm::vec3(glm::radians(-pitch), 0.0f, glm::radians(roll))));
+    hips->set_rotation(glm::quat(glm::vec3(0.0f, glm::pi<float>() + glm::radians(yaw), 0.0f)));
+}
+
+void FPSCharacterController::late_update(float delta, const hid::Keyboard &keyboard, const hid::Mouse &mouse)
+{
+    auto head_global_transform = head_node->get_global_transform();
+    glm::vec3 scale;
+    glm::quat rotation;
+    glm::vec3 translation;
+    glm::vec3 skew;
+    glm::vec4 perspective;
+    glm::decompose(head_global_transform, scale, rotation, translation, skew, perspective);
+    
+
+    this->pitch -= mouse.get_delta().y * 0.3f;
+    this->yaw -= mouse.get_delta().x * 0.3f;
+
+    if (pitch > 90.0f)
+        pitch = 90.0f;
+    else if (pitch < -90.0)
+        pitch = -90.0f;
+
+    if (yaw > 360.0f)
+        yaw = -360.0f;
+    else if (yaw < -360.0f)
+        yaw = 360.0f;
+
+    target_roll = 0;
+    if (keyboard.get_action("LEAN_LEFT"))
+    {
+        target_roll -= 30.0f;
+    }
+    if (keyboard.get_action("LEAN_RIGHT"))
+    {
+        target_roll += 30.0f;
+    }
+    roll = std::lerp(roll, target_roll, delta * 5.0f);
+
+    camera.rotation.x = pitch;
+    camera.rotation.y = yaw;
+    camera.rotation.z = -roll;
+    camera.position = translation;
+}
+
+void FPSCharacterController::shutdown()
+{
+    
 }

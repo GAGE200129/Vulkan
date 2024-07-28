@@ -28,7 +28,7 @@ namespace gage::scene
 
         ImGui::Separator();
 
-        for (auto &component : components)
+        for (auto &component : component_ptrs)
         {
             ImGui::Text("%s", component->get_name());
             component->render_imgui();
@@ -36,9 +36,10 @@ namespace gage::scene
         }
     }
 
-    void Node::add_component(std::unique_ptr<components::IComponent> component)
+
+    void Node::add_component_ptr(components::IComponent* component)
     {
-        components.push_back(std::move(component));
+        component_ptrs.push_back(component);
     }
 
     void Node::set_name(const std::string &name)
@@ -53,12 +54,12 @@ namespace gage::scene
 
     void *Node::get_requested_component(const char *typeid_name)
     {
-        for (auto &component : components)
+        for (auto &component : component_ptrs)
         {
-            log().trace("Searching for component: {}", typeid(*component.get()).name());
-            if (typeid(*component.get()).name() == typeid_name)
+            log().trace("Searching for component: {}", typeid(*component).name());
+            if (typeid(*component).name() == typeid_name)
             {
-                return component.get();
+                return component;
             }
         }
         log().error("Unknown requested component: {}", typeid_name);
@@ -85,11 +86,11 @@ namespace gage::scene
     void Node::get_requested_component_accumulate_recursive(const char* typeid_name, std::vector<void*>& out_components)
     {
         log().trace("get_requested_component_accumulate_recursive: {}", this->name);
-        for (auto &component : this->components)
+        for (auto &component : this->component_ptrs)
         {
-            if (typeid(*component.get()).name() == typeid_name)
+            if (typeid(*component).name() == typeid_name)
             {
-                out_components.push_back(component.get());
+                out_components.push_back(component);
             }
         }
 

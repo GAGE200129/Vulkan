@@ -63,7 +63,7 @@ namespace gage::phys
 
         // Now create a dynamic body to bounce on the floor
         // Note that this uses the shorthand version of creating and adding a body to the world
-        JPH::BodyCreationSettings floor_settings(new JPH::BoxShapeSettings(JPH::Vec3(100.0f, 1.0f, 100.0f)),
+        JPH::BodyCreationSettings floor_settings(new JPH::BoxShapeSettings(JPH::Vec3(9999.0f, 1.0f, 9999.0f)),
              JPH::RVec3(0.0_r, -1.0_r, 0.0_r), JPH::Quat::sIdentity(), JPH::EMotionType::Static, Layers::NON_MOVING);
         floor_settings.mFriction = 0.5f;
         auto new_floor = std::make_unique<JPH::BodyID>();

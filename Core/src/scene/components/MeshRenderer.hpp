@@ -12,11 +12,17 @@ namespace gage::scene::data
     class ModelSkin;
 }
 
+namespace gage::scene::systems
+{
+    class Renderer;
+}
+
 
 namespace gage::scene::components
 {
     class MeshRenderer final : public IComponent
     {
+        friend class systems::Renderer;
     public:
         struct AnimationBuffer
         {
@@ -25,13 +31,6 @@ namespace gage::scene::components
         };
     public:
         MeshRenderer(SceneGraph& scene, Node& node, gfx::Graphics& gfx, const data::Model& model, const data::ModelMesh& model_mesh, const data::ModelSkin* model_skin);
-
-        inline void init() final {}
-        inline void update(float, const hid::Keyboard&, const hid::Mouse&) final {}
-        inline void late_update(float, const hid::Keyboard&, const hid::Mouse&) final {}
-        void render_depth(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) final;
-        void render_geometry(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) final;
-        void shutdown() final;
 
         inline void render_imgui() final {};
         inline const char* get_name() const final { return "MeshRenderer"; };

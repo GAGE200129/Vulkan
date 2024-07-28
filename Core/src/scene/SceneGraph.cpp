@@ -67,7 +67,10 @@ namespace tinygltf
 
 namespace gage::scene
 {
-    SceneGraph::SceneGraph(gfx::Graphics &gfx) : gfx(gfx)
+    SceneGraph::SceneGraph(gfx::Graphics &gfx, phys::Physics& phys) : 
+        gfx(gfx), 
+        renderer(gfx), 
+        physics(phys)
     {
         // Create root node
         id = 0;
@@ -78,63 +81,25 @@ namespace gage::scene
     }
     SceneGraph::~SceneGraph()
     {
-        // Free material descriptor set
-        for (const auto &model : models)
-        {
-            for (const auto &material : model->materials)
-            {
-                gfx.get_pbr_pipeline().free_descriptor_set(material.descriptor_set);
-            }
-        }
-
-        // call shutdown on all components
-        std::function<void(const Node *node)> traverse_scene_graph_recursive;
-        traverse_scene_graph_recursive = [&](const scene::Node *node)
-        {
-            for (const auto &component : node->components)
-            {
-                component->shutdown();
-            }
-
-            for (const auto &child : node->get_children())
-            {
-                traverse_scene_graph_recursive(child);
-            }
-        };
-
-        traverse_scene_graph_recursive(nodes.at(0).get());
+        generic.shutdown();
+        renderer.shutdown();
+        animation.shutdown();
+        physics.shutdown();
     }
 
     void SceneGraph::init()
     {
-        // Call init on all nodes
-        std::function<void(const Node *node)> traverse_scene_graph_recursive;
-        traverse_scene_graph_recursive = [&](const scene::Node *node)
-        {
-            for (const auto &component : node->components)
-            {
-                component->init();
-            }
-
-            for (const auto &child : node->get_children())
-            {
-                traverse_scene_graph_recursive(child);
-            }
-        };
-
-        traverse_scene_graph_recursive(nodes.at(0).get());
+        renderer.init();
+        animation.init();
+        physics.init();
+        generic.init();
     }
 
-    void SceneGraph::update(float delta, const hid::Keyboard &keyboard, const hid::Mouse &mouse)
+    void SceneGraph::build_node_transform()
     {
         std::function<void(Node * node, glm::mat4x4 accumulated_transform)> traverse_scene_graph_recursive;
         traverse_scene_graph_recursive = [&](scene::Node *node, glm::mat4x4 accumulated_transform)
         {
-            for (const auto &component : node->components)
-            {
-                component->update(delta, keyboard, mouse);
-            }
-
             // Build node global transform
             accumulated_transform = glm::translate(accumulated_transform, node->position);
             accumulated_transform = glm::scale(accumulated_transform, node->scale);
@@ -150,62 +115,6 @@ namespace gage::scene
         traverse_scene_graph_recursive(nodes.at(0).get(), glm::mat4x4(1.0f));
     }
 
-    void SceneGraph::late_update(float delta, const hid::Keyboard &keyboard, const hid::Mouse &mouse)
-    {
-        std::function<void(Node * node, glm::mat4x4 accumulated_transform)> traverse_scene_graph_recursive;
-        traverse_scene_graph_recursive = [&](scene::Node *node, glm::mat4x4 accumulated_transform)
-        {
-            for (const auto &component : node->components)
-            {
-                component->late_update(delta, keyboard, mouse);
-            }
-
-            for (const auto &child : node->get_children())
-            {
-                traverse_scene_graph_recursive(child, accumulated_transform);
-            }
-        };
-
-        traverse_scene_graph_recursive(nodes.at(0).get(), glm::mat4x4(1.0f));
-    }
-
-    void SceneGraph::render_depth(VkCommandBuffer cmd, VkPipelineLayout layout)
-    {
-        std::function<void(const Node *node)> traverse_scene_graph_recursive;
-        traverse_scene_graph_recursive = [&](const scene::Node *node)
-        {
-            for (const auto &component : node->components)
-            {
-                component->render_depth(cmd, layout);
-            }
-
-            for (const auto &child : node->get_children())
-            {
-                traverse_scene_graph_recursive(child);
-            }
-        };
-
-        traverse_scene_graph_recursive(nodes.at(0).get());
-    }
-
-    void SceneGraph::render_geometry(VkCommandBuffer cmd, VkPipelineLayout layout)
-    {
-        std::function<void(const Node *node)> traverse_scene_graph_recursive;
-        traverse_scene_graph_recursive = [&](const scene::Node *node)
-        {
-            for (const auto &component : node->components)
-            {
-                component->render_geometry(cmd, layout);
-            }
-
-            for (const auto &child : node->get_children())
-            {
-                traverse_scene_graph_recursive(child);
-            }
-        };
-
-        traverse_scene_graph_recursive(nodes.at(0).get());
-    }
 
     const data::Model &SceneGraph::import_model(const std::string &file_path, ImportMode mode)
     {
@@ -363,7 +272,7 @@ namespace gage::scene
                 {
                     skin = &model.skins.at(model_node.skin_index);
                 }
-                new_node->components.push_back(std::make_unique<components::MeshRenderer>(*this, *new_node, gfx, model, model.meshes.at(model_node.mesh_index), skin));
+                add_component(new_node, SystemType::Renderer, std::make_unique<components::MeshRenderer>(*this, *new_node, gfx, model, model.meshes.at(model_node.mesh_index), skin));
             }
 
             for (const uint32_t &node : model_node.children)
@@ -380,7 +289,7 @@ namespace gage::scene
 
         if (model.animations.size() != 0)
         {
-            new_node->components.emplace_back(std::make_unique<components::Animator>(*this, *new_node, model, model.animations));
+            add_component(new_node, SystemType::Animation, std::make_unique<components::Animator>(*this, *new_node, model, model.animations));
         }
 
         return new_node;
@@ -426,24 +335,71 @@ namespace gage::scene
         return nullptr;
     }
 
-    uint64_t SceneGraph::find_node_index(uint64_t id)
+    void SceneGraph::add_component(Node* node, SystemType type, std::unique_ptr<components::IComponent> component)
     {
-        uint64_t index = 0;
-        for (const auto &node : nodes)
+        //Release component
+        components::IComponent* ptr = component.release();
+        node->add_component_ptr(ptr);
+        switch(type)
         {
-            if (node->id == id)
+            case SystemType::Renderer:
             {
-                return index;
+               
+                renderer.add_pbr_mesh_renderer(std::unique_ptr<components::MeshRenderer>(static_cast<components::MeshRenderer*>(ptr)));
+                break;
             }
-            index++;
+
+            case SystemType::Animation:
+            {
+                animation.add_animator(std::unique_ptr<components::Animator>(static_cast<components::Animator*>(ptr)));
+                break;
+            }
+
+            case SystemType::Physics:
+            {
+                physics.add_character_controller(std::unique_ptr<components::CharacterController>(static_cast<components::CharacterController*>(ptr)));
+                break;
+            }
+
+            case SystemType::Generic:
+            {
+                generic.add_script(std::unique_ptr<components::Script>(static_cast<components::Script*>(ptr)));
+                break;
+            }
+
+
+            default:
+            {
+                log().critical("Unknown system: {}", (uint32_t) type);
+                throw SceneException{};
+            }
         }
 
-        return 0;
     }
 
+   
     const std::vector<std::unique_ptr<Node>> &SceneGraph::get_nodes() const
     {
         return nodes;
+    }
+
+    systems::Renderer& SceneGraph::get_renderer() 
+    {
+        return renderer;
+    }
+
+    systems::Animation& SceneGraph::get_animation()
+    {
+        return animation;
+    }
+    systems::Physics& SceneGraph::get_physics()
+    {
+        return physics;
+    }
+
+    systems::Generic& SceneGraph::get_generic()
+    {
+        return generic;
     }
 
     void SceneGraph::process_model_material(const tinygltf::Model &gltf_model, const tinygltf::Material &gltf_material, data::ModelMaterial &material)
