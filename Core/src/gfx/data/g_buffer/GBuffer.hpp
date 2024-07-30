@@ -31,7 +31,7 @@ namespace gage::gfx::data::g_buffer
         VkRenderPass get_shadowpass_render_pass() const;
         VkRenderPass get_ssao_render_pass() const;
 
-        VkImageView get_position_view() const;
+        VkImageView get_depth_view() const;
         VkImageView get_normal_view() const;
         VkImageView get_albedo_view() const;
         VkImageView get_mr_view() const;

@@ -344,15 +344,15 @@ namespace gage::gfx::data
 
         std::vector<VkPipelineColorBlendAttachmentState> blend_attachments =
             {
-                VkPipelineColorBlendAttachmentState{
-                    .blendEnable = false,
-                    .srcColorBlendFactor = VK_BLEND_FACTOR_ZERO,
-                    .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
-                    .colorBlendOp = VK_BLEND_OP_ADD,
-                    .srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-                    .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-                    .alphaBlendOp = VK_BLEND_OP_ADD,
-                    .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT},
+                // VkPipelineColorBlendAttachmentState{
+                //     .blendEnable = false,
+                //     .srcColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+                //     .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+                //     .colorBlendOp = VK_BLEND_OP_ADD,
+                //     .srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+                //     .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+                //     .alphaBlendOp = VK_BLEND_OP_ADD,
+                //     .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT},
 
                 VkPipelineColorBlendAttachmentState{
                     .blendEnable = false,

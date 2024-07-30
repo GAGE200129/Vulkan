@@ -91,8 +91,8 @@ namespace gage::gfx::data
         VkWriteDescriptorSet descriptor_write{};
         descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 
-        // Link to position g_buffer
-        img_info.imageView = gfx.geometry_buffer->get_position_view();
+        // Link to depth g_buffer
+        img_info.imageView = gfx.geometry_buffer->get_depth_view();
         descriptor_write.dstSet = desc;
         descriptor_write.dstBinding = 0;
         descriptor_write.dstArrayElement = 0;

@@ -737,11 +737,11 @@ namespace gage::gfx
             };
         glm::mat4x4 cam_proj = glm::perspectiveFovRH_ZO(glm::radians(camera.get_field_of_view()),
                                                         (float)draw_extent.width, (float)draw_extent.height, near, far);
-        cam_proj[1][1] *= -1;
+        //cam_proj[1][1] *= -1;
 
         glm::mat4x4 inv_proj = glm::inverse(cam_proj * global_uniform.view);
 
-        glm::vec3 center{};
+        glm::vec3 center{0, 0, 0};
         for (size_t i = 0; i < 8; i++)
         {
             frustum_corners[i] = inv_proj * frustum_corners[i];

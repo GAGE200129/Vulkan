@@ -8,18 +8,15 @@
 
 namespace gage::gfx::data::g_buffer
 {
-    GBuffer::GBuffer(Graphics &gfx) : 
-        gfx(gfx),
-        main_pass(gfx),
-        shadow_pass(gfx),
-        light_pass(gfx),
-        ssao_pass(gfx)
+    GBuffer::GBuffer(Graphics &gfx) : gfx(gfx),
+                                      main_pass(gfx),
+                                      shadow_pass(gfx),
+                                      light_pass(gfx),
+                                      ssao_pass(gfx)
     {
-
     }
     GBuffer::~GBuffer()
     {
-        
     }
 
     void GBuffer::reset()
@@ -53,16 +50,16 @@ namespace gage::gfx::data::g_buffer
     {
         VkRenderPassBeginInfo render_pass_begin_info{};
         render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        render_pass_begin_info.renderPass = main_pass.render_pass; 
+        render_pass_begin_info.renderPass = main_pass.render_pass;
         render_pass_begin_info.framebuffer = main_pass.framebuffer;
         render_pass_begin_info.renderArea.offset = {0, 0};
         render_pass_begin_info.renderArea.extent = gfx.get_scaled_draw_extent();
-        std::array<VkClearValue, 5> clear_values{};
+        std::array<VkClearValue, 4> clear_values{};
+        //clear_values[0].color = {{0.0f, 0.0f, 0.0f}};
         clear_values[0].color = {{0.0f, 0.0f, 0.0f}};
         clear_values[1].color = {{0.0f, 0.0f, 0.0f}};
         clear_values[2].color = {{0.0f, 0.0f, 0.0f}};
-        clear_values[3].color = {{0.0f, 0.0f, 0.0f}};
-        clear_values[4].depthStencil = {1.0f, 0};
+        clear_values[3].depthStencil = {1.0f, 0};
         render_pass_begin_info.clearValueCount = clear_values.size();
         render_pass_begin_info.pClearValues = clear_values.data();
         vkCmdBeginRenderPass(cmd, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
@@ -72,7 +69,7 @@ namespace gage::gfx::data::g_buffer
     {
         VkRenderPassBeginInfo render_pass_begin_info{};
         render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        render_pass_begin_info.renderPass =  light_pass.finalpass_renderpass;
+        render_pass_begin_info.renderPass = light_pass.finalpass_renderpass;
         render_pass_begin_info.framebuffer = light_pass.finalpass_framebuffer;
         render_pass_begin_info.renderArea.offset = {0, 0};
         render_pass_begin_info.renderArea.extent = gfx.get_scaled_draw_extent();
@@ -87,7 +84,7 @@ namespace gage::gfx::data::g_buffer
     {
         VkRenderPassBeginInfo render_pass_begin_info{};
         render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        render_pass_begin_info.renderPass =  ssao_pass.render_pass;
+        render_pass_begin_info.renderPass = ssao_pass.render_pass;
         render_pass_begin_info.framebuffer = ssao_pass.framebuffer;
         render_pass_begin_info.renderArea.offset = {0, 0};
         render_pass_begin_info.renderArea.extent = gfx.get_scaled_draw_extent();
@@ -103,13 +100,12 @@ namespace gage::gfx::data::g_buffer
         vkCmdEndRenderPass(cmd);
     }
 
-
     VkRenderPass GBuffer::get_mainpass_render_pass() const
     {
         return main_pass.render_pass;
     }
 
-    VkRenderPass GBuffer::get_lightpass_render_pass() const 
+    VkRenderPass GBuffer::get_lightpass_render_pass() const
     {
         return light_pass.finalpass_renderpass;
     }
@@ -123,11 +119,14 @@ namespace gage::gfx::data::g_buffer
     {
         return shadow_pass.shadowpass_renderpass;
     }
-
-    VkImageView GBuffer::get_position_view() const
+    VkImageView GBuffer::get_depth_view() const
     {
-        return main_pass.position_view;
+        return main_pass.depth_image_view;
     }
+    // VkImageView GBuffer::get_position_view() const
+    // {
+    //     return main_pass.position_view;
+    // }
     VkImageView GBuffer::get_normal_view() const
     {
         return main_pass.normal_view;

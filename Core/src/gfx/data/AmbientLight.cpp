@@ -261,7 +261,7 @@ namespace gage::gfx::data
         descriptor_write.pTexelBufferView = nullptr;
         vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
 
-         // Link to albedo g_buffer
+         // Link to ssao g_buffer
         img_info.imageView = gfx.geometry_buffer->get_ssao_view();
         descriptor_write.dstSet = desc;
         descriptor_write.dstBinding = 0;

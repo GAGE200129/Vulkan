@@ -8,11 +8,10 @@
 
 namespace gage::gfx::data::terrain
 {
-    TerrainPipeline:: TerrainPipeline(Graphics& gfx) :
-        gfx(gfx)
+    TerrainPipeline::TerrainPipeline(Graphics &gfx) : gfx(gfx)
     {
         create_pipeline();
-    } 
+    }
     TerrainPipeline::~TerrainPipeline()
     {
         vkDestroyDescriptorSetLayout(gfx.device, desc_layout, nullptr);
@@ -44,16 +43,15 @@ namespace gage::gfx::data::terrain
     VkPipelineLayout TerrainPipeline::get_layout() const
     {
         return pipeline_layout;
-    }   
+    }
     void TerrainPipeline::reset()
     {
-
     }
     void TerrainPipeline::create_pipeline()
     {
-         // PER INSTANCE SET LAYOUT
+        // PER INSTANCE SET LAYOUT
         std::vector<VkDescriptorSetLayoutBinding> instance_bindings{
-            //{.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
+            {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .pImmutableSamplers = nullptr},
         };
 
         VkDescriptorSetLayoutCreateInfo layout_ci{};
@@ -66,8 +64,7 @@ namespace gage::gfx::data::terrain
             VkPushConstantRange{
                 VK_SHADER_STAGE_ALL,
                 0,
-                sizeof(glm::mat4x4)}
-        };
+                sizeof(glm::mat4x4)}};
 
         std::vector<VkDescriptorSetLayout> layouts = {gfx.global_set_layout, desc_layout};
         VkPipelineLayoutCreateInfo pipeline_layout_info = {};
@@ -78,7 +75,7 @@ namespace gage::gfx::data::terrain
         pipeline_layout_info.setLayoutCount = layouts.size();
         vk_check(vkCreatePipelineLayout(gfx.device, &pipeline_layout_info, nullptr, &pipeline_layout));
 
-        //Create pipelie
+        // Create pipelie
         std::vector<VkVertexInputBindingDescription> vertex_bindings{
             {.binding = 0, .stride = (sizeof(float) * 3), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}, // position
             //{.binding = 1, .stride = (sizeof(float) * 3), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}, // Normal
@@ -156,15 +153,15 @@ namespace gage::gfx::data::terrain
 
         std::vector<VkPipelineColorBlendAttachmentState> blend_attachments =
             {
-                VkPipelineColorBlendAttachmentState{
-                    .blendEnable = false,
-                    .srcColorBlendFactor = VK_BLEND_FACTOR_ZERO,
-                    .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
-                    .colorBlendOp = VK_BLEND_OP_ADD,
-                    .srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-                    .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-                    .alphaBlendOp = VK_BLEND_OP_ADD,
-                    .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT},
+                // VkPipelineColorBlendAttachmentState{
+                //     .blendEnable = false,
+                //     .srcColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+                //     .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+                //     .colorBlendOp = VK_BLEND_OP_ADD,
+                //     .srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+                //     .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+                //     .alphaBlendOp = VK_BLEND_OP_ADD,
+                //     .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT},
 
                 VkPipelineColorBlendAttachmentState{
                     .blendEnable = false,
@@ -213,7 +210,7 @@ namespace gage::gfx::data::terrain
 
         std::vector<VkPipelineShaderStageCreateInfo> pipeline_shader_stages{};
         VkShaderModule vertex_shader{};
-        //VkShaderModule geometry_shader{};
+        // VkShaderModule geometry_shader{};
         VkShaderModule fragment_shader{};
         auto vertex_binary = utils::file_path_to_binary("Core/shaders/compiled/terrain.vert.spv");
         auto fragment_binary = utils::file_path_to_binary("Core/shaders/compiled/terrain.frag.spv");
@@ -251,10 +248,9 @@ namespace gage::gfx::data::terrain
         pipeline_shader_stages.push_back(shader_stage_ci);
 
         std::vector<VkDynamicState> dynamic_states =
-        {
-            VK_DYNAMIC_STATE_VIEWPORT,
-            VK_DYNAMIC_STATE_SCISSOR
-        };
+            {
+                VK_DYNAMIC_STATE_VIEWPORT,
+                VK_DYNAMIC_STATE_SCISSOR};
 
         VkPipelineDynamicStateCreateInfo dynamic_state_ci{};
         dynamic_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -286,8 +282,45 @@ namespace gage::gfx::data::terrain
         vk_check(vkCreateGraphicsPipelines(gfx.device, nullptr, 1, &pipeline_info, nullptr, &pipeline));
 
         vkDestroyShaderModule(gfx.device, vertex_shader, nullptr);
-        //vkDestroyShaderModule(gfx.device, geometry_shader, nullptr);
+        // vkDestroyShaderModule(gfx.device, geometry_shader, nullptr);
         vkDestroyShaderModule(gfx.device, fragment_shader, nullptr);
     }
+    VkDescriptorSet TerrainPipeline::allocate_descriptor_set(size_t size_in_bytes, VkBuffer buffer) const
+    {
+        gfx.uploading_mutex.lock();
+        VkDescriptorSet res{};
+        VkDescriptorSetAllocateInfo alloc_info{};
+        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        alloc_info.descriptorSetCount = 1;
+        alloc_info.descriptorPool = gfx.desc_pool;
+        alloc_info.pSetLayouts = &desc_layout;
+        vk_check(vkAllocateDescriptorSets(gfx.device, &alloc_info, &res));
 
+        //Set 1 binding 0 = uniform buffer
+        VkDescriptorBufferInfo buffer_desc_info{};
+        buffer_desc_info.buffer = buffer;
+        buffer_desc_info.offset = 0;
+        buffer_desc_info.range = size_in_bytes;
+
+        VkWriteDescriptorSet descriptor_write{};
+        descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptor_write.dstSet = res;
+        descriptor_write.dstBinding = 0;
+        descriptor_write.dstArrayElement = 0;
+        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptor_write.descriptorCount = 1;
+        descriptor_write.pBufferInfo = &buffer_desc_info;
+        descriptor_write.pImageInfo = nullptr;
+        descriptor_write.pTexelBufferView = nullptr;
+        vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
+
+
+        gfx.uploading_mutex.unlock();
+
+        return res;
+    }
+    void TerrainPipeline::free_descriptor_set(VkDescriptorSet set) const
+    {
+        vkFreeDescriptorSets(gfx.device, gfx.desc_pool, 1, &set);
+    }
 }

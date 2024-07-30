@@ -76,14 +76,14 @@ int main()
         std::optional<scene::SceneGraph> scene;
         scene.emplace(gfx, phys);
 
-        gfx::data::terrain::Terrain terrain(gfx, "res/terrains/test.ter");
+        gfx::data::terrain::Terrain terrain(gfx, 100, 500, 1.0f, -20.0f, 10.0f, 0.5f);
 
         const scene::data::Model &scene_model = scene->import_model("res/models/human_base.glb", scene::SceneGraph::ImportMode::Binary);
         const scene::data::Model &sponza_model = scene->import_model("res/models/sponza.glb", scene::SceneGraph::ImportMode::Binary);
-        scene->instanciate_model(sponza_model, {0, 0, 0});
+        scene->instanciate_model(sponza_model, {50, 0, 50});
 
         scene::Node *animated_node = scene->instanciate_model(scene_model, {0, 0, 0});
-        animated_node->set_position({0, 30, 0});
+        animated_node->set_position({50, 0, 50});
         animated_node->set_name("Player");
         scene->add_component(animated_node, scene::SceneGraph::SystemType::Physics, std::make_unique<scene::components::CharacterController>(*scene, *animated_node, phys));
         scene->add_component(animated_node, scene::SceneGraph::SystemType::Generic, std::make_unique<FPSCharacterController>(*scene, *animated_node, phys, camera));
@@ -154,10 +154,10 @@ int main()
             g_buffer.begin_lightpass(cmd);
             final_ambient.process(cmd);
             directional_light.process(cmd);
-            for (auto &p_light : point_lights)
-            {
-                point_light.process(cmd, p_light);
-            }
+            // for (auto &p_light : point_lights)
+            // {
+            //     point_light.process(cmd, p_light);
+            // }
 
             g_buffer.end(cmd);
 

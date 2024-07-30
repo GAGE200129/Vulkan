@@ -8,6 +8,8 @@ layout (set = 1, binding = 0) uniform sampler2D g_buffers[];
 
 
 layout (location = 0) in vec2 fs_uv;
+layout (location = 1) in vec2 fs_uv_non_scaled;
+
 layout (location = 0) out vec4 out_color;
 
 
@@ -15,7 +17,16 @@ layout (location = 0) out vec4 out_color;
 
 void main() 
 {
-	vec3 frag_pos_world_space = texture(g_buffers[0], fs_uv).xyz;
+    mat4 inverse_proj_mat = inverse(ubo.projection);
+    mat4 inverse_view_mat = inverse(ubo.view);
+	float depth = texture(g_buffers[0], fs_uv).r;
+    vec4 clip_space_position = vec4(fs_uv_non_scaled * 2.0 - 1.0, depth, 1.0);
+    vec4 view_space_position = inverse_proj_mat * clip_space_position;
+    // Perspective division
+    view_space_position /= view_space_position.w;
+    vec3 frag_pos_world_space = (inverse_view_mat * view_space_position).xyz;
+
+
     vec3 n = texture(g_buffers[1], fs_uv).xyz;
     vec3 albedo = texture(g_buffers[2], fs_uv).rgb;
 
@@ -39,6 +50,9 @@ void main()
             break;
         }
     }
+
+
+
     vec4 frag_pos_light_space = ubo.directional_light_proj_views[layer] * vec4(frag_pos_world_space, 1.0);
 
     //Shadow mapping
@@ -62,11 +76,12 @@ void main()
         }    
     }
     shadow /= 9.0;
+    shadow = 1.0 - shadow;
     
-    // float shadow = 1.0;
-    // if(sampled_depth + bias < current_depth)
+    // float shadow = 0.0;
+    // if(sampled_depth + bias > current_depth)
     // {
-    //     shadow = 0.0;
+    //     shadow = 1.0;
     // }
 
     //Main pbr 
@@ -93,5 +108,5 @@ void main()
         Lo += (kD * albedo / PI + specular) * radiance * NdotL;
     } 
 
-    out_color = vec4(Lo * (1.0 - shadow), 1);
+    out_color = vec4(Lo * shadow, 1);
 }

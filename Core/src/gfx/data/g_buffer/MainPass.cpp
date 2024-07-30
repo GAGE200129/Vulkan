@@ -42,9 +42,9 @@ namespace gage::gfx::data::g_buffer
         image_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
 
-        image_ci.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        image_ci.format = POSITION_FORMAT;
-        vk_check(vkCreateImage(gfx.device, &image_ci, nullptr, &position));
+        // image_ci.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        // image_ci.format = POSITION_FORMAT;
+        // vk_check(vkCreateImage(gfx.device, &image_ci, nullptr, &position));
 
         image_ci.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
         image_ci.format = NORMAL_FORMAT;
@@ -58,7 +58,7 @@ namespace gage::gfx::data::g_buffer
         image_ci.format = METALIC_ROUGHENSS_FORMAT;
         vk_check(vkCreateImage(gfx.device, &image_ci, nullptr, &mr));
 
-        image_ci.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        image_ci.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
         image_ci.format = DEPTH_FORMAT;
         vk_check(vkCreateImage(gfx.device, &image_ci, nullptr, &depth_image));
 
@@ -74,7 +74,7 @@ namespace gage::gfx::data::g_buffer
             vk_check(vkBindImageMemory(gfx.device, image, memory, 0));
         };
 
-        allocate_memory(position, position_memory);
+        //allocate_memory(position, position_memory);
         allocate_memory(normal, normal_memory);
         allocate_memory(albedo, albedo_memory);
         allocate_memory(mr, mr_memory);
@@ -92,10 +92,10 @@ namespace gage::gfx::data::g_buffer
         image_view_ci.subresourceRange.layerCount = 1;
         image_view_ci.subresourceRange.levelCount = 1;
 
-        image_view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        image_view_ci.format = POSITION_FORMAT;
-        image_view_ci.image = position;
-        vk_check(vkCreateImageView(gfx.device, &image_view_ci, nullptr, &position_view));
+        // image_view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        // image_view_ci.format = POSITION_FORMAT;
+        // image_view_ci.image = position;
+        // vk_check(vkCreateImageView(gfx.device, &image_view_ci, nullptr, &position_view));
 
         image_view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         image_view_ci.format = NORMAL_FORMAT;
@@ -121,17 +121,17 @@ namespace gage::gfx::data::g_buffer
     void MainPass::create_render_pass()
     {
         std::vector<VkAttachmentDescription> color_attachments = {
-            {
-                .flags = 0,
-                .format = POSITION_FORMAT,
-                .samples = VK_SAMPLE_COUNT_1_BIT,
-                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-                .finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            },
+            // {
+            //     .flags = 0,
+            //     .format = POSITION_FORMAT,
+            //     .samples = VK_SAMPLE_COUNT_1_BIT,
+            //     .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+            //     .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            //     .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            //     .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            //     .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            //     .finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            // },
 
             {
                 .flags = 0,
@@ -170,28 +170,28 @@ namespace gage::gfx::data::g_buffer
             },
 
             // Depth
-
             {
                 .flags = 0,
                 .format = DEPTH_FORMAT,
                 .samples = VK_SAMPLE_COUNT_1_BIT,
                 .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
                 .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
                 .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
                 .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-                .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-            }};
+                .finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            }
+        };
 
         std::vector<VkAttachmentReference> color_attachment_refs = {
+            //{.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
             {.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
             {.attachment = 1, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
             {.attachment = 2, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
-            {.attachment = 3, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
         };
 
         VkAttachmentReference depth_attachment_ref{};
-        depth_attachment_ref.attachment = 4;
+        depth_attachment_ref.attachment = 3;
         depth_attachment_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
         VkSubpassDescription subpass{};
@@ -237,11 +237,12 @@ namespace gage::gfx::data::g_buffer
     void MainPass::create_framebuffer()
     {
         std::vector<VkImageView> attachments = {
-            position_view,
+            //position_view,
             normal_view,
             albedo_view,
             mr_view,
-            depth_image_view};
+            depth_image_view
+        };
         VkFramebufferCreateInfo ci{};
         ci.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         ci.renderPass = render_pass;
@@ -255,9 +256,9 @@ namespace gage::gfx::data::g_buffer
 
     void MainPass::destroy_image()
     {
-        vkDestroyImageView(gfx.device, position_view, nullptr);
-        vkDestroyImage(gfx.device, position, nullptr);
-        vkFreeMemory(gfx.device, position_memory, nullptr);
+        // vkDestroyImageView(gfx.device, position_view, nullptr);
+        // vkDestroyImage(gfx.device, position, nullptr);
+        // vkFreeMemory(gfx.device, position_memory, nullptr);
 
         vkDestroyImageView(gfx.device, normal_view, nullptr);
         vkDestroyImage(gfx.device, normal, nullptr);

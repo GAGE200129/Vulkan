@@ -15,10 +15,10 @@ layout(location = 0) in VSOutput
 
 
 //output write
-layout (location = 0) out vec3 out_g_buffer_position;
-layout (location = 1) out vec3 out_g_buffer_normal;
-layout (location = 2) out vec3 out_g_buffer_albedo;
-layout (location = 3) out vec3 out_g_buffer_metalic_roughness;
+//layout (location = 0) out vec3 out_g_buffer_position;
+layout (location = 0) out vec3 out_g_buffer_normal;
+layout (location = 1) out vec3 out_g_buffer_albedo;
+layout (location = 2) out vec3 out_g_buffer_metalic_roughness;
 
 layout(set = 1, binding = 0) uniform Material
 {
@@ -55,7 +55,7 @@ void main()
     }
 
 
-    out_g_buffer_position = fs_in.world_pos;
+    //out_g_buffer_position = fs_in.world_pos;
     out_g_buffer_normal = n;
     out_g_buffer_albedo = albedo;
     out_g_buffer_metalic_roughness = metalic_roughness;
