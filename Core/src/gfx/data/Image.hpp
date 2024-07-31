@@ -11,10 +11,10 @@ namespace gage::gfx::data
 {
     struct ImageCreateInfo
     {
-        VkFormat format;
-        VkFilter min_filter;
-        VkFilter mag_filter;
-        VkSamplerAddressMode address_node;
+        VkFormat format{};
+        VkFilter min_filter{};
+        VkFilter mag_filter{};
+        VkSamplerAddressMode address_node{};
     };
 
     class Image

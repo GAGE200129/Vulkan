@@ -13,7 +13,7 @@
 #include <memory>
 #include <string_view>
 
-#include <Core/src/utils/Exception.hpp>
+
 
 namespace gage::gfx
 {
@@ -43,7 +43,7 @@ namespace gage::hid
 namespace gage::scene
 {
 
-    class SceneException : public utils::Exception{ using Exception::Exception; };
+    
 
     class SceneGraph
     {
@@ -52,13 +52,6 @@ namespace gage::scene
         {
             Binary,
             ASCII
-        };
-        enum class SystemType
-        {
-            Renderer,
-            Animation,
-            Physics,
-            Generic
         };
         static constexpr std::string_view ROOT_NAME = "ROOT";
     public:
@@ -70,7 +63,7 @@ namespace gage::scene
 
         Node* create_node();
         Node* find_node(uint64_t id);
-        void add_component(Node* node, SystemType type, std::unique_ptr<components::IComponent> component);
+        void add_component(Node* node, std::unique_ptr<components::IComponent> component);
         
 
 

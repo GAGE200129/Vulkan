@@ -1,10 +1,11 @@
 #version 460 core
 #extension GL_ARB_shading_language_include : require
 
-#include "includes/global_uniform_buffer.inc"
+#include "includes/descriptor_set_0.inc"
+#include "includes/directional_descriptor_set_1.inc"
 #include "includes/pbr_functions.inc"
 
-layout (set = 1, binding = 0) uniform sampler2D g_buffers[];
+
 
 
 layout (location = 0) in vec2 fs_uv;
@@ -13,18 +14,14 @@ layout (location = 1) in vec2 fs_uv_non_scaled;
 layout (location = 0) out vec4 out_color;
 
 
-
-
 void main() 
 {
-    mat4 inverse_proj_mat = inverse(ubo.projection);
-    mat4 inverse_view_mat = inverse(ubo.view);
 	float depth = texture(g_buffers[0], fs_uv).r;
     vec4 clip_space_position = vec4(fs_uv_non_scaled * 2.0 - 1.0, depth, 1.0);
-    vec4 view_space_position = inverse_proj_mat * clip_space_position;
+    vec4 view_space_position = descriptor_set_0_ubo.inv_projection * clip_space_position;
     // Perspective division
     view_space_position /= view_space_position.w;
-    vec3 frag_pos_world_space = (inverse_view_mat * view_space_position).xyz;
+    vec3 frag_pos_world_space = (descriptor_set_0_ubo.inv_view * view_space_position).xyz;
 
 
     vec3 n = texture(g_buffers[1], fs_uv).xyz;
@@ -36,15 +33,15 @@ void main()
     float ao = 1.0;
 
 
-    vec3 frag_pos_view_space = (ubo.view * vec4(frag_pos_world_space, 1.0)).xyz;
-    vec3 to_cam_dir = normalize(ubo.camera_position - frag_pos_world_space);
+    vec3 frag_pos_view_space = (descriptor_set_0_ubo.view * vec4(frag_pos_world_space, 1.0)).xyz;
+    vec3 to_cam_dir = normalize(descriptor_set_0_ubo.camera_position - frag_pos_world_space);
 
 
     float depth_value = abs(frag_pos_view_space.z);
     int layer = CASCADE_COUNT - 1;
     for (int i = 0; i < CASCADE_COUNT; i++)
     {
-        if (depth_value < ubo.directional_light_cascade_planes[i])
+        if (depth_value < descriptor_set_0_ubo.directional_light_cascade_planes[i])
         {
             layer = i;
             break;
@@ -53,7 +50,7 @@ void main()
 
 
 
-    vec4 frag_pos_light_space = ubo.directional_light_proj_views[layer] * vec4(frag_pos_world_space, 1.0);
+    vec4 frag_pos_light_space = descriptor_set_0_ubo.directional_light_proj_views[layer] * vec4(frag_pos_world_space, 1.0);
 
     //Shadow mapping
     vec3 proj_coords = frag_pos_light_space.xyz / frag_pos_light_space.w;
@@ -62,16 +59,16 @@ void main()
     float current_depth = proj_coords.z;
     //float sampled_depth = texture(directional_light_map, vec3(proj_coords.xy, layer)).r; 
     
-    float bias = max(0.01 * (1.0 - dot(n, -ubo.directional_light_direction)), 0.001);
-    bias *= 1.0 / (ubo.directional_light_cascade_planes[layer] * 0.5f);
+    float bias = max(0.05 * (1.0 - dot(n, -descriptor_set_0_ubo.directional_light_direction)), 0.005);
+    bias *= 1.0 / (descriptor_set_0_ubo.directional_light_cascade_planes[layer] * 0.5f);
 
     float shadow = 0.0;
-    vec2 texel_size = 1.0 / textureSize(directional_light_map, 0).xy;
+    vec2 texel_size = 1.0 / textureSize(descriptor_set_0_directional_light_map, 0).xy;
     for(int x = -1; x <= 1; ++x)
     {
         for(int y = -1; y <= 1; ++y)
         {
-            float pcf_depth = texture(directional_light_map, vec3(proj_coords.xy + vec2(x, y) * texel_size, layer)).r; 
+            float pcf_depth = texture(descriptor_set_0_directional_light_map, vec3(proj_coords.xy + vec2(x, y) * texel_size, layer)).r; 
             shadow += current_depth - bias > pcf_depth ? 1.0 : 0.0;        
         }    
     }
@@ -88,10 +85,10 @@ void main()
     vec3 Lo = vec3(0.0);
     for(int i = 0; i < 4; i++) 
     { 
-        vec3 L = normalize(-ubo.directional_light_direction);
+        vec3 L = normalize(-descriptor_set_0_ubo.directional_light_direction);
         vec3 H = normalize(to_cam_dir + L);
     
-        vec3 radiance     = ubo.directional_light_color;
+        vec3 radiance     = descriptor_set_0_ubo.directional_light_color;
         vec3 F0 = vec3(0.04);  
         F0      = mix(F0, albedo, metalic);
         vec3 F  = fresnelSchlick(max(dot(H, to_cam_dir), 0.0), F0);

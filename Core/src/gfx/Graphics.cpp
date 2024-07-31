@@ -389,7 +389,9 @@ namespace gage::gfx
         global_uniform.projection = glm::perspectiveFovRH_ZO(glm::radians(camera.get_field_of_view()),
                                                              (float)draw_extent.width, (float)draw_extent.height, camera.get_near(), camera.get_far());
         global_uniform.projection[1][1] *= -1;
+        global_uniform.inv_projection = glm::inverse(global_uniform.projection);
         global_uniform.view = camera.get_view();
+        global_uniform.inv_view = glm::inverse(global_uniform.view);
         global_uniform.directional_light_proj_views[0] = calculate_directional_light_proj_view(camera, 0.1f, global_uniform.directional_light_cascade_planes[0].x);
         global_uniform.directional_light_proj_views[1] = calculate_directional_light_proj_view(camera, 0.1f, global_uniform.directional_light_cascade_planes[1].x);
         global_uniform.directional_light_proj_views[2] = calculate_directional_light_proj_view(camera, 0.1f, global_uniform.directional_light_cascade_planes[2].x);

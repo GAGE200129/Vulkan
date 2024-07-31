@@ -272,7 +272,7 @@ namespace gage::scene
                 {
                     skin = &model.skins.at(model_node.skin_index);
                 }
-                add_component(new_node, SystemType::Renderer, std::make_unique<components::MeshRenderer>(*this, *new_node, gfx, model, model.meshes.at(model_node.mesh_index), skin));
+                add_component(new_node, std::make_unique<components::MeshRenderer>(*this, *new_node, gfx, model, model.meshes.at(model_node.mesh_index), skin));
             }
 
             for (const uint32_t &node : model_node.children)
@@ -289,7 +289,7 @@ namespace gage::scene
 
         if (model.animations.size() != 0)
         {
-            add_component(new_node, SystemType::Animation, std::make_unique<components::Animator>(*this, *new_node, model, model.animations));
+            add_component(new_node, std::make_unique<components::Animator>(*this, *new_node, model, model.animations));
         }
 
         return new_node;
@@ -335,46 +335,39 @@ namespace gage::scene
         return nullptr;
     }
 
-    void SceneGraph::add_component(Node* node, SystemType type, std::unique_ptr<components::IComponent> component)
+    void SceneGraph::add_component(Node* node, std::unique_ptr<components::IComponent> component)
     {
         //Release component
         components::IComponent* ptr = component.release();
         node->add_component_ptr(ptr);
-        switch(type)
+
+        if(std::strcmp(ptr->get_name(), "MeshRenderer") == 0)
         {
-            case SystemType::Renderer:
-            {
-               
-                renderer.add_pbr_mesh_renderer(std::unique_ptr<components::MeshRenderer>(static_cast<components::MeshRenderer*>(ptr)));
-                break;
-            }
-
-            case SystemType::Animation:
-            {
-                animation.add_animator(std::unique_ptr<components::Animator>(static_cast<components::Animator*>(ptr)));
-                break;
-            }
-
-            case SystemType::Physics:
-            {
-                physics.add_character_controller(std::unique_ptr<components::CharacterController>(static_cast<components::CharacterController*>(ptr)));
-                break;
-            }
-
-            case SystemType::Generic:
-            {
-                generic.add_script(std::unique_ptr<components::Script>(static_cast<components::Script*>(ptr)));
-                break;
-            }
-
-
-            default:
-            {
-                log().critical("Unknown system: {}", (uint32_t) type);
-                throw SceneException{};
-            }
+            renderer.add_pbr_mesh_renderer(std::unique_ptr<components::MeshRenderer>(static_cast<components::MeshRenderer*>(ptr)));
         }
-
+        else if(std::strcmp(ptr->get_name(), "TerrainRenderer") == 0) // this component will be shared
+        {
+            auto terrain_renderer = std::shared_ptr<components::TerrainRenderer>(static_cast<components::TerrainRenderer*>(ptr));
+            renderer.add_terrain_renderer(terrain_renderer);
+            physics.add_terrain_renderer(terrain_renderer);
+        }
+        else if(std::strcmp(ptr->get_name(), "Animator") == 0)
+        {
+            animation.add_animator(std::unique_ptr<components::Animator>(static_cast<components::Animator*>(ptr)));
+        }
+        else if(std::strcmp(ptr->get_name(), "CharacterController") == 0)
+        {
+            physics.add_character_controller(std::unique_ptr<components::CharacterController>(static_cast<components::CharacterController*>(ptr)));
+        }
+        else if(std::strcmp(ptr->get_name(), "Script") == 0)
+        {
+            generic.add_script(std::unique_ptr<components::Script>(static_cast<components::Script*>(ptr)));
+        }
+        else
+        {
+            log().critical("Unknown system for component: {}", ptr->get_name());
+            throw SceneException{};
+        }
     }
 
    

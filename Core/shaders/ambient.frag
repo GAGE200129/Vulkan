@@ -1,9 +1,9 @@
 #version 460 core
 #extension GL_ARB_shading_language_include : require
 
-#include "includes/global_uniform_buffer.inc"
+#include "includes/descriptor_set_0.inc"
+#include "includes/ambient_descriptor_set_1.inc"
 
-layout (set = 1, binding = 0) uniform sampler2D g_buffers[];
 
 
 layout (location = 0) in vec2 fs_uv;
@@ -28,5 +28,5 @@ void main()
     }
     result /= (9.0);
 
-    out_color = vec4(albedo.rgb * ubo.ambient_light_color * ubo.ambient_light_intensity * result, 1); 
+    out_color = vec4(albedo.rgb * descriptor_set_0_ubo.ambient_light_color * descriptor_set_0_ubo.ambient_light_intensity * result, 1); 
 }

@@ -184,17 +184,20 @@ namespace gage::gfx
 
 
         static constexpr uint32_t CASCADE_COUNT{3};
-        struct GlobalUniform
+        struct GlobalUniform 
         {
             glm::mat4x4 projection{};
+            glm::mat4x4 inv_projection{};
             glm::mat4x4 view{};
+            glm::mat4x4 inv_view{};
             glm::vec3 camera_position{}; float padding;
 
-            glm::vec3 ambient_light_color{1, 1, 1}; float ambient_light_intensity{0.1f};
+            glm::vec3 ambient_light_color{1, 1, 1};
+            float ambient_light_intensity{0.1f};
 
             glm::vec3 directional_light_direction{0, -1, 0}; float padding2;
             glm::vec3 directional_light_color{1, 1, 1}; float padding3;
-            
+        
             glm::mat4x4 directional_light_proj_views[CASCADE_COUNT]{};
             glm::vec4  directional_light_cascade_planes[CASCADE_COUNT]{ {10, 0, 0, 0}, {30, 0, 0, 0}, {50, 0, 0, 0} };
         } global_uniform{};

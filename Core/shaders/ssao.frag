@@ -3,7 +3,7 @@
 
 #define KERNEL_SIZE 32
 
-#include "includes/global_uniform_buffer.inc"
+#include "includes/descriptor_set_0.inc"
 
 layout(location = 0) out float out_color;
   
@@ -42,13 +42,11 @@ vec3 get_world_pos_from_depth(mat4 inverse_proj, mat4 inverse_view, vec2 uv, vec
 
 void main()
 {
-    mat4 inverse_proj_mat = inverse(ubo.projection);
-    mat4 inverse_view_mat = inverse(ubo.view);
-    vec3 frag_pos_world_space = get_world_pos_from_depth(inverse_proj_mat, inverse_view_mat, fs_uv, fs_uv_non_scaled);
+    vec3 frag_pos_world_space = get_world_pos_from_depth(descriptor_set_0_ubo.inv_projection, descriptor_set_0_ubo.inv_view, fs_uv, fs_uv_non_scaled);
     vec3 n    = texture(g_buffers[1], fs_uv).rgb;
 
-    vec3 frag_pos_view_space   = (ubo.view * vec4(frag_pos_world_space, 1.0)).xyz;
-    vec3 n_view_space = (ubo.view * vec4(n, 0.0)).xyz;
+    vec3 frag_pos_view_space   = (descriptor_set_0_ubo.view * vec4(frag_pos_world_space, 1.0)).xyz;
+    vec3 n_view_space = (descriptor_set_0_ubo.view * vec4(n, 0.0)).xyz;
     vec3 random_vec = texture(g_buffers[2], fs_uv * ps.noise_scale).rgb; 
 
     vec3 tangent   = normalize(random_vec - n_view_space * dot(random_vec, n_view_space));
@@ -63,14 +61,14 @@ void main()
 
 
         vec4 offset = vec4(sample_pos, 1.0);
-        offset      = ubo.projection * offset; // from view to clip-space
+        offset      = descriptor_set_0_ubo.projection * offset; // from view to clip-space
         offset.xyz /= offset.w;                // perspective divide
         offset.xyz  = offset.xyz * 0.5 + 0.5;  // transform to range 0.0 - 1.0  
 
-        vec3 sample_pos_world_space = get_world_pos_from_depth(inverse_proj_mat, inverse_view_mat, offset.xy * ps.resolution_scale, fs_uv_non_scaled);
-        vec3 sample_pos_view_space = (ubo.view * vec4(sample_pos_world_space, 1.0)).xyz;
+        vec3 sample_pos_world_space = get_world_pos_from_depth(descriptor_set_0_ubo.inv_projection, descriptor_set_0_ubo.inv_view, offset.xy * ps.resolution_scale, fs_uv_non_scaled);
+        vec3 sample_pos_view_space = (descriptor_set_0_ubo.view * vec4(sample_pos_world_space, 1.0)).xyz;
         float sample_depth = sample_pos_view_space.z; 
-        float range_check = smoothstep(0.0, 1.0, ps.radius / abs(frag_pos_view_space.z - sample_depth));
+        float range_check = smoothstep(0.0, 1.0, ps.radius / abs(frag_pos_view_space.z - sample_depth)); //Range check not working
         occlusion += (sample_depth >= sample_pos.z + ps.bias ? 1.0 : 0.0) * range_check;
 
     }    

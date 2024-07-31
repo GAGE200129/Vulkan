@@ -63,13 +63,13 @@ namespace gage::phys
 
         // Now create a dynamic body to bounce on the floor
         // Note that this uses the shorthand version of creating and adding a body to the world
-        JPH::BodyCreationSettings floor_settings(new JPH::BoxShapeSettings(JPH::Vec3(9999.0f, 1.0f, 9999.0f)),
-             JPH::RVec3(0.0_r, -1.0_r, 0.0_r), JPH::Quat::sIdentity(), JPH::EMotionType::Static, Layers::NON_MOVING);
-        floor_settings.mFriction = 0.5f;
-        auto new_floor = std::make_unique<JPH::BodyID>();
-        *new_floor = p_body_interface->CreateAndAddBody(floor_settings, JPH::EActivation::DontActivate);
-        floor = new_floor.get();
-        bodies.push_back(std::move(new_floor));
+        // JPH::BodyCreationSettings floor_settings(new JPH::BoxShapeSettings(JPH::Vec3(9999.0f, 1.0f, 9999.0f)),
+        //      JPH::RVec3(0.0_r, -1.0_r, 0.0_r), JPH::Quat::sIdentity(), JPH::EMotionType::Static, Layers::NON_MOVING);
+        // floor_settings.mFriction = 0.5f;
+        // auto new_floor = std::make_unique<JPH::BodyID>();
+        // *new_floor = p_body_interface->CreateAndAddBody(floor_settings, JPH::EActivation::DontActivate);
+        // floor = new_floor.get();
+        // bodies.push_back(std::move(new_floor));
 
 
     }
@@ -84,6 +84,11 @@ namespace gage::phys
         bodies.clear();
     }
 
+    JPH::BodyInterface* Physics::get_body_interface()
+    {
+        return p_body_interface;
+    }
+
     void Physics::update(float delta)
     {
         // If you take larger steps than 1 / 60th of a second you need to do multiple collision steps in order to keep the simulation stable. Do 1 collision step per 1 / 60th of a second (round up).
@@ -91,15 +96,16 @@ namespace gage::phys
         physics_system->Update(delta, cCollisionSteps, temp_allocator.get(), job_system.get());
     }
 
+
     JPH::Character* Physics::create_character(const glm::vec3& position, const glm::quat& rotation)
     {
         // Create 'player' character
         JPH::Ref<JPH::CharacterSettings> settings = new JPH::CharacterSettings();
         settings->mMaxSlopeAngle = JPH::DegreesToRadians(45.0f);
         settings->mLayer = Layers::MOVING;
-        settings->mShape = JPH::RotatedTranslatedShapeSettings(JPH::Vec3(0, 0.9f, 0.0), JPH::Quat(0, 0, 0, 1), JPH::CapsuleShapeSettings(0.9f, 0.1f).Create().Get()).Create().Get();
-        settings->mFriction = 5.0f;
-        
+        settings->mShape = JPH::RotatedTranslatedShapeSettings(JPH::Vec3(0, 0.9f, 0.0), JPH::Quat(0, 0, 0, 1), JPH::CapsuleShapeSettings(1.8f, 0.3f).Create().Get()).Create().Get();
+        settings->mFriction = 0.9f;
+        //settings->mShape = JPH::CapsuleShapeSettings(1.8f, 0.3f).Create().Get();
         std::unique_ptr<JPH::Character> character = std::make_unique<JPH::Character>(
             settings, 
             JPH::Vec3Arg(position.x, position.y, position.z),

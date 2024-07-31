@@ -1,7 +1,8 @@
 #version 460
 #extension GL_ARB_shading_language_include : require
 
-#include "includes/global_uniform_buffer.inc"
+#include "includes/descriptor_set_0.inc"
+#include "includes/pbr_descriptor_set_2_vert.inc"
 
 layout(location = 0) in vec3 in_pos;
 layout(location = 1) in vec3 in_normal;
@@ -16,11 +17,6 @@ layout(location = 0) out VSOutput
     vec2 uv;
 } vs_out;
 
-layout(set = 2, binding = 0) uniform Animation
-{
-    mat4x4 bone_matrices[100];
-    uint enabled;
-} animation;
 
  
 
@@ -45,8 +41,8 @@ void main()
         }
     }
 
-    vec4 p_view = ubo.view * vec4(total_position.xyz, 1.0);
-	gl_Position = ubo.projection * p_view;
+    vec4 p_view = descriptor_set_0_ubo.view * vec4(total_position.xyz, 1.0);
+	gl_Position = descriptor_set_0_ubo.projection * p_view;
 	vs_out.normal = total_normal;
 	vs_out.uv = in_uvs;
     vs_out.world_pos = total_position.xyz;

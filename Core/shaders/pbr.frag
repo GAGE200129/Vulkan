@@ -1,8 +1,8 @@
 #version 460
 #extension GL_ARB_shading_language_include : require
 
-#include "includes/global_uniform_buffer.inc"
-
+#include "includes/descriptor_set_0.inc"
+#include "includes/pbr_descriptor_set_1_frag.inc"
 
 layout(location = 0) in VSOutput
 {
@@ -20,16 +20,6 @@ layout (location = 0) out vec3 out_g_buffer_normal;
 layout (location = 1) out vec3 out_g_buffer_albedo;
 layout (location = 2) out vec3 out_g_buffer_metalic_roughness;
 
-layout(set = 1, binding = 0) uniform Material
-{
-    vec4 color;
-    float specular_intensity;
-    float specular_power;
-    bool has_albedo;
-    bool has_metalic_roughness;
-    bool has_normal;
-} material;
-layout(set = 1, binding = 1) uniform sampler2D textures[3];
 
 
 void main()

@@ -1,7 +1,7 @@
 #version 460 core
 #extension GL_ARB_shading_language_include : require
 
-#include "includes/global_uniform_buffer.inc"
+#include "includes/descriptor_set_0.inc"
 
 layout (set = 1, binding = 0) uniform sampler2D g_buffers[];
 
@@ -31,7 +31,7 @@ void main()
     // float roughness = metalic_roughness.g;
     // float ao = 1.0;
 
-    vec3 to_cam_dir = normalize(ubo.camera_position - frag_pos_world_space);
+    vec3 to_cam_dir = normalize(descriptor_set_0_ubo.camera_position - frag_pos_world_space);
     vec3 to_light_vec = position - frag_pos_world_space;
     float to_light_distance = length(to_light_vec);
     vec3 to_light_dir = normalize(to_light_vec);

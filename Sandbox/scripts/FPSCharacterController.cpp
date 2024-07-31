@@ -4,6 +4,7 @@
 #include <glm/gtx/norm.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/common.hpp>
+#include <iostream>
 
 #include <Core/src/gfx/data/Camera.hpp>
 #include <Core/src/hid/Keyboard.hpp>
@@ -36,7 +37,7 @@ void FPSCharacterController::init()
 
     scene::components::Animator *animator = (scene::components::Animator *)node.get_requested_component(typeid(scene::components::Animator).name());
 
-    scene::systems::Animation::set_animator_animation(animator, "Test1");
+    scene::systems::Animation::set_animator_animation(animator, "Test2");
 }
 void FPSCharacterController::update(float delta, const hid::Keyboard &keyboard, const hid::Mouse &mouse)
 {
@@ -88,13 +89,14 @@ void FPSCharacterController::update(float delta, const hid::Keyboard &keyboard, 
         
         if (scene::systems::Physics::character_get_ground_state(character_controller) == scene::systems::Physics::GroundState::GROUND)
         {
-            scene::systems::Physics::character_add_velocity(character_controller, glm::vec3{0.0f, 100.0f, 0.0f} * 1.0f * delta);
+            scene::systems::Physics::character_add_impulse(character_controller, glm::vec3{0.0f, 100000.0f, 0.0f} * delta);
         }
     }
 
+
     if (keyboard.get_action("SPRINT"))
     {
-        current_speed = 4.0f;
+        current_speed = 40.0f;
     }
     else if (keyboard.get_action("WALK"))
     {
@@ -106,12 +108,13 @@ void FPSCharacterController::update(float delta, const hid::Keyboard &keyboard, 
     }
 
     auto velocity = scene::systems::Physics::character_get_velocity(character_controller);
-    if (glm::length2(dir) != 0.0f && glm::length2(velocity) < glm::pow(current_speed, 2.0f) &&
-         scene::systems::Physics::character_get_ground_state(character_controller) == scene::systems::Physics::GroundState::GROUND)
+    if (glm::length2(dir) != 0.0f && glm::length2(velocity) < glm::pow(current_speed, 2.0f))
     {
         dir = glm::normalize(dir);
-        scene::systems::Physics::character_add_velocity(character_controller, glm::vec3{dir.x, 0.0f, dir.y} * 30.0f * delta);
+        scene::systems::Physics::character_add_impulse(character_controller, glm::vec3{dir.x, 0.0f, dir.y} * 1600.0f * delta);
     }
+
+
 
     // camera.position = translation;
     spine->set_rotation(glm::quat(glm::vec3(glm::radians(-pitch), 0.0f, glm::radians(roll))));

@@ -11,6 +11,7 @@ namespace JPH
     class JobSystemThreadPool;
     class BodyID;
     class Character;
+    class Body;
 }
 
 namespace gage::phys
@@ -26,6 +27,8 @@ namespace gage::phys
         ~Physics();
 
         void update(float delta);
+
+        JPH::BodyInterface* get_body_interface();
 
         JPH::Character* create_character(const glm::vec3& position, const glm::quat& rotation);
         void destroy_character(JPH::Character* character);
