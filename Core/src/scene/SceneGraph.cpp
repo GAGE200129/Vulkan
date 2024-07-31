@@ -404,7 +404,12 @@ namespace gage::scene
             gltf_material.pbrMetallicRoughness.baseColorFactor.at(3),
         };
 
-        gfx::data::ImageCreateInfo image_ci{VK_FORMAT_R8G8B8A8_UNORM, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT};
+        gfx::data::ImageCreateInfo image_ci{};
+        image_ci.format = VK_FORMAT_R8G8B8A8_UNORM;
+        image_ci.min_filter = VK_FILTER_NEAREST;
+        image_ci.mag_filter = VK_FILTER_NEAREST;
+        image_ci.address_node = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        image_ci.mip_levels = 1;
 
         // Has albedo texture ?
         const auto &albedo_texture_index = gltf_material.pbrMetallicRoughness.baseColorTexture.index;
@@ -414,7 +419,12 @@ namespace gage::scene
             const auto &image_src_index = gltf_model.textures.at(albedo_texture_index).source;
             const auto &image = gltf_model.images.at(image_src_index);
             size_t size_in_bytes = image.width * image.height * 4;
-            material.albedo_image = std::make_unique<gfx::data::Image>(gfx, image.image.data(), image.width, image.height, size_in_bytes, image_ci);
+
+            image_ci.image_data = image.image.data();
+            image_ci.width = image.width;
+            image_ci.height = image.height;
+            image_ci.size_in_bytes = size_in_bytes;
+            material.albedo_image = std::make_unique<gfx::data::Image>(gfx, image_ci);
         }
 
         // Has metalic roughness ?
@@ -425,7 +435,12 @@ namespace gage::scene
             const auto &image_src_index = gltf_model.textures.at(metalic_roughness_texture_index).source;
             const auto &image = gltf_model.images.at(image_src_index);
             size_t size_in_bytes = image.width * image.height * 4;
-            material.metalic_roughness_image = std::make_unique<gfx::data::Image>(gfx, image.image.data(), image.width, image.height, size_in_bytes, image_ci);
+
+            image_ci.image_data = image.image.data();
+            image_ci.width = image.width;
+            image_ci.height = image.height;
+            image_ci.size_in_bytes = size_in_bytes;
+            material.metalic_roughness_image = std::make_unique<gfx::data::Image>(gfx, image_ci);
         }
 
         // Has normal map ?
@@ -436,7 +451,12 @@ namespace gage::scene
             const auto &image_src_index = gltf_model.textures.at(normal_texture_index).source;
             const auto &image = gltf_model.images.at(image_src_index);
             size_t size_in_bytes = image.width * image.height * 4;
-            material.normal_image = std::make_unique<gfx::data::Image>(gfx, image.image.data(), image.width, image.height, size_in_bytes, image_ci);
+
+            image_ci.image_data = image.image.data();
+            image_ci.width = image.width;
+            image_ci.height = image.height;
+            image_ci.size_in_bytes = size_in_bytes;
+            material.normal_image = std::make_unique<gfx::data::Image>(gfx, image_ci);
         }
 
         material.uniform_buffer = std::make_unique<gfx::data::CPUBuffer>(gfx, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(data::ModelMaterial::UniformBuffer), &material.uniform_buffer_data);

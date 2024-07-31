@@ -37,7 +37,7 @@ void FPSCharacterController::init()
 
     scene::components::Animator *animator = (scene::components::Animator *)node.get_requested_component(typeid(scene::components::Animator).name());
 
-    scene::systems::Animation::set_animator_animation(animator, "Test2");
+    scene::systems::Animation::set_animator_animation(animator, "Test1");
 }
 void FPSCharacterController::update(float delta, const hid::Keyboard &keyboard, const hid::Mouse &mouse)
 {
@@ -89,7 +89,7 @@ void FPSCharacterController::update(float delta, const hid::Keyboard &keyboard, 
         
         if (scene::systems::Physics::character_get_ground_state(character_controller) == scene::systems::Physics::GroundState::GROUND)
         {
-            scene::systems::Physics::character_add_impulse(character_controller, glm::vec3{0.0f, 100000.0f, 0.0f} * delta);
+            scene::systems::Physics::character_add_impulse(character_controller, glm::vec3{0.0f, 10000.0f, 0.0f} * delta);
         }
     }
 
@@ -108,10 +108,11 @@ void FPSCharacterController::update(float delta, const hid::Keyboard &keyboard, 
     }
 
     auto velocity = scene::systems::Physics::character_get_velocity(character_controller);
-    if (glm::length2(dir) != 0.0f && glm::length2(velocity) < glm::pow(current_speed, 2.0f))
+    if (glm::length2(dir) != 0.0f && glm::length2(velocity) < glm::pow(current_speed, 2.0f) && 
+        scene::systems::Physics::character_get_ground_state(character_controller) ==  scene::systems::Physics::GroundState::GROUND)
     {
         dir = glm::normalize(dir);
-        scene::systems::Physics::character_add_impulse(character_controller, glm::vec3{dir.x, 0.0f, dir.y} * 1600.0f * delta);
+        scene::systems::Physics::character_add_impulse(character_controller, glm::vec3{dir.x, 0.0f, dir.y} * 3200.0f * delta);
     }
 
 

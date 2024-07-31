@@ -26,14 +26,14 @@ namespace gage::scene::systems
 
         for (const auto &terrain_renderer : terrain_renderers)
         {
-             // Init height map for physics
+            // Init height map for physics
             {
                 JPH::HeightFieldShapeSettings shape_settings(terrain_renderer->height_map.data(), JPH::Vec3(0, 0, 0), JPH::Vec3(1, 1, 1), terrain_renderer->size);
                 JPH::BodyCreationSettings setting(shape_settings.Create().Get(),
-                    JPH::RVec3(0.0, -1.0, 0.0),
-                    JPH::Quat::sIdentity(), JPH::EMotionType::Static, phys::Layers::NON_MOVING);
-                setting.mFriction = 1.0f;
-  
+                                                  JPH::RVec3(0.0, -1.0, 0.0),
+                                                  JPH::Quat::sIdentity(), JPH::EMotionType::Static, phys::Layers::NON_MOVING);
+                setting.mFriction = 0.2f;
+
                 terrain_renderer->height_map_body = this->phys.get_body_interface()->CreateAndAddBody(setting, JPH::EActivation::DontActivate);
             }
         }
@@ -60,6 +60,35 @@ namespace gage::scene::systems
             character_controller->character->PostSimulation(0.1f);
             auto position = character_controller->character->GetPosition(false);
             character_controller->node.set_position({position.GetX(), position.GetY(), position.GetZ()});
+
+            {
+                JPH::CharacterBase::EGroundState state = character_controller->character->GetGroundState();
+                const JPH::BodyLockInterface *lock_interface = phys.get_body_lock_interface();
+                JPH::BodyLockWrite lock(*lock_interface, character_controller->character->GetBodyID());
+                if (lock.Succeeded())
+                {
+                    JPH::Body &body = lock.GetBody();
+
+                    switch(state)
+                    {
+                        case JPH::CharacterBase::EGroundState::InAir :
+                        {
+                            body.GetMotionProperties()->SetLinearDamping(0.0f);
+                            break;
+                        }
+
+                        case JPH::CharacterBase::EGroundState::NotSupported :
+                        case JPH::CharacterBase::EGroundState::OnGround :
+                        case JPH::CharacterBase::EGroundState::OnSteepGround :
+                        {
+                            body.GetMotionProperties()->SetLinearDamping(5.0f);
+                            break;
+                        }
+                    }
+
+                    
+                }
+            }
         }
     }
 

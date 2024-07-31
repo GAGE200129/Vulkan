@@ -121,9 +121,11 @@ namespace gage::scene::systems
                     throw SceneException{};
                 }
 
-                size_t size_in_bytes = w * h * 3;
-                gfx::data::ImageCreateInfo image_ci{VK_FORMAT_R8G8B8_UNORM, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT};
-                image = std::make_unique<gfx::data::Image>(gfx, data, w, h, size_in_bytes, image_ci);
+                uint32_t size_in_bytes = w * h * 3;
+                gfx::data::ImageCreateInfo image_ci{data, w, h, 1, size_in_bytes, VK_FORMAT_R8G8B8_UNORM, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT};
+
+                image_ci.mip_levels = std::floor(std::log2(std::max(w, h))) + 1;
+                image = std::make_unique<gfx::data::Image>(gfx, image_ci);
                 stbi_image_free(data);
             }
 

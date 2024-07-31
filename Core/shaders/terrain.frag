@@ -21,6 +21,6 @@ void main()
     
     //out_g_buffer_position = vs_in.world_pos;
     out_g_buffer_normal = vs_in.normal;
-    out_g_buffer_albedo = vec3(vs_in.color, vs_in.color, vs_in.color);
+    out_g_buffer_albedo = texture(image, vs_in.tex_coord).rgb;
     out_g_buffer_metalic_roughness = vec3(1, 1, 1);
 }

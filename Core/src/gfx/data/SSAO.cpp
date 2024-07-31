@@ -360,9 +360,9 @@ namespace gage::gfx::data
             noises.push_back(noise);
         }
 
-        ImageCreateInfo image_ci{VK_FORMAT_R32G32B32_SFLOAT, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT};
+        ImageCreateInfo image_ci{noises.data(), 4, 4, 1, 12 * 4 * 4, VK_FORMAT_R32G32B32_SFLOAT, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT};
 
-        image = std::make_unique<Image>(gfx, noises.data(), 4, 4, 12 * 4 * 4, image_ci);
+        image = std::make_unique<Image>(gfx,  image_ci);
 
         kernel_buffer = std::make_unique<GPUBuffer>(gfx, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(glm::vec4) * KERNEL_SIZE, kernel.data());
     }

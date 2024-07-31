@@ -24,13 +24,12 @@
 namespace gage::phys
 {
     using namespace JPH::literals;
-    Physics::Physics() : 
-                        physics_system(std::make_unique<JPH::PhysicsSystem>()),
-                        temp_allocator(std::make_unique<JPH::TempAllocatorImpl>(10 * 1024 * 1024)), // 10 MB
-                        job_system(std::make_unique<JPH::JobSystemThreadPool>(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, 1)),
-                        broad_phase_layer_interface(std::make_unique<BPLayerInterface>()),
-                        object_vs_broadphase_layer_filter(std::make_unique<ObjectVsBroadPhaseLayerFilter>()),
-                        object_vs_object_layer_filter(std::make_unique<ObjectLayerPairFilter>())
+    Physics::Physics() : physics_system(std::make_unique<JPH::PhysicsSystem>()),
+                         temp_allocator(std::make_unique<JPH::TempAllocatorImpl>(10 * 1024 * 1024)), // 10 MB
+                         job_system(std::make_unique<JPH::JobSystemThreadPool>(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, 1)),
+                         broad_phase_layer_interface(std::make_unique<BPLayerInterface>()),
+                         object_vs_broadphase_layer_filter(std::make_unique<ObjectVsBroadPhaseLayerFilter>()),
+                         object_vs_object_layer_filter(std::make_unique<ObjectLayerPairFilter>())
     {
         // This is the max amount of rigid bodies that you can add to the physics system. If you try to add more you'll get an error.
         // Note: This value is low because this is a simple test. For a real project use something in the order of 65536.
@@ -52,15 +51,14 @@ namespace gage::phys
 
         // Now we can create the actual physics system.
         physics_system->Init(cMaxBodies,
-            cNumBodyMutexes,
-            cMaxBodyPairs,
-            cMaxContactConstraints,
-            *broad_phase_layer_interface,
-            *object_vs_broadphase_layer_filter,
-            *object_vs_object_layer_filter
-        );
+                             cNumBodyMutexes,
+                             cMaxBodyPairs,
+                             cMaxContactConstraints,
+                             *broad_phase_layer_interface,
+                             *object_vs_broadphase_layer_filter,
+                             *object_vs_object_layer_filter);
         p_body_interface = &physics_system->GetBodyInterface();
-
+        p_body_lock_interface = &physics_system->GetBodyLockInterface();
         // Now create a dynamic body to bounce on the floor
         // Note that this uses the shorthand version of creating and adding a body to the world
         // JPH::BodyCreationSettings floor_settings(new JPH::BoxShapeSettings(JPH::Vec3(9999.0f, 1.0f, 9999.0f)),
@@ -70,13 +68,11 @@ namespace gage::phys
         // *new_floor = p_body_interface->CreateAndAddBody(floor_settings, JPH::EActivation::DontActivate);
         // floor = new_floor.get();
         // bodies.push_back(std::move(new_floor));
-
-
     }
- 
+
     Physics::~Physics()
     {
-        for(const auto& body_id : bodies)
+        for (const auto &body_id : bodies)
         {
             p_body_interface->RemoveBody(*body_id);
             p_body_interface->DestroyBody(*body_id);
@@ -84,47 +80,53 @@ namespace gage::phys
         bodies.clear();
     }
 
-    JPH::BodyInterface* Physics::get_body_interface()
+    JPH::BodyInterface *Physics::get_body_interface()
     {
         return p_body_interface;
+    }
+
+    const JPH::BodyLockInterface *Physics::get_body_lock_interface() const
+    {
+        return p_body_lock_interface;
     }
 
     void Physics::update(float delta)
     {
         // If you take larger steps than 1 / 60th of a second you need to do multiple collision steps in order to keep the simulation stable. Do 1 collision step per 1 / 60th of a second (round up).
-		const int cCollisionSteps = 1;
+        const int cCollisionSteps = 1;
         physics_system->Update(delta, cCollisionSteps, temp_allocator.get(), job_system.get());
     }
 
-
-    JPH::Character* Physics::create_character(const glm::vec3& position, const glm::quat& rotation)
+    JPH::Character *Physics::create_character(const glm::vec3 &position, const glm::quat &rotation)
     {
         // Create 'player' character
         JPH::Ref<JPH::CharacterSettings> settings = new JPH::CharacterSettings();
         settings->mMaxSlopeAngle = JPH::DegreesToRadians(45.0f);
         settings->mLayer = Layers::MOVING;
         settings->mShape = JPH::RotatedTranslatedShapeSettings(JPH::Vec3(0, 0.9f, 0.0), JPH::Quat(0, 0, 0, 1), JPH::CapsuleShapeSettings(1.8f, 0.3f).Create().Get()).Create().Get();
-        settings->mFriction = 0.9f;
-        //settings->mShape = JPH::CapsuleShapeSettings(1.8f, 0.3f).Create().Get();
+        settings->mFriction = 0.2f;
+
+        // settings->mShape = JPH::CapsuleShapeSettings(1.8f, 0.3f).Create().Get();
         std::unique_ptr<JPH::Character> character = std::make_unique<JPH::Character>(
-            settings, 
+            settings,
             JPH::Vec3Arg(position.x, position.y, position.z),
             JPH::QuatArg(rotation.x, rotation.y, rotation.z, rotation.w),
             0,
-            physics_system.get()
-        );
+            physics_system.get());
         character->AddToPhysicsSystem(JPH::EActivation::Activate);
-
         
+       
 
-        JPH::Character* result = character.get();
+        JPH::Character *result = character.get();
         characters.push_back(std::move(character));
         return result;
     }
 
-    void Physics::destroy_character(JPH::Character* character)
+    void Physics::destroy_character(JPH::Character *character)
     {
-        characters.erase(std::remove_if(characters.begin(), characters.end(), 
-                       [&](const std::unique_ptr<JPH::Character>& c) { return c.get() == character; }), characters.end());
+        characters.erase(std::remove_if(characters.begin(), characters.end(),
+                                        [&](const std::unique_ptr<JPH::Character> &c)
+                                        { return c.get() == character; }),
+                         characters.end());
     }
 }

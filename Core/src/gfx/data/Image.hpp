@@ -11,6 +11,10 @@ namespace gage::gfx::data
 {
     struct ImageCreateInfo
     {
+        const void* image_data{};
+        uint32_t width{}, height{};
+        uint32_t mip_levels{};
+        uint32_t size_in_bytes{};
         VkFormat format{};
         VkFilter min_filter{};
         VkFilter mag_filter{};
@@ -20,7 +24,7 @@ namespace gage::gfx::data
     class Image
     {
     public:
-        Image(Graphics& gfx, const void* image_data, uint32_t width, uint32_t height, size_t size_in_bytes, ImageCreateInfo create_info);
+        Image(Graphics& gfx, ImageCreateInfo ci);
         Image(const Image&) = delete;
         Image(Image&&) = delete;
         Image operator=(const Image&) = delete;
@@ -29,6 +33,8 @@ namespace gage::gfx::data
         VkImage get_image() const;
         VkImageView get_image_view() const;
         VkSampler get_sampler() const;
+    private:
+        void generate_mip_maps(VkCommandBuffer cmd, uint32_t mip_levels, uint32_t width, uint32_t height);
     private:
         Graphics& gfx;
         VkImage image{};
