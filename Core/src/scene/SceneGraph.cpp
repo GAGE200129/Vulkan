@@ -67,9 +67,9 @@ namespace tinygltf
 
 namespace gage::scene
 {
-    SceneGraph::SceneGraph(gfx::Graphics &gfx, phys::Physics& phys) : 
+    SceneGraph::SceneGraph(gfx::Graphics &gfx, phys::Physics& phys, const gfx::data::Camera& camera) : 
         gfx(gfx), 
-        renderer(gfx), 
+        renderer(gfx, camera), 
         physics(phys)
     {
         // Create root node

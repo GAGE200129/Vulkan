@@ -55,7 +55,7 @@ namespace gage::scene
         };
         static constexpr std::string_view ROOT_NAME = "ROOT";
     public:
-        SceneGraph(gfx::Graphics& gfx, phys::Physics& phys);
+        SceneGraph(gfx::Graphics& gfx, phys::Physics& phys, const gfx::data::Camera& camera);
         ~SceneGraph();
 
         void init();

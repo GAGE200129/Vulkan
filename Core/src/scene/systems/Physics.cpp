@@ -24,18 +24,17 @@ namespace gage::scene::systems
             character_controller->character = phys.create_character(character_controller->node.get_position(), character_controller->node.get_rotation());
         }
 
-        for (const auto &terrain_renderer : terrain_renderers)
+        for (auto &terrain_renderer : terrain_renderers)
         {
             // Init height map for physics
-            {
-                JPH::HeightFieldShapeSettings shape_settings(terrain_renderer->height_map.data(), JPH::Vec3(0, 0, 0), JPH::Vec3(1, 1, 1), terrain_renderer->size);
-                JPH::BodyCreationSettings setting(shape_settings.Create().Get(),
-                                                  JPH::RVec3(0.0, -1.0, 0.0),
-                                                  JPH::Quat::sIdentity(), JPH::EMotionType::Static, phys::Layers::NON_MOVING);
-                setting.mFriction = 0.2f;
 
-                terrain_renderer->height_map_body = this->phys.get_body_interface()->CreateAndAddBody(setting, JPH::EActivation::DontActivate);
-            }
+            JPH::HeightFieldShapeSettings shape_settings(terrain_renderer.terrain_renderer->height_map.data(), JPH::Vec3(0, 0, 0), JPH::Vec3(1, 1, 1), terrain_renderer.terrain_renderer->size);
+            JPH::BodyCreationSettings setting(shape_settings.Create().Get(),
+                                              JPH::RVec3(0.0, -1.0, 0.0),
+                                              JPH::Quat::sIdentity(), JPH::EMotionType::Static, phys::Layers::NON_MOVING);
+            setting.mFriction = 0.2f;
+
+            terrain_renderer.height_map_body = this->phys.get_body_interface()->CreateAndAddBody(setting, JPH::EActivation::DontActivate);
         }
     }
 
@@ -48,8 +47,8 @@ namespace gage::scene::systems
 
         for (const auto &terrain_renderer : terrain_renderers)
         {
-            this->phys.get_body_interface()->RemoveBody(terrain_renderer->height_map_body);
-            this->phys.get_body_interface()->DestroyBody(terrain_renderer->height_map_body);
+            this->phys.get_body_interface()->RemoveBody(terrain_renderer.height_map_body);
+            this->phys.get_body_interface()->DestroyBody(terrain_renderer.height_map_body);
         }
     }
 
@@ -69,24 +68,22 @@ namespace gage::scene::systems
                 {
                     JPH::Body &body = lock.GetBody();
 
-                    switch(state)
+                    switch (state)
                     {
-                        case JPH::CharacterBase::EGroundState::InAir :
-                        {
-                            body.GetMotionProperties()->SetLinearDamping(0.0f);
-                            break;
-                        }
-
-                        case JPH::CharacterBase::EGroundState::NotSupported :
-                        case JPH::CharacterBase::EGroundState::OnGround :
-                        case JPH::CharacterBase::EGroundState::OnSteepGround :
-                        {
-                            body.GetMotionProperties()->SetLinearDamping(5.0f);
-                            break;
-                        }
+                    case JPH::CharacterBase::EGroundState::InAir:
+                    {
+                        body.GetMotionProperties()->SetLinearDamping(0.0f);
+                        break;
                     }
 
-                    
+                    case JPH::CharacterBase::EGroundState::NotSupported:
+                    case JPH::CharacterBase::EGroundState::OnGround:
+                    case JPH::CharacterBase::EGroundState::OnSteepGround:
+                    {
+                        body.GetMotionProperties()->SetLinearDamping(5.0f);
+                        break;
+                    }
+                    }
                 }
             }
         }
@@ -99,7 +96,10 @@ namespace gage::scene::systems
 
     void Physics::add_terrain_renderer(std::shared_ptr<components::TerrainRenderer> terrain_renderer)
     {
-        terrain_renderers.push_back(terrain_renderer);
+        TerrainRenderer terrain_renderer_additional_datas{};
+        terrain_renderer_additional_datas.terrain_renderer = terrain_renderer;
+
+        terrain_renderers.push_back(std::move(terrain_renderer_additional_datas));
     }
 
     void Physics::character_add_impulse(components::CharacterController *character, const glm::vec3 &vel)

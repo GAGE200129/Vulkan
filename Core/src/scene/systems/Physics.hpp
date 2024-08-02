@@ -7,6 +7,9 @@
 
 #include <glm/vec3.hpp>
 
+#include <Jolt/Jolt.h>
+#include <Jolt/Physics/Body/BodyID.h>
+
 namespace gage::phys
 {
     class Physics;
@@ -16,6 +19,12 @@ namespace gage::scene::systems
 {
     class Physics
     {
+    private:
+        struct TerrainRenderer
+        {
+            JPH::BodyID height_map_body{};
+            std::shared_ptr<components::TerrainRenderer> terrain_renderer;
+        };
     public:
         enum class GroundState
         {
@@ -40,6 +49,6 @@ namespace gage::scene::systems
     private:
         phys::Physics& phys;
         std::vector<std::unique_ptr<components::CharacterController>> character_controllers; 
-        std::vector<std::shared_ptr<components::TerrainRenderer>> terrain_renderers;
+        std::vector<TerrainRenderer> terrain_renderers;
     };
 }

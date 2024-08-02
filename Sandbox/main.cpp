@@ -73,25 +73,25 @@ int main()
         std::vector<gfx::data::PointLight::Data> point_lights{};
 
         std::optional<scene::SceneGraph> scene;
-        scene.emplace(gfx, phys);
+        scene.emplace(gfx, phys, camera);
 
 
         const scene::data::Model &scene_model = scene->import_model("res/models/human_base.glb", scene::SceneGraph::ImportMode::Binary);
-        const scene::data::Model &sponza_model = scene->import_model("res/models/sponza.glb", scene::SceneGraph::ImportMode::Binary);
+        //const scene::data::Model &sponza_model = scene->import_model("res/models/sponza.glb", scene::SceneGraph::ImportMode::Binary);
         //const scene::data::Model &crying_model = scene->import_model("res/models/crying.glb", scene::SceneGraph::ImportMode::Binary);
-        scene->instanciate_model(sponza_model, {50, 0, 50});
+        //scene->instanciate_model(sponza_model, {50, 0, 50});
         //auto crying_node = scene->instanciate_model(crying_model, {50, 75, 50});
         //scene::components::Animator* crying_node_animator = (scene::components::Animator*)crying_node->get_requested_component(typeid(scene::components::Animator).name());
         //scene->add_component(crying_node, std::make_unique<scene::components::CharacterController>(*scene, *crying_node, phys));
 
         scene::Node *animated_node = scene->instanciate_model(scene_model, {0, 0, 0});
-        animated_node->set_position({50, 70, 50});
+        animated_node->set_position({50, 150, 50});
         animated_node->set_name("Player");
         scene->add_component(animated_node, std::make_unique<scene::components::CharacterController>(*scene, *animated_node, phys));
         scene->add_component(animated_node, std::make_unique<FPSCharacterController>(*scene, *animated_node, phys, camera));
 
         auto terrain = scene->create_node();
-        scene->add_component(terrain, std::make_unique<scene::components::TerrainRenderer>(*scene, *terrain, gfx, 500, 64, 1.0f, -10.0f, 20.0f, 0.01f));
+        scene->add_component(terrain, std::make_unique<scene::components::TerrainRenderer>(*scene, *terrain, gfx, 64, 17, 128, 1.0f, 0.0f, 100.0f, 0.5f));
         scene->init();
 
         //scene::systems::Animation::set_animator_animation(crying_node_animator, "Armature|mixamo.com|Layer0");

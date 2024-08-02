@@ -6,13 +6,12 @@
 
 #include <Core/src/gfx/data/PBRPipeline.hpp>
 #include <Core/src/gfx/data/terrain/TerrainPipeline.hpp>
+#include <Core/src/gfx/data/Camera.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
-
 
 namespace gage::scene::systems
 {
-    Renderer::Renderer(gfx::Graphics &gfx) : gfx(gfx)
+    Renderer::Renderer(gfx::Graphics &gfx, const gfx::data::Camera &camera) : gfx(gfx), camera(camera)
     {
     }
 
@@ -31,85 +30,17 @@ namespace gage::scene::systems
             }
         }
 
-        for (const auto &terrain_renderer : terrain_renderers)
+        // Init terrain renderers
+        for (auto &terrain_renderer : terrain_renderers)
         {
-            const auto &height_map = terrain_renderer->height_map;
-            const auto &size = terrain_renderer->size;
-            const auto &min_height = terrain_renderer->min_height;
-            const auto &max_height = terrain_renderer->max_height;
-            const auto &scale = terrain_renderer->scale;
-            auto &vertex_buffer = terrain_renderer->vertex_buffer;
-            auto &index_buffer = terrain_renderer->index_buffer;
-            auto &image = terrain_renderer->image;
-            auto &terrain_data = terrain_renderer->terrain_data;
-            auto &terrain_data_buffer = terrain_renderer->terrain_data_buffer;
-            auto &terrain_data_desc = terrain_renderer->terrain_data_desc;
+            terrain_renderer.vertex_buffer = std::make_unique<gfx::data::GPUBuffer>(gfx,
+                                                                                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, terrain_renderer.terrain_renderer->vertex_data.size() * sizeof(components::TerrainRenderer::Vertex),
+                                                                                    terrain_renderer.terrain_renderer->vertex_data.data());
 
-            
-
-            // Generate triangle list and upload it to vulkan
-            {
-                std::vector<components::TerrainRenderer::Vertex> vertex_data;
-                std::vector<uint32_t> indices_data;
-
-                // Generate positions and uvs
-                for (uint32_t y = 0; y < size; y++)
-                    for (uint32_t x = 0; x < size; x++)
-                    {
-                        float height = height_map.at(x + y * size);
-                        components::TerrainRenderer::Vertex v{};
-                        v.pos = {x * scale, height, y * scale};
-                        v.tex_coord = {(float)x / size, (float)y / size};
-                        v.normal = {0, 1, 0};
-                        vertex_data.push_back(std::move(v));
-                    }
-
-                // Generate indices
-                uint32_t num_quad = (size - 1) * (size - 1);
-                indices_data.resize(num_quad * 6);
-                uint32_t index = 0;
-                for (uint32_t y = 0; y < (size - 1); y++)
-                    for (uint32_t x = 0; x < (size - 1); x++)
-                    {
-                        uint32_t index_bottom_left = y * size + x;
-                        uint32_t index_top_left = (y + 1) * size + x;
-                        uint32_t index_top_right = (y + 1) * size + x + 1;
-                        uint32_t index_bottom_right = y * size + x + 1;
-
-                        indices_data[index++] = index_bottom_left;
-                        indices_data[index++] = index_top_left;
-                        indices_data[index++] = index_top_right;
-
-                        indices_data[index++] = index_bottom_left;
-                        indices_data[index++] = index_top_right;
-                        indices_data[index++] = index_bottom_right;
-                    }
-
-                // Calculate normals
-                {
-                    for (uint32_t i = 0; i < indices_data.size(); i += 3)
-                    {
-                        uint32_t i0 = indices_data.at(i + 0);
-                        uint32_t i1 = indices_data.at(i + 1);
-                        uint32_t i2 = indices_data.at(i + 2);
-                        glm::vec3 v1 = vertex_data.at(i1).pos - vertex_data.at(i0).pos;
-                        glm::vec3 v2 = vertex_data.at(i2).pos - vertex_data.at(i0).pos;
-                        glm::vec3 n = glm::normalize(glm::cross(v1, v2));
-
-                        vertex_data.at(i0).normal += n;
-                        vertex_data.at(i1).normal += n;
-                        vertex_data.at(i2).normal += n;
-                    }
-
-                    for (auto &v : vertex_data)
-                    {
-                        v.normal = glm::normalize(v.normal);
-                    }
-                }
-
-                vertex_buffer = std::make_unique<gfx::data::GPUBuffer>(gfx, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, vertex_data.size() * sizeof(components::TerrainRenderer::Vertex), vertex_data.data());
-                index_buffer = std::make_unique<gfx::data::GPUBuffer>(gfx, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, indices_data.size() * sizeof(uint32_t), indices_data.data());
-            }
+            terrain_renderer.index_buffer = std::make_unique<gfx::data::GPUBuffer>(gfx,
+                                                                                   VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                                                                                   terrain_renderer.terrain_renderer->indices_data.size() * sizeof(uint32_t),
+                                                                                   terrain_renderer.terrain_renderer->indices_data.data());
 
             // Load test image
             {
@@ -125,23 +56,21 @@ namespace gage::scene::systems
                 gfx::data::ImageCreateInfo image_ci{data, w, h, 1, size_in_bytes, VK_FORMAT_R8G8B8_UNORM, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT};
 
                 image_ci.mip_levels = std::floor(std::log2(std::max(w, h))) + 1;
-                image = std::make_unique<gfx::data::Image>(gfx, image_ci);
+                terrain_renderer.image = std::make_unique<gfx::data::Image>(gfx, image_ci);
                 stbi_image_free(data);
             }
 
             // Create descriptor
             {
-                terrain_data.min_height = min_height;
-                terrain_data.max_height = max_height;
-                terrain_data.uv_scale = size;
+                terrain_renderer.uniform_buffer_data.min_height = terrain_renderer.terrain_renderer->min_height;
+                terrain_renderer.uniform_buffer_data.max_height = terrain_renderer.terrain_renderer->max_height;
+                terrain_renderer.uniform_buffer_data.uv_scale = terrain_renderer.terrain_renderer->size;
 
-                terrain_data_buffer = std::make_unique<gfx::data::CPUBuffer>(gfx, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(components::TerrainRenderer::TerrainData), nullptr);
-                terrain_data_desc = gfx.get_terrain_pipeline().allocate_descriptor_set(sizeof(components::TerrainRenderer::TerrainData),
-                                                                                       terrain_data_buffer->get_buffer_handle(),
-                                                                                       image->get_image_view(), image->get_sampler());
+                terrain_renderer.uniform_buffer = std::make_unique<gfx::data::CPUBuffer>(gfx, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(TerrainRenderer::UniformBuffer), nullptr);
+                terrain_renderer.descriptor = gfx.get_terrain_pipeline().allocate_descriptor_set(sizeof(TerrainRenderer::UniformBuffer),
+                                                                                                 terrain_renderer.uniform_buffer->get_buffer_handle(),
+                                                                                                 terrain_renderer.image->get_image_view(), terrain_renderer.image->get_sampler());
             }
-
-           
         }
     }
 
@@ -149,15 +78,42 @@ namespace gage::scene::systems
     {
         for (const auto &terrain_renderer : terrain_renderers)
         {
+
+            terrain_renderer.terrain_renderer->update_lod_regons(camera.position);
+
+            std::memcpy(terrain_renderer.uniform_buffer->get_mapped(), &terrain_renderer.uniform_buffer_data, sizeof(TerrainRenderer::UniformBuffer));
             VkBuffer buffers[] =
                 {
-                    terrain_renderer->vertex_buffer->get_buffer_handle()};
+                    terrain_renderer.vertex_buffer->get_buffer_handle()
+
+                };
             VkDeviceSize offsets[] = {
                 0};
             glm::mat4x4 transform(1.0f);
             vkCmdBindVertexBuffers(cmd, 0, 1, buffers, offsets);
-            vkCmdBindIndexBuffer(cmd, terrain_renderer->index_buffer->get_buffer_handle(), 0, VK_INDEX_TYPE_UINT32);
-            vkCmdDrawIndexed(cmd, (terrain_renderer->size - 1) * (terrain_renderer->size - 1) * 6, 1, 0, 0, 0);
+            vkCmdBindIndexBuffer(cmd, terrain_renderer.index_buffer->get_buffer_handle(), 0, VK_INDEX_TYPE_UINT32);
+            for (uint32_t patch_y = 0; patch_y < terrain_renderer.terrain_renderer->patch_count; patch_y++)
+                for (uint32_t patch_x = 0; patch_x < terrain_renderer.terrain_renderer->patch_count; patch_x++)
+                {
+                    uint32_t x = patch_x * (terrain_renderer.terrain_renderer->patch_size - 1);
+                    uint32_t y = patch_y * (terrain_renderer.terrain_renderer->patch_size - 1);
+
+                    uint32_t lod = terrain_renderer.terrain_renderer->get_current_lod(patch_x, patch_y);
+                    if (lod != 0)
+                    {   
+                        auto proj = glm::perspectiveFovRH_ZO(glm::radians(camera.get_field_of_view()),
+                             (float)gfx.get_scaled_draw_extent().width, (float)gfx.get_scaled_draw_extent().height,
+                             0.001f, camera.get_far());
+                        if (!terrain_renderer.terrain_renderer->is_inside_frustum(x, y, camera.get_view(), proj))
+                        {
+                            continue;
+                        }
+                    }
+                    uint32_t base_vertex = x + y * terrain_renderer.terrain_renderer->size;
+                    uint32_t base_index = terrain_renderer.terrain_renderer->lod_infos.at(lod).start;
+                    uint32_t vertex_count = terrain_renderer.terrain_renderer->lod_infos.at(lod).count;
+                    vkCmdDrawIndexed(cmd, vertex_count, 1, base_index, base_vertex, 0);
+                }
         }
     }
     void Renderer::render_depth(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) const
@@ -240,18 +196,44 @@ namespace gage::scene::systems
     {
         for (const auto &terrain_renderer : terrain_renderers)
         {
-            std::memcpy(terrain_renderer->terrain_data_buffer->get_mapped(), &terrain_renderer->terrain_data, sizeof(components::TerrainRenderer::TerrainData));
+
+            terrain_renderer.terrain_renderer->update_lod_regons(camera.position);
+
+            std::memcpy(terrain_renderer.uniform_buffer->get_mapped(), &terrain_renderer.uniform_buffer_data, sizeof(TerrainRenderer::UniformBuffer));
             VkBuffer buffers[] =
                 {
-                    terrain_renderer->vertex_buffer->get_buffer_handle()};
+                    terrain_renderer.vertex_buffer->get_buffer_handle()
+
+                };
             VkDeviceSize offsets[] = {
                 0};
             glm::mat4x4 transform(1.0f);
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gfx.get_terrain_pipeline().get_layout(), 1, 1, &terrain_renderer->terrain_data_desc, 0, nullptr);
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gfx.get_terrain_pipeline().get_layout(), 1, 1, &terrain_renderer.descriptor, 0, nullptr);
             vkCmdPushConstants(cmd, gfx.get_terrain_pipeline().get_layout(), VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), glm::value_ptr(transform));
             vkCmdBindVertexBuffers(cmd, 0, 1, buffers, offsets);
-            vkCmdBindIndexBuffer(cmd, terrain_renderer->index_buffer->get_buffer_handle(), 0, VK_INDEX_TYPE_UINT32);
-            vkCmdDrawIndexed(cmd, (terrain_renderer->size - 1) * (terrain_renderer->size - 1) * 6, 1, 0, 0, 0);
+            vkCmdBindIndexBuffer(cmd, terrain_renderer.index_buffer->get_buffer_handle(), 0, VK_INDEX_TYPE_UINT32);
+            for (uint32_t patch_y = 0; patch_y < terrain_renderer.terrain_renderer->patch_count; patch_y++)
+                for (uint32_t patch_x = 0; patch_x < terrain_renderer.terrain_renderer->patch_count; patch_x++)
+                {
+                    uint32_t x = patch_x * (terrain_renderer.terrain_renderer->patch_size - 1);
+                    uint32_t y = patch_y * (terrain_renderer.terrain_renderer->patch_size - 1);
+
+                    uint32_t lod = terrain_renderer.terrain_renderer->get_current_lod(patch_x, patch_y);
+                    if (lod != 0)
+                    {   
+                        auto proj = glm::perspectiveFovRH_ZO(glm::radians(camera.get_field_of_view()),
+                             (float)gfx.get_scaled_draw_extent().width, (float)gfx.get_scaled_draw_extent().height,
+                             0.001f, camera.get_far());
+                        if (!terrain_renderer.terrain_renderer->is_inside_frustum(x, y, camera.get_view(), proj))
+                        {
+                            continue;
+                        }
+                    }
+                    uint32_t base_vertex = x + y * terrain_renderer.terrain_renderer->size;
+                    uint32_t base_index = terrain_renderer.terrain_renderer->lod_infos.at(lod).start;
+                    uint32_t vertex_count = terrain_renderer.terrain_renderer->lod_infos.at(lod).count;
+                    vkCmdDrawIndexed(cmd, vertex_count, 1, base_index, base_vertex, 0);
+                }
         }
     }
 
@@ -267,7 +249,7 @@ namespace gage::scene::systems
 
         for (const auto &terrain_renderer : terrain_renderers)
         {
-            gfx.get_terrain_pipeline().free_descriptor_set(terrain_renderer->terrain_data_desc);
+            gfx.get_terrain_pipeline().free_descriptor_set(terrain_renderer.descriptor);
         }
     }
 
@@ -278,6 +260,9 @@ namespace gage::scene::systems
 
     void Renderer::add_terrain_renderer(std::shared_ptr<components::TerrainRenderer> terrain_renderer)
     {
-        this->terrain_renderers.push_back(terrain_renderer);
+        TerrainRenderer additional_terrain_renderer_datas{};
+        additional_terrain_renderer_datas.terrain_renderer = terrain_renderer;
+
+        this->terrain_renderers.push_back(std::move(additional_terrain_renderer_datas));
     }
 }
