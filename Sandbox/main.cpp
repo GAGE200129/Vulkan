@@ -67,7 +67,7 @@ int main()
         win::ImguiWindow imgui_window{gfx};
 
         gfx::data::Camera camera{};
-        camera.far = 1000.0f;
+        camera.far = 500.0f;
         camera.field_of_view = 80.0f;
 
         std::vector<gfx::data::PointLight::Data> point_lights{};
@@ -91,7 +91,7 @@ int main()
         scene->add_component(animated_node, std::make_unique<FPSCharacterController>(*scene, *animated_node, phys, camera));
 
         auto terrain = scene->create_node();
-        scene->add_component(terrain, std::make_unique<scene::components::TerrainRenderer>(*scene, *terrain, gfx, 64, 17, 128, 1.0f, 0.0f, 100.0f, 0.5f));
+        scene->add_component(terrain, std::make_unique<scene::components::TerrainRenderer>(*scene, *terrain, gfx, 64, 17, 512, 1.0f, 0.0f, 100.0f, 0.9f));
         scene->init();
 
         //scene::systems::Animation::set_animator_animation(crying_node_animator, "Armature|mixamo.com|Layer0");

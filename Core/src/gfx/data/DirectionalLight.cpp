@@ -244,13 +244,14 @@ namespace gage::gfx::data
         // Link to position g_buffer
         VkDescriptorImageInfo img_info{};
         img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        img_info.sampler = gfx.default_sampler;
+        
 
         VkWriteDescriptorSet descriptor_write{};
         descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 
 
         //Link depth to g buffer
+        img_info.sampler = gfx.default_sampler;
         img_info.imageView = gfx.geometry_buffer->get_depth_view();
         descriptor_write.dstSet = desc;
         descriptor_write.dstBinding = 0;
@@ -263,6 +264,7 @@ namespace gage::gfx::data
         vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
 
         // Link to normal of g buffer
+        img_info.sampler = gfx.default_sampler;
         img_info.imageView = gfx.geometry_buffer->get_normal_view();
         descriptor_write.dstSet = desc;
         descriptor_write.dstBinding = 0;
@@ -275,6 +277,7 @@ namespace gage::gfx::data
         vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
 
         // Link to albedo g_buffer
+        img_info.sampler = gfx.default_sampler;
         img_info.imageView = gfx.geometry_buffer->get_albedo_view();
         descriptor_write.dstSet = desc;
         descriptor_write.dstBinding = 0;
@@ -287,6 +290,7 @@ namespace gage::gfx::data
         vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
 
         // Link to mr g_buffer
+        img_info.sampler = gfx.default_sampler;
         img_info.imageView = gfx.geometry_buffer->get_mr_view();
         descriptor_write.dstSet = desc;
         descriptor_write.dstBinding = 0;
@@ -297,8 +301,6 @@ namespace gage::gfx::data
         descriptor_write.pImageInfo = &img_info;
         descriptor_write.pTexelBufferView = nullptr;
         vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
-
-
     }
 
     VkPipelineLayout DirectionalLight::get_layout() const

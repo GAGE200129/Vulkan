@@ -17,6 +17,8 @@ layout (location = 0) out vec4 out_color;
 void main() 
 {
 	float depth = texture(g_buffers[0], fs_uv).r;
+
+    //uint stencil = texture(g_buffers[0], fs_uv);
     vec4 clip_space_position = vec4(fs_uv_non_scaled * 2.0 - 1.0, depth, 1.0);
     vec4 view_space_position = descriptor_set_0_ubo.inv_projection * clip_space_position;
     // Perspective division

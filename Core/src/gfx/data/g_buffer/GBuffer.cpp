@@ -123,10 +123,10 @@ namespace gage::gfx::data::g_buffer
     {
         return main_pass.depth_image_view;
     }
-    // VkImageView GBuffer::get_position_view() const
-    // {
-    //     return main_pass.position_view;
-    // }
+    VkImageView GBuffer::get_stencil_view() const
+    {
+        return main_pass.stencil_image_view;
+    }
     VkImageView GBuffer::get_normal_view() const
     {
         return main_pass.normal_view;

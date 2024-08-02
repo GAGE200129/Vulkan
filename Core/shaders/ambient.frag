@@ -14,19 +14,20 @@ layout (location = 0) out vec4 out_color;
 void main() 
 {
 	vec4 albedo = texture(g_buffers[0], fs_uv);
+    
 
     //Blur the kernel
     vec2 texel_size = 1.0 / vec2(textureSize(g_buffers[1], 0));
     float result = 0.0;
-    for (int x = -1; x <= 1; ++x) 
+    for (int x = -2; x <= 2; ++x) 
     {
-        for (int y = -1; y <= 1; ++y) 
+        for (int y = -2; y <= 2; ++y) 
         {
             vec2 offset = vec2(float(x), float(y)) * texel_size;
             result += texture(g_buffers[1], fs_uv + offset).r;
         }
     }
-    result /= (9.0);
+    result /= (16.0);
 
     out_color = vec4(albedo.rgb * descriptor_set_0_ubo.ambient_light_color * descriptor_set_0_ubo.ambient_light_intensity * result, 1); 
 }

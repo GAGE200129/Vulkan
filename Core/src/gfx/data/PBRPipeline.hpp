@@ -53,7 +53,7 @@ namespace gage::gfx::data
         void destroy_depth_pipeline();
 
     private:
-
+        static constexpr uint8_t STENCIL_VALUE = 0x01;
         Graphics& gfx;
 
         VkDescriptorSetLayout material_set_layout{};

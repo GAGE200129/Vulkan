@@ -32,7 +32,8 @@ namespace gage::gfx::data::g_buffer
         static constexpr VkFormat NORMAL_FORMAT = {VK_FORMAT_R16G16B16_SFLOAT};
         static constexpr VkFormat ALBEDO_FORMAT = {VK_FORMAT_R16G16B16_SFLOAT};
         static constexpr VkFormat METALIC_ROUGHENSS_FORMAT = {VK_FORMAT_R16G16B16_SFLOAT};
-        static constexpr VkFormat DEPTH_FORMAT = {VK_FORMAT_D32_SFLOAT};
+        static constexpr VkFormat DEPTH_FORMAT = {VK_FORMAT_D24_UNORM_S8_UINT};
+        
 
         VkRenderPass render_pass{};
         VkFramebuffer framebuffer{};
@@ -40,10 +41,7 @@ namespace gage::gfx::data::g_buffer
         VkDeviceMemory depth_image_memory{};
         VkImage depth_image{};
         VkImageView depth_image_view{};
-
-        // VkDeviceMemory position_memory{};
-        // VkImage position{};
-        // VkImageView position_view{};
+        VkImageView stencil_image_view{};
 
         VkDeviceMemory normal_memory{};
         VkImage normal{};

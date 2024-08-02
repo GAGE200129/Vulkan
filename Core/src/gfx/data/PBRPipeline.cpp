@@ -315,11 +315,20 @@ namespace gage::gfx::data
         depth_stencil.depthWriteEnable = VK_TRUE;
         depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
         depth_stencil.depthBoundsTestEnable = VK_FALSE;
-        depth_stencil.stencilTestEnable = VK_FALSE;
-        depth_stencil.front = {};
-        depth_stencil.back = {};
+        depth_stencil.stencilTestEnable = VK_TRUE;
         depth_stencil.minDepthBounds = 0.0f;
         depth_stencil.maxDepthBounds = 1.f;
+
+        depth_stencil.front = {};
+        depth_stencil.front.reference = STENCIL_VALUE;
+        depth_stencil.front.compareOp = VK_COMPARE_OP_ALWAYS;
+        depth_stencil.front.compareMask = 0x00;
+        depth_stencil.front.writeMask = 0xFF;
+        depth_stencil.front.failOp = VK_STENCIL_OP_KEEP;
+        depth_stencil.front.depthFailOp = VK_STENCIL_OP_KEEP;
+        depth_stencil.front.passOp = VK_STENCIL_OP_REPLACE;
+        depth_stencil.back = depth_stencil.front;
+        
 
         VkViewport viewport = {};
         viewport.x = 0;

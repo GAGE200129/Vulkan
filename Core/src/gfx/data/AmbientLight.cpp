@@ -272,8 +272,6 @@ namespace gage::gfx::data
         descriptor_write.pImageInfo = &img_info;
         descriptor_write.pTexelBufferView = nullptr;
         vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
-
-        
     }
 
     VkPipelineLayout AmbientLight::get_layout() const

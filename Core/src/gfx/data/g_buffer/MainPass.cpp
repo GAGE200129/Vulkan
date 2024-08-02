@@ -116,6 +116,11 @@ namespace gage::gfx::data::g_buffer
         image_view_ci.format = DEPTH_FORMAT;
         image_view_ci.image = depth_image;
         vk_check(vkCreateImageView(gfx.device, &image_view_ci, nullptr, &depth_image_view));
+
+        image_view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
+        image_view_ci.format = DEPTH_FORMAT;
+        image_view_ci.image = depth_image;
+        vk_check(vkCreateImageView(gfx.device, &image_view_ci, nullptr, &stencil_image_view));
     }
 
     void MainPass::create_render_pass()
@@ -156,7 +161,7 @@ namespace gage::gfx::data::g_buffer
                 .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
                 .finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             },
-
+            //MR
             {
                 .flags = 0,
                 .format = METALIC_ROUGHENSS_FORMAT,
@@ -176,8 +181,8 @@ namespace gage::gfx::data::g_buffer
                 .samples = VK_SAMPLE_COUNT_1_BIT,
                 .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
                 .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                .stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE,
                 .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
                 .finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             }
@@ -256,9 +261,7 @@ namespace gage::gfx::data::g_buffer
 
     void MainPass::destroy_image()
     {
-        // vkDestroyImageView(gfx.device, position_view, nullptr);
-        // vkDestroyImage(gfx.device, position, nullptr);
-        // vkFreeMemory(gfx.device, position_memory, nullptr);
+        
 
         vkDestroyImageView(gfx.device, normal_view, nullptr);
         vkDestroyImage(gfx.device, normal, nullptr);
@@ -274,6 +277,7 @@ namespace gage::gfx::data::g_buffer
 
         vkDestroyImage(gfx.device, depth_image, nullptr);
         vkDestroyImageView(gfx.device, depth_image_view, nullptr);
+        vkDestroyImageView(gfx.device, stencil_image_view, nullptr);
         vkFreeMemory(gfx.device, depth_image_memory, nullptr);
     }
     void MainPass::destroy_render_pass()

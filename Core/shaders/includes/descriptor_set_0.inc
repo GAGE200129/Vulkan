@@ -1,5 +1,8 @@
 #define CASCADE_COUNT 3
 
+#define SKY_STENCIL_ID 0
+#define PBR_STENCIL_ID 1
+#define TERRAIN_STENCIL_ID 2
 
 layout(set = 0, binding = 0) uniform UniformBuffer
 {

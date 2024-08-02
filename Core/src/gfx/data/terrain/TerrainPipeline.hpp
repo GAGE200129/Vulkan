@@ -36,7 +36,7 @@ namespace gage::gfx::data::terrain
         void destroy_depth_pipeline();
 
     private:
-
+        static constexpr uint8_t STENCIL_VALUE = 0x02;
         Graphics& gfx;
 
         VkPipelineLayout pipeline_layout{};
