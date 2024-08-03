@@ -186,6 +186,11 @@ namespace gage::win
         static scene::Node* selected_node = nullptr;
         if (ImGui::Begin("SceneGraph"))
         {
+            if(ImGui::Button("Save"))
+            {
+                scene.save("res/maps/test.json");
+            }
+
             if(ImGui::Button("New"))
             {
                 scene.create_node();

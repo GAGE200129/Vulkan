@@ -11,11 +11,16 @@
 
 namespace gage::scene::components
 {
-    Animator::Animator(SceneGraph &scene, Node &node, const data::Model &model, const std::vector<data::ModelAnimation> &model_animations) : IComponent(scene, node),
-                                                                                                                                             model(model),
-                                                                                                                                             model_animations(model_animations)
+    Animator::Animator(SceneGraph &scene, Node &node, const data::Model &model) :
+        IComponent(scene, node),
+        model(model)
 
     {
+    }
+
+    nlohmann::json Animator::to_json() const
+    {
+        return { {"type", get_name()}, {"model", model.name} };
     }
 
     void Animator::render_imgui()
@@ -24,7 +29,7 @@ namespace gage::scene::components
         if (ImGui::BeginListBox("Animations"))
         {
 
-            for (const auto &animation : this->model_animations)
+            for (const auto &animation : this->model.animations)
             {
                 if(ImGui::Selectable(animation.name.c_str(), current_animation == &animation))
                 {

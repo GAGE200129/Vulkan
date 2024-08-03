@@ -19,6 +19,12 @@ namespace gage::scene::components
     {}
 
 
+    nlohmann::json MeshRenderer::to_json() const
+    {
+        return { {"type", get_name()}, {"model", model.name} };
+    }
+
+
     MeshRenderer::AnimationBuffer& MeshRenderer::get_animation_buffer()
     {
         return animation_buffer_data;

@@ -8,6 +8,7 @@
 
 #include <glm/vec3.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <nlohmann/json.hpp> 
 
 namespace gage::scene
 {
@@ -18,6 +19,8 @@ namespace gage::scene
     public:
         Node(SceneGraph& scene, uint64_t id);
         ~Node();
+
+        nlohmann::json to_json() const;
 
         void render_imgui();
 

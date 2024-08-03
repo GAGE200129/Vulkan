@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
+#include <nlohmann/json.hpp>
 
 namespace gage::gfx
 {
@@ -23,9 +23,12 @@ namespace gage::scene::components
         IComponent(SceneGraph& scene, Node& node) : scene(scene), node(node) {}
         virtual ~IComponent() = default;
 
+        virtual nlohmann::json to_json() const = 0;
+
         //Debug
         virtual void render_imgui() = 0;
         virtual const char* get_name() const = 0;
+
     protected:
         SceneGraph& scene;
         Node& node;

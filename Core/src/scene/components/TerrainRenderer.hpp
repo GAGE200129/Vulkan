@@ -7,7 +7,7 @@
 #include <memory>
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
-
+#include <glm/mat4x4.hpp>
 
 
 
@@ -41,6 +41,9 @@ namespace gage::scene::components
     public:
         TerrainRenderer(SceneGraph &scene, Node &node, gfx::Graphics &gfx, uint32_t patch_count, uint32_t patch_size, uint32_t iteration, float scale, float min_height, float max_height, float filter);
         
+
+        nlohmann::json to_json() const final { return {}; };
+
         void update_lod_regons(const glm::vec3& camera_position);
         bool is_inside_frustum(uint32_t x, uint32_t y, const glm::mat4x4& view, const glm::mat4x4& proj);
 

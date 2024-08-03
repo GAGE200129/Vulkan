@@ -67,10 +67,9 @@ namespace tinygltf
 
 namespace gage::scene
 {
-    SceneGraph::SceneGraph(gfx::Graphics &gfx, phys::Physics& phys, const gfx::data::Camera& camera) : 
-        gfx(gfx), 
-        renderer(gfx, camera), 
-        physics(phys)
+    SceneGraph::SceneGraph(gfx::Graphics &gfx, phys::Physics &phys, const gfx::data::Camera &camera) : gfx(gfx),
+                                                                                                       renderer(gfx, camera),
+                                                                                                       physics(phys)
     {
         // Create root node
         id = 0;
@@ -85,6 +84,16 @@ namespace gage::scene
         renderer.shutdown();
         animation.shutdown();
         physics.shutdown();
+    }
+
+    void SceneGraph::save(const std::string &file_path)
+    {
+        std::ofstream file(file_path);
+        if (file.is_open())
+        {
+            file << nodes.at(0).get()->to_json().dump(2);
+            file.close();
+        }
     }
 
     void SceneGraph::init()
@@ -114,7 +123,6 @@ namespace gage::scene
 
         traverse_scene_graph_recursive(nodes.at(0).get(), glm::mat4x4(1.0f));
     }
-
 
     const data::Model &SceneGraph::import_model(const std::string &file_path, ImportMode mode)
     {
@@ -287,11 +295,6 @@ namespace gage::scene
         Node *new_node = instanciate_node_recursive(model, model.nodes.at(model.root_node));
         new_node->position += initial_position;
 
-        if (model.animations.size() != 0)
-        {
-            add_component(new_node, std::make_unique<components::Animator>(*this, *new_node, model, model.animations));
-        }
-
         return new_node;
     }
 
@@ -335,33 +338,33 @@ namespace gage::scene
         return nullptr;
     }
 
-    void SceneGraph::add_component(Node* node, std::unique_ptr<components::IComponent> component)
+    void SceneGraph::add_component(Node *node, std::unique_ptr<components::IComponent> component)
     {
-        //Release component
-        components::IComponent* ptr = component.release();
+        // Release component
+        components::IComponent *ptr = component.release();
         node->add_component_ptr(ptr);
 
-        if(std::strcmp(ptr->get_name(), "MeshRenderer") == 0)
+        if (std::strcmp(ptr->get_name(), "MeshRenderer") == 0)
         {
-            renderer.add_pbr_mesh_renderer(std::unique_ptr<components::MeshRenderer>(static_cast<components::MeshRenderer*>(ptr)));
+            renderer.add_pbr_mesh_renderer(std::unique_ptr<components::MeshRenderer>(static_cast<components::MeshRenderer *>(ptr)));
         }
-        else if(std::strcmp(ptr->get_name(), "TerrainRenderer") == 0) // this component will be shared
+        else if (std::strcmp(ptr->get_name(), "TerrainRenderer") == 0) // this component will be shared
         {
-            auto terrain_renderer = std::shared_ptr<components::TerrainRenderer>(static_cast<components::TerrainRenderer*>(ptr));
+            auto terrain_renderer = std::shared_ptr<components::TerrainRenderer>(static_cast<components::TerrainRenderer *>(ptr));
             renderer.add_terrain_renderer(terrain_renderer);
             physics.add_terrain_renderer(terrain_renderer);
         }
-        else if(std::strcmp(ptr->get_name(), "Animator") == 0)
+        else if (std::strcmp(ptr->get_name(), "Animator") == 0)
         {
-            animation.add_animator(std::unique_ptr<components::Animator>(static_cast<components::Animator*>(ptr)));
+            animation.add_animator(std::unique_ptr<components::Animator>(static_cast<components::Animator *>(ptr)));
         }
-        else if(std::strcmp(ptr->get_name(), "CharacterController") == 0)
+        else if (std::strcmp(ptr->get_name(), "CharacterController") == 0)
         {
-            physics.add_character_controller(std::unique_ptr<components::CharacterController>(static_cast<components::CharacterController*>(ptr)));
+            physics.add_character_controller(std::unique_ptr<components::CharacterController>(static_cast<components::CharacterController *>(ptr)));
         }
-        else if(std::strcmp(ptr->get_name(), "Script") == 0)
+        else if (std::strcmp(ptr->get_name(), "Script") == 0)
         {
-            generic.add_script(std::unique_ptr<components::Script>(static_cast<components::Script*>(ptr)));
+            generic.add_script(std::unique_ptr<components::Script>(static_cast<components::Script *>(ptr)));
         }
         else
         {
@@ -370,27 +373,26 @@ namespace gage::scene
         }
     }
 
-   
     const std::vector<std::unique_ptr<Node>> &SceneGraph::get_nodes() const
     {
         return nodes;
     }
 
-    systems::Renderer& SceneGraph::get_renderer() 
+    systems::Renderer &SceneGraph::get_renderer()
     {
         return renderer;
     }
 
-    systems::Animation& SceneGraph::get_animation()
+    systems::Animation &SceneGraph::get_animation()
     {
         return animation;
     }
-    systems::Physics& SceneGraph::get_physics()
+    systems::Physics &SceneGraph::get_physics()
     {
         return physics;
     }
 
-    systems::Generic& SceneGraph::get_generic()
+    systems::Generic &SceneGraph::get_generic()
     {
         return generic;
     }

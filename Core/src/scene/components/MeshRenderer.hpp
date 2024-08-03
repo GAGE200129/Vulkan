@@ -32,6 +32,8 @@ namespace gage::scene::components
     public:
         MeshRenderer(SceneGraph& scene, Node& node, gfx::Graphics& gfx, const data::Model& model, const data::ModelMesh& model_mesh, const data::ModelSkin* model_skin);
 
+        nlohmann::json to_json() const final;
+
         inline void render_imgui() final {};
         inline const char* get_name() const final { return "MeshRenderer"; };
 

@@ -35,6 +35,7 @@ void FPSCharacterController::init()
     // hips->set_position({0.0f, -0.8f, 0.0f});
 
     animator = (scene::components::Animator *)node.get_requested_component(typeid(scene::components::Animator).name());
+    scene::systems::Animation::set_animator_animation(animator, "Test1");
 }
 void FPSCharacterController::update(float delta, const hid::Keyboard &keyboard, const hid::Mouse &mouse)
 {
@@ -109,12 +110,9 @@ void FPSCharacterController::update(float delta, const hid::Keyboard &keyboard, 
     {
         dir = glm::normalize(dir);
         scene::systems::Physics::character_add_impulse(character_controller, glm::vec3{dir.x, 0.0f, dir.y} * 3200.0f * delta);
-        scene::systems::Animation::set_animator_animation(animator, "Test1");
+        
     }
-    else
-    {
-        scene::systems::Animation::set_animator_animation(animator, "Test2");
-    }
+
 
     // camera.position = translation;
     spine->set_rotation(glm::quat(glm::vec3(glm::radians(-pitch), 0.0f, glm::radians(roll))));

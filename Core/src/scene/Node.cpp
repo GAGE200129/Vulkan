@@ -16,6 +16,46 @@ namespace gage::scene
     {
     }
 
+    nlohmann::json Node::to_json() const
+    {
+        nlohmann::json j;
+        j["name"] = name;
+        j["transform_pos_x"] = this->position.x;
+        j["transform_pos_y"] = this->position.y;
+        j["transform_pos_z"] = this->position.z;
+
+        j["transform_scale_x"] = this->scale.x;
+        j["transform_scale_y"] = this->scale.y;
+        j["transform_scale_z"] = this->scale.z;
+
+        j["transform_rotateion_x"] = this->rotation.x;
+        j["transform_rotateion_y"] = this->rotation.y;
+        j["transform_rotateion_z"] = this->rotation.z;
+        j["transform_rotateion_w"] = this->rotation.w;
+
+        j["bone_id"] = this->bone_id;
+
+        std::array<float, 16> inverse_bind_matrix;
+        for (uint32_t i = 0; i < 4; i++)
+        {
+            for (uint32_t j = 0; j < 4; j++)
+            {
+                inverse_bind_matrix[i + 4 * j] = inverse_bind_transform[i][j];
+            }
+        }
+        j["inverse_bind_transform"] = inverse_bind_matrix;
+        for (const auto &child : children)
+        {
+            j["children"].push_back(child->to_json());
+        }
+
+        for (const auto &component : this->component_ptrs)
+        {
+            j["components"].push_back(component->to_json());
+        }
+        return j;
+    }
+
     void Node::render_imgui()
     {
         if (this->name.compare(SceneGraph::ROOT_NAME) == 0)
@@ -36,8 +76,7 @@ namespace gage::scene
         }
     }
 
-
-    void Node::add_component_ptr(components::IComponent* component)
+    void Node::add_component_ptr(components::IComponent *component)
     {
         component_ptrs.push_back(component);
     }
@@ -83,7 +122,7 @@ namespace gage::scene
         return nullptr;
     }
 
-    void Node::get_requested_component_accumulate_recursive(const char* typeid_name, std::vector<void*>& out_components)
+    void Node::get_requested_component_accumulate_recursive(const char *typeid_name, std::vector<void *> &out_components)
     {
         log().trace("get_requested_component_accumulate_recursive: {}", this->name);
         for (auto &component : this->component_ptrs)

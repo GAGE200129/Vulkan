@@ -183,7 +183,7 @@ namespace gage::scene::systems
         animator->current_animation = nullptr;
         animator->bone_id_to_joint_map.clear();
         animator->skeleton_id_to_joint_map.clear();
-        for (const auto &model_animation : animator->model_animations)
+        for (const auto &model_animation : animator->model.animations)
         {
             log().trace("Searching animation: {}", model_animation.name);
             if (model_animation.name.compare(animation) == 0)

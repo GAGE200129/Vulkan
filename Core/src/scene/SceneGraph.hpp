@@ -58,6 +58,8 @@ namespace gage::scene
         SceneGraph(gfx::Graphics& gfx, phys::Physics& phys, const gfx::data::Camera& camera);
         ~SceneGraph();
 
+
+        void save(const std::string& file_path);
         void init();
         void build_node_transform();
 

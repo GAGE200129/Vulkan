@@ -24,16 +24,15 @@ namespace gage::scene::components
     {
         friend class systems::Animation;
     public:
-        Animator(SceneGraph &scene, Node &node, const data::Model &model, const std::vector<data::ModelAnimation> &model_animations);
+        Animator(SceneGraph &scene, Node &node, const data::Model &model);
 
-    
+        nlohmann::json to_json() const final;
         void render_imgui() final;
         inline const char* get_name() const final { return "Animator"; };
 
 
     private:
         const data::Model &model;
-        const std::vector<data::ModelAnimation> &model_animations;
 
         std::vector<MeshRenderer*> p_mesh_renderers{};
         double current_time{0.0};
