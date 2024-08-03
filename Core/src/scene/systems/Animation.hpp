@@ -4,10 +4,16 @@
 #include <vector>
 #include <memory>
 
+namespace gage::scene
+{
+    class SceneGraph;
+}
+
 namespace gage::scene::systems
 {
     class Animation
     {
+        friend class scene::SceneGraph;
     public:
         Animation();
         ~Animation();

@@ -18,8 +18,7 @@ namespace gage::gfx::data::terrain
         void bind(VkCommandBuffer cmd) const;
         void bind_depth(VkCommandBuffer cmd) const;
 
-        VkDescriptorSet allocate_descriptor_set(size_t size_in_bytes, VkBuffer buffer, 
-            VkImageView image_view, VkSampler sampler) const;
+        VkDescriptorSet allocate_descriptor_set(VkImageView image_view, VkSampler sampler) const;
         void free_descriptor_set(VkDescriptorSet set) const;
 
         VkPipelineLayout get_layout() const;

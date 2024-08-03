@@ -14,10 +14,16 @@ namespace gage::gfx::data
     class Camera;
 }
 
+namespace gage::scene
+{
+    class SceneGraph;
+}
+
 namespace gage::scene::systems
 {
     class Renderer
     {
+        friend class scene::SceneGraph;
     private:
         struct TerrainRenderer
         {
@@ -26,12 +32,6 @@ namespace gage::scene::systems
             std::unique_ptr<gfx::data::GPUBuffer> index_buffer{};
             std::unique_ptr<gfx::data::Image> image{};
             std::unique_ptr<gfx::data::CPUBuffer> uniform_buffer{};
-            struct UniformBuffer
-            {
-                float min_height{};
-                float max_height{};
-                float uv_scale{};
-            } uniform_buffer_data;
             VkDescriptorSet descriptor{};
 
             //Original data

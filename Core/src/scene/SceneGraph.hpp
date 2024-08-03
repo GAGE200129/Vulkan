@@ -42,9 +42,6 @@ namespace gage::hid
 
 namespace gage::scene
 {
-
-    
-
     class SceneGraph
     {
     public:
@@ -58,6 +55,7 @@ namespace gage::scene
         SceneGraph(gfx::Graphics& gfx, phys::Physics& phys, const gfx::data::Camera& camera);
         ~SceneGraph();
 
+        void render_imgui();
 
         void save(const std::string& file_path);
         void init();
@@ -80,6 +78,7 @@ namespace gage::scene
         systems::Animation& get_animation();
         systems::Physics& get_physics();
         systems::Generic& get_generic();
+
     private:
         void process_model_mesh(const tinygltf::Model& gltf_model, const tinygltf::Mesh& gltf_mesh, data::ModelMesh& mesh);
         void process_model_material(const tinygltf::Model& gltf_model, const tinygltf::Material& gltf_material, data::ModelMaterial& material);

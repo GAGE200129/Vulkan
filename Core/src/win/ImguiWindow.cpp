@@ -183,57 +183,6 @@ namespace gage::win
         ImGui::End();
 
 
-        static scene::Node* selected_node = nullptr;
-        if (ImGui::Begin("SceneGraph"))
-        {
-            if(ImGui::Button("Save"))
-            {
-                scene.save("res/maps/test.json");
-            }
-
-            if(ImGui::Button("New"))
-            {
-                scene.create_node();
-            }
-
-            std::function<void(scene::SceneGraph& scene, scene::Node* node)>  browse_scene_graph_recursive;
-            browse_scene_graph_recursive = [&browse_scene_graph_recursive](scene::SceneGraph& scene, scene::Node* node)
-            {
-                const std::string& node_name = node->get_name();
-                std::string id_string = std::to_string(node->get_id());
-                std::string name = !node_name.empty() ? node_name + "|" +  id_string : id_string;
-
-                ImGuiTreeNodeFlags flags = 0;
-                flags |= selected_node == node ? ImGuiTreeNodeFlags_Selected : 0;
-                flags |= node->get_children().empty() ? ImGuiTreeNodeFlags_Leaf : 0;
-
-                if (ImGui::TreeNodeEx(name.c_str(), flags))
-                {
-                    if (ImGui::IsItemClicked())
-                    {
-                        selected_node = node;
-                    }
-                    for (const auto& child : node->get_children())
-                    {
-                        browse_scene_graph_recursive(scene, child);
-                    }
-                    ImGui::TreePop();
-                }
-            };
-
-            browse_scene_graph_recursive(scene, scene.get_nodes().at(0).get());
-
-        }
-        ImGui::End();
-
-        if (ImGui::Begin("Node Inspector"))
-        {
-            if(selected_node)
-            {
-                selected_node->render_imgui();
-            }
-
-        }
-        ImGui::End();
+        scene.render_imgui();
     }
 }

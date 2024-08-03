@@ -62,14 +62,12 @@ namespace gage::scene::systems
 
             // Create descriptor
             {
-                terrain_renderer.uniform_buffer_data.min_height = terrain_renderer.terrain_renderer->min_height;
-                terrain_renderer.uniform_buffer_data.max_height = terrain_renderer.terrain_renderer->max_height;
-                terrain_renderer.uniform_buffer_data.uv_scale = terrain_renderer.terrain_renderer->size;
+                // terrain_renderer.uniform_buffer_data.min_height = terrain_renderer.terrain_renderer->min_height;
+                // terrain_renderer.uniform_buffer_data.max_height = terrain_renderer.terrain_renderer->max_height;
+                // terrain_renderer.uniform_buffer_data.uv_scale = terrain_renderer.terrain_renderer->size;
 
-                terrain_renderer.uniform_buffer = std::make_unique<gfx::data::CPUBuffer>(gfx, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(TerrainRenderer::UniformBuffer), nullptr);
-                terrain_renderer.descriptor = gfx.get_terrain_pipeline().allocate_descriptor_set(sizeof(TerrainRenderer::UniformBuffer),
-                                                                                                 terrain_renderer.uniform_buffer->get_buffer_handle(),
-                                                                                                 terrain_renderer.image->get_image_view(), terrain_renderer.image->get_sampler());
+                // terrain_renderer.uniform_buffer = std::make_unique<gfx::data::CPUBuffer>(gfx, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(TerrainRenderer::UniformBuffer), nullptr);
+                terrain_renderer.descriptor = gfx.get_terrain_pipeline().allocate_descriptor_set(terrain_renderer.image->get_image_view(), terrain_renderer.image->get_sampler());
             }
         }
     }
@@ -81,7 +79,7 @@ namespace gage::scene::systems
 
             terrain_renderer.terrain_renderer->update_lod_regons(camera.position);
 
-            std::memcpy(terrain_renderer.uniform_buffer->get_mapped(), &terrain_renderer.uniform_buffer_data, sizeof(TerrainRenderer::UniformBuffer));
+            //std::memcpy(terrain_renderer.uniform_buffer->get_mapped(), &terrain_renderer.uniform_buffer_data, sizeof(TerrainRenderer::UniformBuffer));
             VkBuffer buffers[] =
                 {
                     terrain_renderer.vertex_buffer->get_buffer_handle()
@@ -199,7 +197,7 @@ namespace gage::scene::systems
 
             terrain_renderer.terrain_renderer->update_lod_regons(camera.position);
 
-            std::memcpy(terrain_renderer.uniform_buffer->get_mapped(), &terrain_renderer.uniform_buffer_data, sizeof(TerrainRenderer::UniformBuffer));
+           // std::memcpy(terrain_renderer.uniform_buffer->get_mapped(), &terrain_renderer.uniform_buffer_data, sizeof(TerrainRenderer::UniformBuffer));
             VkBuffer buffers[] =
                 {
                     terrain_renderer.vertex_buffer->get_buffer_handle()

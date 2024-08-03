@@ -53,8 +53,8 @@ namespace gage::gfx::data::terrain
     {
         // PER INSTANCE SET LAYOUT
         std::vector<VkDescriptorSetLayoutBinding> instance_bindings{
-            {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .pImmutableSamplers = nullptr},
-            {.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
+            {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
+            //{.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
         };
 
         VkDescriptorSetLayoutCreateInfo layout_ci{};
@@ -296,8 +296,7 @@ namespace gage::gfx::data::terrain
         // vkDestroyShaderModule(gfx.device, geometry_shader, nullptr);
         vkDestroyShaderModule(gfx.device, fragment_shader, nullptr);
     }
-    VkDescriptorSet TerrainPipeline::allocate_descriptor_set(size_t size_in_bytes, VkBuffer buffer,
-                                                             VkImageView image_view, VkSampler sampler) const
+    VkDescriptorSet TerrainPipeline::allocate_descriptor_set(VkImageView image_view, VkSampler sampler) const
     {
         gfx.uploading_mutex.lock();
         VkDescriptorSet res{};
@@ -308,25 +307,25 @@ namespace gage::gfx::data::terrain
         alloc_info.pSetLayouts = &desc_layout;
         vk_check(vkAllocateDescriptorSets(gfx.device, &alloc_info, &res));
 
-        // Set 1 binding 0 = uniform buffer
-        VkDescriptorBufferInfo buffer_desc_info{};
-        buffer_desc_info.buffer = buffer;
-        buffer_desc_info.offset = 0;
-        buffer_desc_info.range = size_in_bytes;
+        // // Set 1 binding 0 = uniform buffer
+        // VkDescriptorBufferInfo buffer_desc_info{};
+        // buffer_desc_info.buffer = buffer;
+        // buffer_desc_info.offset = 0;
+        // buffer_desc_info.range = size_in_bytes;
 
         VkWriteDescriptorSet descriptor_write{};
         descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptor_write.dstSet = res;
-        descriptor_write.dstBinding = 0;
-        descriptor_write.dstArrayElement = 0;
-        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptor_write.descriptorCount = 1;
-        descriptor_write.pBufferInfo = &buffer_desc_info;
-        descriptor_write.pImageInfo = nullptr;
-        descriptor_write.pTexelBufferView = nullptr;
-        vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
+        // descriptor_write.dstSet = res;
+        // descriptor_write.dstBinding = 0;
+        // descriptor_write.dstArrayElement = 0;
+        // descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        // descriptor_write.descriptorCount = 1;
+        // descriptor_write.pBufferInfo = &buffer_desc_info;
+        // descriptor_write.pImageInfo = nullptr;
+        // descriptor_write.pTexelBufferView = nullptr;
+        // vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
 
-        // Set 1 binding 1 = texture
+        // Set 1 binding 0 = texture
 
         VkDescriptorImageInfo img_info{};
         img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -334,7 +333,7 @@ namespace gage::gfx::data::terrain
         img_info.sampler = sampler ? sampler : gfx.default_sampler;
 
         descriptor_write.dstSet = res;
-        descriptor_write.dstBinding = 1;
+        descriptor_write.dstBinding = 0;
         descriptor_write.dstArrayElement = 0; // Array index 0
         descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         descriptor_write.descriptorCount = 1;

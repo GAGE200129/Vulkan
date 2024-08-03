@@ -10,10 +10,9 @@ layout(location = 0) in VSOutput
     //vec3 world_pos;
     vec2 tex_coord;
     vec3 normal;
-    float color;
 } vs_in;
 
-layout(set = 1, binding = 1) uniform sampler2D image;
+layout(set = 1, binding = 0) uniform sampler2D image;
 
 
 void main()

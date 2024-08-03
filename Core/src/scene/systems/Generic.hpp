@@ -10,10 +10,17 @@ namespace gage::hid
     class Mouse;
 }
 
+namespace gage::scene
+{
+    class SceneGraph;
+}
+
+
 namespace gage::scene::systems
 {
     class Generic
     {
+        friend class scene::SceneGraph;
     public:
         Generic();
         ~Generic();

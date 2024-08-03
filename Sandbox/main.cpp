@@ -77,13 +77,6 @@ int main()
 
 
         const scene::data::Model &scene_model = scene->import_model("res/models/human_base.glb", scene::SceneGraph::ImportMode::Binary);
-        //const scene::data::Model &sponza_model = scene->import_model("res/models/sponza.glb", scene::SceneGraph::ImportMode::Binary);
-        //const scene::data::Model &crying_model = scene->import_model("res/models/crying.glb", scene::SceneGraph::ImportMode::Binary);
-        //scene->instanciate_model(sponza_model, {50, 0, 50});
-        //auto crying_node = scene->instanciate_model(crying_model, {50, 10, 50});
-        //scene->add_component(crying_node, std::make_unique<scene::components::Animator>(*scene, *crying_node, crying_model));
-        //scene::components::Animator* crying_node_animator = (scene::components::Animator*)crying_node->get_requested_component(typeid(scene::components::Animator).name());
-        //scene->add_component(crying_node, std::make_unique<scene::components::CharacterController>(*scene, *crying_node, phys));
 
         scene::Node *animated_node = scene->instanciate_model(scene_model, {0, 0, 0});
         scene->add_component(animated_node, std::make_unique<scene::components::Animator>(*scene, *animated_node, scene_model));
@@ -94,7 +87,7 @@ int main()
 
         auto terrain = scene->create_node();
         terrain->set_name("TErrain");
-        scene->add_component(terrain, std::make_unique<scene::components::TerrainRenderer>(*scene, *terrain, gfx, 32, 17, 512, 1.0f, 0.0f, 10.0f, 0.9f));
+        scene->add_component(terrain, std::make_unique<scene::components::TerrainRenderer>(*scene, *terrain, gfx, 8, 23, 1.0f));
 
         scene->init();
 
@@ -164,10 +157,6 @@ int main()
             g_buffer.begin_lightpass(cmd);
             final_ambient.process(cmd);
             directional_light.process(cmd);
-            // for (auto &p_light : point_lights)
-            // {
-            //     point_light.process(cmd, p_light);
-            // }
 
             g_buffer.end(cmd);
 

@@ -8,6 +8,7 @@
 
 #include <Core/src/gfx/Graphics.hpp>
 #include <Core/src/gfx/data/PBRPipeline.hpp>
+#include <imgui/imgui.h>
 
 #include <Core/src/mem.hpp>
 
@@ -801,5 +802,101 @@ namespace gage::scene
             log().critical("Process model animation out of range caught !");
             throw SceneException{};
         }
+    }
+
+    void SceneGraph::render_imgui()
+    {
+        static Node *selected_node = nullptr;
+        if (ImGui::Begin("SceneGraph"))
+        {
+            if (ImGui::Button("Save"))
+            {
+                save("res/maps/test.json");
+            }
+
+            if (ImGui::Button("New"))
+            {
+                create_node();
+            }
+
+            std::function<void(scene::Node * node)> browse_scene_graph_recursive;
+            browse_scene_graph_recursive = [&browse_scene_graph_recursive](scene::Node *node)
+            {
+                const std::string &node_name = node->get_name();
+                std::string id_string = std::to_string(node->get_id());
+                std::string name = !node_name.empty() ? node_name + "|" + id_string : id_string;
+
+                ImGuiTreeNodeFlags flags = 0;
+                flags |= selected_node == node ? ImGuiTreeNodeFlags_Selected : 0;
+                flags |= node->get_children().empty() ? ImGuiTreeNodeFlags_Leaf : 0;
+
+                if (ImGui::TreeNodeEx(name.c_str(), flags))
+                {
+                    if (ImGui::IsItemClicked())
+                    {
+                        selected_node = node;
+                    }
+                    for (const auto &child : node->get_children())
+                    {
+                        browse_scene_graph_recursive(child);
+                    }
+                    ImGui::TreePop();
+                }
+            };
+
+            browse_scene_graph_recursive(get_nodes().at(0).get());
+        }
+        ImGui::End();
+
+        if (ImGui::Begin("Node Inspector"))
+        {
+            if (selected_node)
+            {
+                selected_node->render_imgui();
+            }
+        }
+        ImGui::End();
+
+        if (ImGui::Begin("Scene Graph systems"))
+        {
+            ImGui::Text("Renderer");
+            ImGui::Text("Num mesh renderers: %lu", renderer.mesh_renderers.size());
+            for(const auto& mesh_renderer : renderer.mesh_renderers)
+            {
+                ImGui::Text("unique_ptr: %p", mesh_renderer.get());
+            }
+
+            ImGui::Text("Num terrain renderers: %lu", renderer.terrain_renderers.size());
+            for(const auto& terrain_renderer: renderer.terrain_renderers)
+            {
+                ImGui::Text("shared_ptr: %p", terrain_renderer.terrain_renderer.get());
+            }
+            ImGui::Separator();
+
+            ImGui::Text("Animation");
+            ImGui::Text("Num animators: %lu", animation.animators.size());
+            for(const auto& animator : animation.animators)
+            {
+                ImGui::Text("unique_ptr: %p", animator.get());
+            }
+            ImGui::Separator();
+
+            ImGui::Text("Physics");
+            ImGui::Text("Num character: %lu", physics.character_controllers.size());
+            for(const auto& character_controller : physics.character_controllers)
+            {
+                ImGui::Text("unique_ptr: %p", character_controller.get());
+            }
+
+            ImGui::Text("Num terrains: %lu", physics.terrain_renderers.size());
+            for(const auto& terrain : physics.terrain_renderers)
+            {
+                ImGui::Text("shared_ptr: %p", terrain.terrain_renderer.get());
+            }
+            
+
+
+        }
+        ImGui::End();
     }
 }

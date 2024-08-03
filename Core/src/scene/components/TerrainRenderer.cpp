@@ -25,11 +25,7 @@ namespace gage::scene::components
                                                      size(0),
                                                      patch_count(patch_count),
                                                      patch_size(patch_size),
-                                                     iteration(iteration),
-                                                     scale(scale),
-                                                     min_height(min_height),
-                                                     max_height(max_height),
-                                                     filter(filter)
+                                                     scale(scale)
     {
         // calculate size
         {
@@ -255,6 +251,38 @@ namespace gage::scene::components
         }
     }
 
+    TerrainRenderer::TerrainRenderer(SceneGraph &scene, Node &node, gfx::Graphics &gfx, uint32_t patch_count, uint32_t patch_size, float scale) :
+        IComponent(scene, node),
+        gfx(gfx),
+        size(0),
+        patch_count(patch_count),
+        patch_size(patch_size),
+        scale(scale)
+    {
+        // calculate size
+        {
+            this->size = (patch_size - 1) * patch_count + 1;
+        }
+        // Calculate lod
+        {
+            max_lod = glm::log2(patch_size - 1);
+            lod_infos.resize(max_lod + 1);
+            lod_regions.resize(patch_count * patch_count);
+        }
+        // Generate height map
+        {
+            // Default it to zero
+            height_map.reserve(size * size);
+            for (uint32_t i = 0; i < (size * size); i++)
+            {
+                height_map.push_back(0.0f);
+            }
+        }
+
+        
+        generate_vertex_datas();
+    }
+
     uint32_t TerrainRenderer::get_current_lod(uint32_t patch_x, uint32_t patch_y)
     {
         return lod_regions.at(patch_x + this->patch_count * patch_y);
@@ -262,18 +290,23 @@ namespace gage::scene::components
 
     void TerrainRenderer::render_imgui()
     {
-        ImGui::DragInt("LOD", &current_lod, 1.0f, 0, max_lod);
+        
     }
 
-    bool TerrainRenderer::is_inside_frustum(uint32_t x, uint32_t y, const glm::mat4x4& view, const glm::mat4x4& proj)
+    nlohmann::json TerrainRenderer::to_json() const
     {
-        auto test = [](const glm::vec3& p, const glm::mat4x4& view, const glm::mat4x4& proj) -> bool
-        {   
+        return {};
+    }
+
+    bool TerrainRenderer::is_inside_frustum(uint32_t x, uint32_t y, const glm::mat4x4 &view, const glm::mat4x4 &proj)
+    {
+        auto test = [](const glm::vec3 &p, const glm::mat4x4 &view, const glm::mat4x4 &proj) -> bool
+        {
             glm::vec4 p_4d(p, 1.0f);
             glm::vec4 clip = proj * view * p_4d;
-            bool inside = (clip.x <= clip.w) && (clip.x >= -clip.w) && 
-                        (clip.y <= clip.w) && (clip.y >= -clip.w) && 
-                        (clip.z <= clip.w) && (clip.z >= -clip.w) ;
+            bool inside = (clip.x <= clip.w) && (clip.x >= -clip.w) &&
+                          (clip.y <= clip.w) && (clip.y >= -clip.w) &&
+                          (clip.z <= clip.w) && (clip.z >= -clip.w);
             return inside;
         };
         uint32_t x0 = x;
@@ -285,7 +318,6 @@ namespace gage::scene::components
         glm::vec3 p01 = {float(x0) * scale, height_map.at(x0 + size * y1), float(y1) * scale};
         glm::vec3 p10 = {float(x1) * scale, height_map.at(x1 + size * y0), float(y0) * scale};
         glm::vec3 p11 = {float(x1) * scale, height_map.at(x1 + size * y1), float(y1) * scale};
-        
 
         bool inside_view_frustum = test(p00, view, proj) || test(p01, view, proj) || test(p10, view, proj) || test(p11, view, proj);
         return inside_view_frustum;
@@ -302,16 +334,16 @@ namespace gage::scene::components
 
                 glm::vec3 patch_center = {(float)x * scale, 0.0f, (float)y * scale};
 
-                float distance = glm::length(patch_center - glm::vec3{camera_position.x, 0.0f, camera_position.z} );
+                float distance = glm::length(patch_center - glm::vec3{camera_position.x, 0.0f, camera_position.z});
                 uint32_t lod = max_lod;
 
-                if(distance < 50.0f)
+                if (distance < 50.0f)
                     lod = 0;
-                else if(distance < 100.0f)
+                else if (distance < 100.0f)
                     lod = 1;
-                else if(distance < 150.0f)
+                else if (distance < 150.0f)
                     lod = 2;
-                else if(distance < 200.0f)
+                else if (distance < 200.0f)
                     lod = 3;
 
                 lod_regions.at(patch_x + this->patch_count * patch_y) = lod;

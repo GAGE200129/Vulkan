@@ -40,9 +40,10 @@ namespace gage::scene::components
 
     public:
         TerrainRenderer(SceneGraph &scene, Node &node, gfx::Graphics &gfx, uint32_t patch_count, uint32_t patch_size, uint32_t iteration, float scale, float min_height, float max_height, float filter);
+        TerrainRenderer(SceneGraph &scene, Node &node, gfx::Graphics &gfx, uint32_t patch_count, uint32_t patch_size, float scale);
         
 
-        nlohmann::json to_json() const final { return {}; };
+        nlohmann::json to_json() const final;
 
         void update_lod_regons(const glm::vec3& camera_position);
         bool is_inside_frustum(uint32_t x, uint32_t y, const glm::mat4x4& view, const glm::mat4x4& proj);
@@ -63,17 +64,9 @@ namespace gage::scene::components
         uint32_t max_lod{};
         std::vector<LODInfo> lod_infos{};
         std::vector<uint32_t> lod_regions{};
-        uint32_t iteration{};
         float scale{};
-        float min_height{};
-        float max_height{};
-        float uv_scale{};
-        float filter{};
         std::vector<float> height_map{};
         std::vector<Vertex> vertex_data;
         std::vector<uint32_t> indices_data;
-
-        //Temp current lod
-        int32_t current_lod{0};
     };
 }

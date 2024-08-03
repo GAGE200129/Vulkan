@@ -15,10 +15,17 @@ namespace gage::phys
     class Physics;
 }
 
+namespace gage::scene
+{
+    class SceneGraph;
+}
+
+
 namespace gage::scene::systems
 {
     class Physics
     {
+        friend class scene::SceneGraph;
     private:
         struct TerrainRenderer
         {
