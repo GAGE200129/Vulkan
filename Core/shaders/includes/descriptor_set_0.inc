@@ -14,6 +14,8 @@ layout(set = 0, binding = 0) uniform UniformBuffer
 
     vec3 ambient_light_color;
     float ambient_light_intensity;
+    float ambient_fog_begin;
+    float ambient_fog_end;
 
     vec3 directional_light_direction; 
     vec3 directional_light_color;

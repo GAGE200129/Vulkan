@@ -14,7 +14,8 @@ namespace gage::gfx::data
         // Create descriptor set layout
         {
             std::vector<VkDescriptorSetLayoutBinding> bindings{
-                {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 2, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
+                {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 3, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
+                {.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
             };
 
             VkDescriptorSetLayoutCreateInfo ci{};
@@ -266,6 +267,30 @@ namespace gage::gfx::data
         descriptor_write.dstSet = desc;
         descriptor_write.dstBinding = 0;
         descriptor_write.dstArrayElement = 1;
+        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptor_write.descriptorCount = 1;
+        descriptor_write.pBufferInfo = nullptr;
+        descriptor_write.pImageInfo = &img_info;
+        descriptor_write.pTexelBufferView = nullptr;
+        vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
+
+        // Link to depth g_buffer
+        img_info.imageView = gfx.geometry_buffer->get_depth_view();
+        descriptor_write.dstSet = desc;
+        descriptor_write.dstBinding = 0;
+        descriptor_write.dstArrayElement = 2;
+        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptor_write.descriptorCount = 1;
+        descriptor_write.pBufferInfo = nullptr;
+        descriptor_write.pImageInfo = &img_info;
+        descriptor_write.pTexelBufferView = nullptr;
+        vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
+
+         // Link to stencil g_buffer
+        img_info.imageView = gfx.geometry_buffer->get_stencil_view();
+        descriptor_write.dstSet = desc;
+        descriptor_write.dstBinding = 1;
+        descriptor_write.dstArrayElement = 0;
         descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         descriptor_write.descriptorCount = 1;
         descriptor_write.pBufferInfo = nullptr;

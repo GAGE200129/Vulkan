@@ -76,13 +76,13 @@ int main()
         scene.emplace(gfx, phys, camera);
 
 
-        const scene::data::Model &scene_model = scene->import_model("res/models/human_base.glb", scene::SceneGraph::ImportMode::Binary);
+        const scene::data::Model &scene_model = scene->import_model("res/models/human_base_no_head.glb", scene::SceneGraph::ImportMode::Binary);
         //const scene::data::Model &sponza_model = scene->import_model("res/models/sponza.glb", scene::SceneGraph::ImportMode::Binary);
-        //const scene::data::Model &crying_model = scene->import_model("res/models/crying.glb", scene::SceneGraph::ImportMode::Binary);
+        const scene::data::Model &crying_model = scene->import_model("res/models/crying.glb", scene::SceneGraph::ImportMode::Binary);
         //scene->instanciate_model(sponza_model, {50, 0, 50});
-        //auto crying_node = scene->instanciate_model(crying_model, {50, 75, 50});
-        //scene::components::Animator* crying_node_animator = (scene::components::Animator*)crying_node->get_requested_component(typeid(scene::components::Animator).name());
-        //scene->add_component(crying_node, std::make_unique<scene::components::CharacterController>(*scene, *crying_node, phys));
+        auto crying_node = scene->instanciate_model(crying_model, {50, 150, 50});
+        scene::components::Animator* crying_node_animator = (scene::components::Animator*)crying_node->get_requested_component(typeid(scene::components::Animator).name());
+        scene->add_component(crying_node, std::make_unique<scene::components::CharacterController>(*scene, *crying_node, phys));
 
         scene::Node *animated_node = scene->instanciate_model(scene_model, {0, 0, 0});
         animated_node->set_position({50, 150, 50});
@@ -91,7 +91,7 @@ int main()
         scene->add_component(animated_node, std::make_unique<FPSCharacterController>(*scene, *animated_node, phys, camera));
 
         auto terrain = scene->create_node();
-        scene->add_component(terrain, std::make_unique<scene::components::TerrainRenderer>(*scene, *terrain, gfx, 64, 17, 512, 1.0f, 0.0f, 100.0f, 0.9f));
+        scene->add_component(terrain, std::make_unique<scene::components::TerrainRenderer>(*scene, *terrain, gfx, 16, 17, 512, 1.0f, 0.0f, 100.0f, 0.9f));
         scene->init();
 
         //scene::systems::Animation::set_animator_animation(crying_node_animator, "Armature|mixamo.com|Layer0");
@@ -99,7 +99,7 @@ int main()
         auto previous = std::chrono::high_resolution_clock::now();
         uint64_t lag = 0;
 
-        double tick_time_in_seconds = 1.0 / 128.0;
+        double tick_time_in_seconds = 1.0 / 64.0;
         uint64_t tick_time_in_nanoseconds = tick_time_in_seconds * 1E9;
 
         while (!window.is_closing())
@@ -122,7 +122,6 @@ int main()
                 scene->get_animation().late_update(tick_time_in_seconds);
                 lag -= tick_time_in_nanoseconds;
             }
-            // double elapsed_time_in_seconds = (double)elapsed.count() * 1E-9;
 
             mouse.update();
             win::update();

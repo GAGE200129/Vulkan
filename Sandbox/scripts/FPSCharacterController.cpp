@@ -18,26 +18,23 @@
 
 using namespace gage;
 
-FPSCharacterController::FPSCharacterController(scene::SceneGraph &scene, scene::Node &node, phys::Physics &phys, gfx::data::Camera &camera) : 
-    Script(scene, node),
-    camera(camera)
+FPSCharacterController::FPSCharacterController(scene::SceneGraph &scene, scene::Node &node, phys::Physics &phys, gfx::data::Camera &camera) : Script(scene, node),
+                                                                                                                                              camera(camera)
 {
 }
 
 void FPSCharacterController::init()
 {
-    character_controller = (scene::components::CharacterController*)this->node.get_requested_component(typeid(scene::components::CharacterController).name());
+    character_controller = (scene::components::CharacterController *)this->node.get_requested_component(typeid(scene::components::CharacterController).name());
 
     head_node = this->node.search_child_by_name("mixamorig:Head");
     spine1 = this->node.search_child_by_name("mixamorig:Spine1");
     spine = this->node.search_child_by_name("mixamorig:Spine");
     hips = this->node.search_child_by_name("mixamorig:Hips");
 
-    //hips->set_position({0.0f, -0.8f, 0.0f});
+    // hips->set_position({0.0f, -0.8f, 0.0f});
 
-    scene::components::Animator *animator = (scene::components::Animator *)node.get_requested_component(typeid(scene::components::Animator).name());
-
-    scene::systems::Animation::set_animator_animation(animator, "Test1");
+    animator = (scene::components::Animator *)node.get_requested_component(typeid(scene::components::Animator).name());
 }
 void FPSCharacterController::update(float delta, const hid::Keyboard &keyboard, const hid::Mouse &mouse)
 {
@@ -64,7 +61,7 @@ void FPSCharacterController::update(float delta, const hid::Keyboard &keyboard, 
         target_roll += 30.0f;
     }
     roll = std::lerp(roll, target_roll, delta * 5.0f);
-    
+
     glm::vec2 dir{0, 0};
     if (keyboard.get_action("FORWARD"))
     {
@@ -86,13 +83,12 @@ void FPSCharacterController::update(float delta, const hid::Keyboard &keyboard, 
 
     if (keyboard.get_action("JUMP"))
     {
-        
+
         if (scene::systems::Physics::character_get_ground_state(character_controller) == scene::systems::Physics::GroundState::GROUND)
         {
             scene::systems::Physics::character_add_impulse(character_controller, glm::vec3{0.0f, 10000.0f, 0.0f} * delta);
         }
     }
-
 
     if (keyboard.get_action("SPRINT"))
     {
@@ -108,14 +104,17 @@ void FPSCharacterController::update(float delta, const hid::Keyboard &keyboard, 
     }
 
     auto velocity = scene::systems::Physics::character_get_velocity(character_controller);
-    if (glm::length2(dir) != 0.0f && glm::length2(velocity) < glm::pow(current_speed, 2.0f) && 
-        scene::systems::Physics::character_get_ground_state(character_controller) ==  scene::systems::Physics::GroundState::GROUND)
+    if (glm::length2(dir) != 0.0f && glm::length2(velocity) < glm::pow(current_speed, 2.0f) &&
+        scene::systems::Physics::character_get_ground_state(character_controller) == scene::systems::Physics::GroundState::GROUND)
     {
         dir = glm::normalize(dir);
         scene::systems::Physics::character_add_impulse(character_controller, glm::vec3{dir.x, 0.0f, dir.y} * 3200.0f * delta);
+        scene::systems::Animation::set_animator_animation(animator, "Test1");
     }
-
-
+    else
+    {
+        scene::systems::Animation::set_animator_animation(animator, "Test2");
+    }
 
     // camera.position = translation;
     spine->set_rotation(glm::quat(glm::vec3(glm::radians(-pitch), 0.0f, glm::radians(roll))));
@@ -131,7 +130,6 @@ void FPSCharacterController::late_update(float delta, const hid::Keyboard &keybo
     glm::vec3 skew;
     glm::vec4 perspective;
     glm::decompose(head_global_transform, scale, rotation, translation, skew, perspective);
-    
 
     camera.rotation.x = pitch;
     camera.rotation.y = yaw;
@@ -141,5 +139,4 @@ void FPSCharacterController::late_update(float delta, const hid::Keyboard &keybo
 
 void FPSCharacterController::shutdown()
 {
-    
 }

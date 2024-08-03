@@ -2,6 +2,7 @@
 
 #include <Core/src/scene/components/Script.hpp>
 #include <Core/src/scene/components/CharacterController.hpp>
+#include <Core/src/scene/components/Animator.hpp>
 
 namespace gage::gfx::data
 {
@@ -30,6 +31,7 @@ private:
     gage::gfx::data::Camera &camera;
 
     gage::scene::components::CharacterController* character_controller{};
+    gage::scene::components::Animator* animator{};
     gage::scene::Node *head_node{};
     gage::scene::Node *spine1{};
     gage::scene::Node *spine{};

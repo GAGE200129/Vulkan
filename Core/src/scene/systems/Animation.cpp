@@ -41,7 +41,7 @@ namespace gage::scene::systems
                 mesh_renderer->get_animation_buffer().enabled = (animator->current_animation != nullptr);
             }
             if (animator->current_animation == nullptr)
-                return;
+                continue;
 
             animator->current_time += delta;
 
@@ -62,7 +62,7 @@ namespace gage::scene::systems
                 float diff = next_time_point - current_time_point;
                 scale_factor = current_time_rev_to_current_time_point / diff;
 
-                //scale_factor = std::floor(scale_factor);
+                // scale_factor = std::floor(scale_factor);
                 return scale_factor;
             };
 
@@ -112,7 +112,7 @@ namespace gage::scene::systems
         for (std::unique_ptr<components::Animator> &animator : animators)
         {
             if (animator->current_animation == nullptr)
-                return;
+                continue;
             for (const auto &[skeleton_id, joint] : animator->skeleton_id_to_joint_map)
             {
                 for (const auto mesh_renderer : animator->p_mesh_renderers)
@@ -124,18 +124,14 @@ namespace gage::scene::systems
     }
     void Animation::shutdown()
     {
-
     }
     void Animation::add_animator(std::unique_ptr<components::Animator> animator)
     {
         animators.push_back(std::move(animator));
     }
 
-    void Animation::set_animator_animation(components::Animator* animator, const std::string& animation)
+    void Animation::set_animator_animation(components::Animator *animator, const std::string &animation)
     {
-        animator->bone_id_to_joint_map.clear();
-        animator->skeleton_id_to_joint_map.clear();
-        animator->current_animation = nullptr;
 
         std::function<void(std::map<uint32_t, Node *> & out_joints, const data::ModelAnimation &animation, Node *node)> link_bone_id_recursive;
         link_bone_id_recursive = [&link_bone_id_recursive](std::map<uint32_t, Node *> &out_joints, const data::ModelAnimation &animation, Node *node)
@@ -180,6 +176,13 @@ namespace gage::scene::systems
             }
         };
 
+        if (animator->current_animation && animator->current_animation->name.compare(animation) == 0)
+        {
+            return;
+        }
+        animator->current_animation = nullptr;
+        animator->bone_id_to_joint_map.clear();
+        animator->skeleton_id_to_joint_map.clear();
         for (const auto &model_animation : animator->model_animations)
         {
             log().trace("Searching animation: {}", model_animation.name);
@@ -194,7 +197,7 @@ namespace gage::scene::systems
                     link_skeleton_id(animator->skeleton_id_to_joint_map, animator->bone_id_to_joint_map, mesh_renderer->get_skin()->joints);
                 }
 
-                log().trace("skeleton_id_to_joint_map.size(): {}", animator->skeleton_id_to_joint_map.size() );
+                log().trace("skeleton_id_to_joint_map.size(): {}", animator->skeleton_id_to_joint_map.size());
 
                 break;
             }

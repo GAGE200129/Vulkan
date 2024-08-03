@@ -155,6 +155,8 @@ namespace gage::win
             {
                 window.get_graphics().set_ssao_bias_and_radius(ssao_bias, ssao_radius);
             }
+            ImGui::DragFloat("Ambient: Fog begin", &ubo.ambient_fog_begin, 0.1f, 10.0f, 10000.0f);
+            ImGui::DragFloat("Ambient: Fog end", &ubo.ambient_fog_end, 0.1f, 10.0f, 10000.0f);
             ImGui::Separator();
             if(ImGui::DragFloat3("Directional: direction", &ubo.directional_light_direction.x, 0.01f, -1, 1))
             {

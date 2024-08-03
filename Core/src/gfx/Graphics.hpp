@@ -194,6 +194,9 @@ namespace gage::gfx
 
             glm::vec3 ambient_light_color{1, 1, 1};
             float ambient_light_intensity{0.1f};
+            float ambient_fog_begin{30.1f};
+            float ambient_fog_end{500.1f};
+            float padding4[2];
 
             glm::vec3 directional_light_direction{0, -1, 0}; float padding2;
             glm::vec3 directional_light_color{1, 1, 1}; float padding3;

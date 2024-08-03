@@ -27,7 +27,7 @@ namespace gage::scene::components
         Animator(SceneGraph &scene, Node &node, const data::Model &model, const std::vector<data::ModelAnimation> &model_animations);
 
     
-        inline void render_imgui() final {};
+        void render_imgui() final;
         inline const char* get_name() const final { return "Animator"; };
 
 
