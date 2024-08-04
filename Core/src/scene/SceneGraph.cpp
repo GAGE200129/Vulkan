@@ -7,7 +7,6 @@
 #include "components/Animator.hpp"
 
 #include <Core/src/gfx/Graphics.hpp>
-#include <Core/src/gfx/data/PBRPipeline.hpp>
 #include <imgui/imgui.h>
 
 #include <Core/src/mem.hpp>
@@ -69,7 +68,8 @@ namespace tinygltf
 namespace gage::scene
 {
     SceneGraph::SceneGraph(gfx::Graphics &gfx, phys::Physics &phys, const gfx::data::Camera &camera) : gfx(gfx),
-                                                                                                       renderer(gfx, camera),
+                                                                                                       renderer(gfx),
+                                                                                                       terrain_renderer(gfx, camera),
                                                                                                        physics(phys)
     {
         // Create root node
@@ -83,6 +83,7 @@ namespace gage::scene
     {
         generic.shutdown();
         renderer.shutdown();
+        terrain_renderer.shutdown();
         animation.shutdown();
         physics.shutdown();
     }
@@ -100,6 +101,7 @@ namespace gage::scene
     void SceneGraph::init()
     {
         renderer.init();
+        terrain_renderer.init();
         animation.init();
         physics.init();
         generic.init();
@@ -349,11 +351,11 @@ namespace gage::scene
         {
             renderer.add_pbr_mesh_renderer(std::unique_ptr<components::MeshRenderer>(static_cast<components::MeshRenderer *>(ptr)));
         }
-        else if (std::strcmp(ptr->get_name(), "TerrainRenderer") == 0) // this component will be shared
+        else if (std::strcmp(ptr->get_name(), "Terrain") == 0) // this component will be shared
         {
-            auto terrain_renderer = std::shared_ptr<components::TerrainRenderer>(static_cast<components::TerrainRenderer *>(ptr));
-            renderer.add_terrain_renderer(terrain_renderer);
-            physics.add_terrain_renderer(terrain_renderer);
+            auto terrain = std::shared_ptr<components::Terrain>(static_cast<components::Terrain *>(ptr));
+            terrain_renderer.add_terrain(terrain);
+            physics.add_terrain_renderer(terrain);
         }
         else if (std::strcmp(ptr->get_name(), "Animator") == 0)
         {
@@ -387,6 +389,10 @@ namespace gage::scene
     systems::Animation &SceneGraph::get_animation()
     {
         return animation;
+    }
+    systems::TerrainRenderer& SceneGraph::get_terrain_renderer()
+    {
+        return terrain_renderer; 
     }
     systems::Physics &SceneGraph::get_physics()
     {
@@ -464,7 +470,7 @@ namespace gage::scene
 
         material.uniform_buffer = std::make_unique<gfx::data::CPUBuffer>(gfx, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(data::ModelMaterial::UniformBuffer), &material.uniform_buffer_data);
 
-        gfx::data::PBRPipeline::MaterialSetAllocInfo alloc_info{
+        systems::Renderer::MaterialSetAllocInfo alloc_info{
             .size_in_bytes = sizeof(data::ModelMaterial::UniformBuffer),
             .buffer = material.uniform_buffer->get_buffer_handle(),
             .albedo_view = material.albedo_image ? material.albedo_image->get_image_view() : VK_NULL_HANDLE,
@@ -473,7 +479,7 @@ namespace gage::scene
             .metalic_roughness_sampler = material.metalic_roughness_image ? material.metalic_roughness_image->get_sampler() : VK_NULL_HANDLE,
             .normal_view = material.normal_image ? material.normal_image->get_image_view() : VK_NULL_HANDLE,
             .normal_sampler = material.normal_image ? material.normal_image->get_sampler() : VK_NULL_HANDLE};
-        material.descriptor_set = gfx.get_pbr_pipeline().allocate_material_set(alloc_info);
+        material.descriptor_set = renderer.allocate_material_set(alloc_info);
     }
 
     void SceneGraph::process_model_skin(const tinygltf::Model &gltf_model, const tinygltf::Skin &gltf_skin, data::ModelSkin &skin)
@@ -866,10 +872,10 @@ namespace gage::scene
                 ImGui::Text("unique_ptr: %p", mesh_renderer.get());
             }
 
-            ImGui::Text("Num terrain renderers: %lu", renderer.terrain_renderers.size());
-            for(const auto& terrain_renderer: renderer.terrain_renderers)
+            ImGui::Text("Num terrain renderers: %lu", terrain_renderer.terrains.size());
+            for(const auto& terrain: terrain_renderer.terrains)
             {
-                ImGui::Text("shared_ptr: %p", terrain_renderer.terrain_renderer.get());
+                ImGui::Text("shared_ptr: %p", terrain.terrain.get());
             }
             ImGui::Separator();
 

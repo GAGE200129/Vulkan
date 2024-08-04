@@ -1,27 +1,95 @@
 #include <pch.hpp>
-#include "TerrainPipeline.hpp"
+#include "TerrainRenderer.hpp"
 
-#include "../../Graphics.hpp"
-#include "../g_buffer/GBuffer.hpp"
-
+#include <Core/src/gfx/Graphics.hpp>
+#include <Core/src/gfx/data/Camera.hpp>
 #include <Core/src/utils/FileLoader.hpp>
+#include <Core/src/gfx/data/g_buffer/GBuffer.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
-namespace gage::gfx::data::terrain
+#include "../scene.hpp"
+
+namespace gage::scene::systems
 {
-    TerrainPipeline::TerrainPipeline(Graphics &gfx) : gfx(gfx)
+    TerrainRenderer::TerrainRenderer(gfx::Graphics &gfx, const gfx::data::Camera &camera) : gfx(gfx),
+                                                                                            camera(camera)
     {
         create_pipeline();
         create_depth_pipeline();
     }
-    TerrainPipeline::~TerrainPipeline()
+    TerrainRenderer::~TerrainRenderer()
     {
-        destroy_depth_pipeline();
-        vkDestroyDescriptorSetLayout(gfx.device, desc_layout, nullptr);
-        vkDestroyPipelineLayout(gfx.device, pipeline_layout, nullptr);
-        vkDestroyPipeline(gfx.device, pipeline, nullptr);
+        vkDestroyPipelineLayout(gfx.get_device(), depth_pipeline_layout, nullptr);
+        vkDestroyPipeline(gfx.get_device(), depth_pipeline, nullptr);
+
+        vkDestroyDescriptorSetLayout(gfx.get_device(), desc_layout, nullptr);
+        vkDestroyPipelineLayout(gfx.get_device(), pipeline_layout, nullptr);
+        vkDestroyPipeline(gfx.get_device(), pipeline, nullptr);
     }
 
-    void TerrainPipeline::bind(VkCommandBuffer cmd) const
+    void TerrainRenderer::init()
+    {
+        // Init terrain renderers
+        for (auto &terrain : terrains)
+        {
+            terrain.vertex_buffer =
+                std::make_unique<gfx::data::GPUBuffer>(gfx,
+                                                       VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                                       terrain.terrain->vertex_data.size() * sizeof(components::Terrain::Vertex),
+                                                       terrain.terrain->vertex_data.data());
+
+            terrain.index_buffer =
+                std::make_unique<gfx::data::GPUBuffer>(gfx,
+                                                       VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                                                       terrain.terrain->indices_data.size() * sizeof(uint32_t),
+                                                       terrain.terrain->indices_data.data());
+
+            // Load test image
+            {
+                int w, h, comp;
+                stbi_uc *data = stbi_load("res/textures/grass_tiled.jpg", &w, &h, &comp, STBI_rgb);
+                if (!data)
+                {
+                    log().critical("Failed to terrain load image: {}", "res/textures/grass_tiled.jpg");
+                    throw SceneException{};
+                }
+
+                uint32_t size_in_bytes = w * h * 3;
+                gfx::data::ImageCreateInfo image_ci{data, w, h, 1, size_in_bytes, VK_FORMAT_R8G8B8_UNORM, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT};
+
+                image_ci.mip_levels = std::floor(std::log2(std::max(w, h))) + 1;
+                terrain.image = std::make_unique<gfx::data::Image>(gfx, image_ci);
+                stbi_image_free(data);
+            }
+
+            // Create descriptor
+            {
+                // terrain.uniform_buffer_data.min_height = terrain.terrain->min_height;
+                // terrain.uniform_buffer_data.max_height = terrain.terrain->max_height;
+                // terrain.uniform_buffer_data.uv_scale = terrain.terrain->size;
+
+                // terrain.uniform_buffer = std::make_unique<gfx::data::CPUBuffer>(gfx, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Terrain::UniformBuffer), nullptr);
+                terrain.descriptor = this->allocate_descriptor_set(terrain.image->get_image_view(), terrain.image->get_sampler());
+            }
+        }
+    }
+    void TerrainRenderer::shutdown()
+    {
+        for (const auto &terrain : terrains)
+        {
+            vkFreeDescriptorSets(gfx.get_device(), gfx.get_desc_pool(), 1, &terrain.descriptor);
+        }
+    }
+
+    void TerrainRenderer::add_terrain(std::shared_ptr<components::Terrain> terrain)
+    {
+        Terrain additional_terrain_datas{};
+        additional_terrain_datas.terrain = terrain;
+
+        this->terrains.push_back(std::move(additional_terrain_datas));
+    }
+
+    void TerrainRenderer::render(VkCommandBuffer cmd) const
     {
         VkViewport viewport = {};
         viewport.x = 0;
@@ -38,20 +106,170 @@ namespace gage::gfx::data::terrain
         scissor.extent.height = gfx.get_scaled_draw_extent().height;
 
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &gfx.frame_datas[gfx.frame_index].global_set, 0, nullptr);
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &gfx.get_frame_data().global_set, 0, nullptr);
         vkCmdSetViewport(cmd, 0, 1, &viewport);
         vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+        for (const auto &terrain : terrains)
+        {
+
+            terrain.terrain->update_lod_regons(camera.position);
+
+            // std::memcpy(terrain.uniform_buffer->get_mapped(), &terrain.uniform_buffer_data, sizeof(Terrain::UniformBuffer));
+            VkBuffer buffers[] =
+                {
+                    terrain.vertex_buffer->get_buffer_handle()
+
+                };
+            VkDeviceSize offsets[] = {
+                0};
+            glm::mat4x4 transform(1.0f);
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline_layout, 1, 1, &terrain.descriptor, 0, nullptr);
+            vkCmdPushConstants(cmd, this->pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), glm::value_ptr(transform));
+            vkCmdBindVertexBuffers(cmd, 0, 1, buffers, offsets);
+            vkCmdBindIndexBuffer(cmd, terrain.index_buffer->get_buffer_handle(), 0, VK_INDEX_TYPE_UINT32);
+            for (uint32_t patch_y = 0; patch_y < terrain.terrain->patch_count; patch_y++)
+                for (uint32_t patch_x = 0; patch_x < terrain.terrain->patch_count; patch_x++)
+                {
+                    uint32_t x = patch_x * (terrain.terrain->patch_size - 1);
+                    uint32_t y = patch_y * (terrain.terrain->patch_size - 1);
+
+                    uint32_t lod = terrain.terrain->get_current_lod(patch_x, patch_y);
+                    if (lod != 0)
+                    {
+                        auto proj = glm::perspectiveFovRH_ZO(glm::radians(camera.get_field_of_view()),
+                                                             (float)gfx.get_scaled_draw_extent().width, (float)gfx.get_scaled_draw_extent().height,
+                                                             0.001f, camera.get_far());
+                        if (!terrain.terrain->is_inside_frustum(x, y, camera.get_view(), proj))
+                        {
+                            continue;
+                        }
+                    }
+                    uint32_t base_vertex = x + y * terrain.terrain->size;
+                    uint32_t base_index = terrain.terrain->lod_infos.at(lod).start;
+                    uint32_t vertex_count = terrain.terrain->lod_infos.at(lod).count;
+                    vkCmdDrawIndexed(cmd, vertex_count, 1, base_index, base_vertex, 0);
+                }
+        }
     }
-    VkPipelineLayout TerrainPipeline::get_layout() const
+    void TerrainRenderer::render_depth(VkCommandBuffer cmd) const
     {
-        return pipeline_layout;
+        VkViewport viewport = {};
+        viewport.x = 0;
+        viewport.y = 0;
+        viewport.width = gfx.get_directional_light_shadow_map_resolution();
+        viewport.height = gfx.get_directional_light_shadow_map_resolution();
+        viewport.minDepth = 0.f;
+        viewport.maxDepth = 1.f;
+
+        VkRect2D scissor = {};
+        scissor.offset.x = 0;
+        scissor.offset.y = 0;
+        scissor.extent.width = gfx.get_directional_light_shadow_map_resolution();
+        scissor.extent.height = gfx.get_directional_light_shadow_map_resolution();
+
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, depth_pipeline);
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, depth_pipeline_layout, 0, 1, &gfx.get_frame_data().global_set, 0, nullptr);
+
+        vkCmdSetViewport(cmd, 0, 1, &viewport);
+        vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+        for (const auto &terrain : terrains)
+        {
+
+            terrain.terrain->update_lod_regons(camera.position);
+
+            // std::memcpy(terrain.uniform_buffer->get_mapped(), &terrain.uniform_buffer_data, sizeof(Terrain::UniformBuffer));
+            VkBuffer buffers[] =
+                {
+                    terrain.vertex_buffer->get_buffer_handle()
+
+                };
+            VkDeviceSize offsets[] = {
+                0};
+            glm::mat4x4 transform(1.0f);
+            vkCmdBindVertexBuffers(cmd, 0, 1, buffers, offsets);
+            vkCmdBindIndexBuffer(cmd, terrain.index_buffer->get_buffer_handle(), 0, VK_INDEX_TYPE_UINT32);
+            for (uint32_t patch_y = 0; patch_y < terrain.terrain->patch_count; patch_y++)
+                for (uint32_t patch_x = 0; patch_x < terrain.terrain->patch_count; patch_x++)
+                {
+                    uint32_t x = patch_x * (terrain.terrain->patch_size - 1);
+                    uint32_t y = patch_y * (terrain.terrain->patch_size - 1);
+
+                    uint32_t lod = terrain.terrain->get_current_lod(patch_x, patch_y);
+                    if (lod != 0)
+                    {
+                        auto proj = glm::perspectiveFovRH_ZO(glm::radians(camera.get_field_of_view()),
+                                                             (float)gfx.get_scaled_draw_extent().width, (float)gfx.get_scaled_draw_extent().height,
+                                                             0.001f, camera.get_far());
+                        if (!terrain.terrain->is_inside_frustum(x, y, camera.get_view(), proj))
+                        {
+                            continue;
+                        }
+                    }
+                    uint32_t base_vertex = x + y * terrain.terrain->size;
+                    uint32_t base_index = terrain.terrain->lod_infos.at(lod).start;
+                    uint32_t vertex_count = terrain.terrain->lod_infos.at(lod).count;
+                    vkCmdDrawIndexed(cmd, vertex_count, 1, base_index, base_vertex, 0);
+                }
+        }
     }
-    void TerrainPipeline::reset()
+
+    VkDescriptorSet TerrainRenderer::allocate_descriptor_set(VkImageView image_view, VkSampler sampler) const
+    {
+        VkDescriptorSet res{};
+        VkDescriptorSetAllocateInfo alloc_info{};
+        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        alloc_info.descriptorSetCount = 1;
+        alloc_info.descriptorPool = gfx.get_desc_pool();
+        alloc_info.pSetLayouts = &desc_layout;
+        vk_check(vkAllocateDescriptorSets(gfx.get_device(), &alloc_info, &res));
+
+        // // Set 1 binding 0 = uniform buffer
+        // VkDescriptorBufferInfo buffer_desc_info{};
+        // buffer_desc_info.buffer = buffer;
+        // buffer_desc_info.offset = 0;
+        // buffer_desc_info.range = size_in_bytes;
+
+        VkWriteDescriptorSet descriptor_write{};
+        descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        // descriptor_write.dstSet = res;
+        // descriptor_write.dstBinding = 0;
+        // descriptor_write.dstArrayElement = 0;
+        // descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        // descriptor_write.descriptorCount = 1;
+        // descriptor_write.pBufferInfo = &buffer_desc_info;
+        // descriptor_write.pImageInfo = nullptr;
+        // descriptor_write.pTexelBufferView = nullptr;
+        // vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
+
+        // Set 1 binding 0 = texture
+
+        VkDescriptorImageInfo img_info{};
+        img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        img_info.imageView = image_view;
+        img_info.sampler = sampler;
+
+        descriptor_write.dstSet = res;
+        descriptor_write.dstBinding = 0;
+        descriptor_write.dstArrayElement = 0; // Array index 0
+        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptor_write.descriptorCount = 1;
+        descriptor_write.pBufferInfo = nullptr;
+        descriptor_write.pImageInfo = &img_info;
+        descriptor_write.pTexelBufferView = nullptr;
+        vkUpdateDescriptorSets(gfx.get_device(), 1, &descriptor_write, 0, nullptr);
+
+        return res;
+    }
+
+    void TerrainRenderer::reset()
     {
     }
-    void TerrainPipeline::create_pipeline()
+
+    void TerrainRenderer::create_pipeline()
     {
-        // PER INSTANCE SET LAYOUT
+         // PER INSTANCE SET LAYOUT
         std::vector<VkDescriptorSetLayoutBinding> instance_bindings{
             {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
             //{.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
@@ -62,21 +280,21 @@ namespace gage::gfx::data::terrain
         layout_ci.bindingCount = instance_bindings.size();
         layout_ci.pBindings = instance_bindings.data();
         layout_ci.flags = 0;
-        vk_check(vkCreateDescriptorSetLayout(gfx.device, &layout_ci, nullptr, &desc_layout));
+        vk_check(vkCreateDescriptorSetLayout(gfx.get_device(), &layout_ci, nullptr, &desc_layout));
         std::vector<VkPushConstantRange> push_constants{
             VkPushConstantRange{
                 VK_SHADER_STAGE_ALL,
                 0,
                 sizeof(glm::mat4x4)}};
 
-        std::vector<VkDescriptorSetLayout> layouts = {gfx.global_set_layout, desc_layout};
-        VkPipelineLayoutCreateInfo pipeline_layout_info = {};
+        std::vector<VkDescriptorSetLayout> layouts = {gfx.get_global_desc_layout(), desc_layout};
+        VkPipelineLayoutCreateInfo pipeline_layout_info = {}; 
         pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipeline_layout_info.pushConstantRangeCount = push_constants.size();
         pipeline_layout_info.pPushConstantRanges = push_constants.data();
         pipeline_layout_info.pSetLayouts = layouts.data();
         pipeline_layout_info.setLayoutCount = layouts.size();
-        vk_check(vkCreatePipelineLayout(gfx.device, &pipeline_layout_info, nullptr, &pipeline_layout));
+        vk_check(vkCreatePipelineLayout(gfx.get_device(), &pipeline_layout_info, nullptr, &pipeline_layout));
 
         // Create pipelie
         std::vector<VkVertexInputBindingDescription> vertex_bindings{
@@ -144,16 +362,16 @@ namespace gage::gfx::data::terrain
         VkViewport viewport = {};
         viewport.x = 0;
         viewport.y = 0;
-        viewport.width = gfx.get_scaled_draw_extent().width;
-        viewport.height = gfx.get_scaled_draw_extent().height;
+        viewport.width = 0;
+        viewport.height = 0;
         viewport.minDepth = 0.f;
         viewport.maxDepth = 1.f;
 
         VkRect2D scissor = {};
         scissor.offset.x = 0;
         scissor.offset.y = 0;
-        scissor.extent.width = gfx.draw_extent.width;
-        scissor.extent.height = gfx.draw_extent.height;
+        scissor.extent.width = 0;
+        scissor.extent.height = 0;
 
         VkPipelineViewportStateCreateInfo viewport_state{};
         viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -234,7 +452,7 @@ namespace gage::gfx::data::terrain
         // Vertex shader
         shader_module_ci.codeSize = vertex_binary.size();
         shader_module_ci.pCode = (uint32_t *)vertex_binary.data();
-        vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &vertex_shader));
+        vk_check(vkCreateShaderModule(gfx.get_device(), &shader_module_ci, nullptr, &vertex_shader));
         shader_stage_ci.module = vertex_shader;
         shader_stage_ci.pName = "main";
         shader_stage_ci.stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -252,7 +470,7 @@ namespace gage::gfx::data::terrain
         // Fragment shader
         shader_module_ci.codeSize = fragment_binary.size();
         shader_module_ci.pCode = (uint32_t *)fragment_binary.data();
-        vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &fragment_shader));
+        vk_check(vkCreateShaderModule(gfx.get_device(), &shader_module_ci, nullptr, &fragment_shader));
         shader_stage_ci.module = fragment_shader;
         shader_stage_ci.pName = "main";
         shader_stage_ci.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -288,81 +506,28 @@ namespace gage::gfx::data::terrain
         pipeline_info.pDynamicState = &dynamic_state_ci;
         pipeline_info.pDepthStencilState = &depth_stencil;
         pipeline_info.layout = pipeline_layout;
-        pipeline_info.renderPass = gfx.geometry_buffer->get_mainpass_render_pass();
+        pipeline_info.renderPass = gfx.get_g_buffer().get_mainpass_render_pass();
 
-        vk_check(vkCreateGraphicsPipelines(gfx.device, nullptr, 1, &pipeline_info, nullptr, &pipeline));
+        vk_check(vkCreateGraphicsPipelines(gfx.get_device(), nullptr, 1, &pipeline_info, nullptr, &pipeline));
 
-        vkDestroyShaderModule(gfx.device, vertex_shader, nullptr);
+        vkDestroyShaderModule(gfx.get_device(), vertex_shader, nullptr);
         // vkDestroyShaderModule(gfx.device, geometry_shader, nullptr);
-        vkDestroyShaderModule(gfx.device, fragment_shader, nullptr);
-    }
-    VkDescriptorSet TerrainPipeline::allocate_descriptor_set(VkImageView image_view, VkSampler sampler) const
-    {
-        gfx.uploading_mutex.lock();
-        VkDescriptorSet res{};
-        VkDescriptorSetAllocateInfo alloc_info{};
-        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        alloc_info.descriptorSetCount = 1;
-        alloc_info.descriptorPool = gfx.desc_pool;
-        alloc_info.pSetLayouts = &desc_layout;
-        vk_check(vkAllocateDescriptorSets(gfx.device, &alloc_info, &res));
-
-        // // Set 1 binding 0 = uniform buffer
-        // VkDescriptorBufferInfo buffer_desc_info{};
-        // buffer_desc_info.buffer = buffer;
-        // buffer_desc_info.offset = 0;
-        // buffer_desc_info.range = size_in_bytes;
-
-        VkWriteDescriptorSet descriptor_write{};
-        descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        // descriptor_write.dstSet = res;
-        // descriptor_write.dstBinding = 0;
-        // descriptor_write.dstArrayElement = 0;
-        // descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        // descriptor_write.descriptorCount = 1;
-        // descriptor_write.pBufferInfo = &buffer_desc_info;
-        // descriptor_write.pImageInfo = nullptr;
-        // descriptor_write.pTexelBufferView = nullptr;
-        // vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
-
-        // Set 1 binding 0 = texture
-
-        VkDescriptorImageInfo img_info{};
-        img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        img_info.imageView = image_view ? image_view : gfx.default_image_view;
-        img_info.sampler = sampler ? sampler : gfx.default_sampler;
-
-        descriptor_write.dstSet = res;
-        descriptor_write.dstBinding = 0;
-        descriptor_write.dstArrayElement = 0; // Array index 0
-        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptor_write.descriptorCount = 1;
-        descriptor_write.pBufferInfo = nullptr;
-        descriptor_write.pImageInfo = &img_info;
-        descriptor_write.pTexelBufferView = nullptr;
-        vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
-
-        gfx.uploading_mutex.unlock();
-
-        return res;
-    }
-    void TerrainPipeline::free_descriptor_set(VkDescriptorSet set) const
-    {
-        vkFreeDescriptorSets(gfx.device, gfx.desc_pool, 1, &set);
+        vkDestroyShaderModule(gfx.get_device(), fragment_shader, nullptr);
     }
 
-    void TerrainPipeline::create_depth_pipeline()
+
+    void TerrainRenderer::create_depth_pipeline()
     {
         std::vector<VkPushConstantRange> push_constants{};
 
-        std::vector<VkDescriptorSetLayout> layouts = {gfx.global_set_layout};
+        std::vector<VkDescriptorSetLayout> layouts = {gfx.get_global_desc_layout()};
         VkPipelineLayoutCreateInfo pipeline_layout_info = {};
         pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipeline_layout_info.pushConstantRangeCount = push_constants.size();
         pipeline_layout_info.pPushConstantRanges = push_constants.data();
         pipeline_layout_info.pSetLayouts = layouts.data();
         pipeline_layout_info.setLayoutCount = layouts.size();
-        vk_check(vkCreatePipelineLayout(gfx.device, &pipeline_layout_info, nullptr, &depth_pipeline_layout));
+        vk_check(vkCreatePipelineLayout(gfx.get_device(), &pipeline_layout_info, nullptr, &depth_pipeline_layout));
 
         // Create pipelie
         std::vector<VkVertexInputBindingDescription> vertex_bindings{
@@ -421,16 +586,16 @@ namespace gage::gfx::data::terrain
         VkViewport viewport = {};
         viewport.x = 0;
         viewport.y = 0;
-        viewport.width = gfx.directional_light_shadow_map_resolution;
-        viewport.height = gfx.directional_light_shadow_map_resolution;
+        viewport.width = 0;
+        viewport.height = 0;
         viewport.minDepth = 0.f;
         viewport.maxDepth = 1.f;
 
         VkRect2D scissor = {};
         scissor.offset.x = 0;
         scissor.offset.y = 0;
-        scissor.extent.width = gfx.directional_light_shadow_map_resolution;
-        scissor.extent.height = gfx.directional_light_shadow_map_resolution;
+        scissor.extent.width = 0;
+        scissor.extent.height = 0;
 
         VkPipelineViewportStateCreateInfo viewport_state{};
         viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -470,7 +635,7 @@ namespace gage::gfx::data::terrain
         // Vertex shader
         shader_module_ci.codeSize = vertex_binary.size();
         shader_module_ci.pCode = (uint32_t *)vertex_binary.data();
-        vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &vertex_shader));
+        vk_check(vkCreateShaderModule(gfx.get_device(), &shader_module_ci, nullptr, &vertex_shader));
         shader_stage_ci.module = vertex_shader;
         shader_stage_ci.pName = "main";
         shader_stage_ci.stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -479,7 +644,7 @@ namespace gage::gfx::data::terrain
         // Geometry shader
         shader_module_ci.codeSize = geometry_binary.size();
         shader_module_ci.pCode = (uint32_t *)geometry_binary.data();
-        vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &geometry_shader));
+        vk_check(vkCreateShaderModule(gfx.get_device(), &shader_module_ci, nullptr, &geometry_shader));
         shader_stage_ci.module = geometry_shader;
         shader_stage_ci.pName = "main";
         shader_stage_ci.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
@@ -488,7 +653,7 @@ namespace gage::gfx::data::terrain
         // Fragment shader
         shader_module_ci.codeSize = fragment_binary.size();
         shader_module_ci.pCode = (uint32_t *)fragment_binary.data();
-        vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &fragment_shader));
+        vk_check(vkCreateShaderModule(gfx.get_device(), &shader_module_ci, nullptr, &fragment_shader));
         shader_stage_ci.module = fragment_shader;
         shader_stage_ci.pName = "main";
         shader_stage_ci.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -518,47 +683,12 @@ namespace gage::gfx::data::terrain
         pipeline_info.pDynamicState = &dynamic_state_ci;
         pipeline_info.pDepthStencilState = &depth_stencil;
         pipeline_info.layout = depth_pipeline_layout;
-        pipeline_info.renderPass = gfx.geometry_buffer->get_shadowpass_render_pass();
+        pipeline_info.renderPass = gfx.get_g_buffer().get_shadowpass_render_pass();
 
-        vk_check(vkCreateGraphicsPipelines(gfx.device, nullptr, 1, &pipeline_info, nullptr, &depth_pipeline));
+        vk_check(vkCreateGraphicsPipelines(gfx.get_device(), nullptr, 1, &pipeline_info, nullptr, &depth_pipeline));
 
-        vkDestroyShaderModule(gfx.device, vertex_shader, nullptr);
-        vkDestroyShaderModule(gfx.device, geometry_shader, nullptr);
-        vkDestroyShaderModule(gfx.device, fragment_shader, nullptr);
-    }
-
-    void TerrainPipeline::destroy_depth_pipeline()
-    {
-        vkDestroyPipelineLayout(gfx.device, depth_pipeline_layout, nullptr);
-        vkDestroyPipeline(gfx.device, depth_pipeline, nullptr);
-    }
-
-    void TerrainPipeline::bind_depth(VkCommandBuffer cmd) const
-    {
-        VkViewport viewport = {};
-        viewport.x = 0;
-        viewport.y = 0;
-        viewport.width = gfx.directional_light_shadow_map_resolution;
-        viewport.height = gfx.directional_light_shadow_map_resolution;
-        viewport.minDepth = 0.f;
-        viewport.maxDepth = 1.f;
-
-        VkRect2D scissor = {};
-        scissor.offset.x = 0;
-        scissor.offset.y = 0;
-        scissor.extent.width = gfx.directional_light_shadow_map_resolution;
-        scissor.extent.height = gfx.directional_light_shadow_map_resolution;
-
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, depth_pipeline);
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, depth_pipeline_layout, 0, 1, &gfx.frame_datas[gfx.frame_index].global_set, 0, nullptr);
-
-        
-        vkCmdSetViewport(cmd, 0, 1, &viewport);
-        vkCmdSetScissor(cmd, 0, 1, &scissor);
-    }
-
-    VkPipelineLayout TerrainPipeline::get_depth_layout() const
-    {
-        return depth_pipeline_layout;
+        vkDestroyShaderModule(gfx.get_device(), vertex_shader, nullptr);
+        vkDestroyShaderModule(gfx.get_device(), geometry_shader, nullptr);
+        vkDestroyShaderModule(gfx.get_device(), fragment_shader, nullptr);
     }
 }

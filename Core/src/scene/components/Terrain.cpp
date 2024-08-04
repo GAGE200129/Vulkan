@@ -1,17 +1,16 @@
 #include <pch.hpp>
-#include "TerrainRenderer.hpp"
+#include "Terrain.hpp"
 
 #include "../scene.hpp"
 #include <glm/gtc/integer.hpp>
 
 #include <Core/src/gfx/Graphics.hpp>
-#include <Core/src/gfx/data/terrain/TerrainPipeline.hpp>
 
 #include <imgui/imgui.h>
 
 namespace gage::scene::components
 {
-    TerrainRenderer::TerrainRenderer(SceneGraph &scene, Node &node,
+    Terrain::Terrain(SceneGraph &scene, Node &node,
                                      gfx::Graphics &gfx,
                                      uint32_t patch_count,
                                      uint32_t patch_size,
@@ -164,14 +163,14 @@ namespace gage::scene::components
         generate_vertex_datas();
     }
 
-    void TerrainRenderer::generate_vertex_datas()
+    void Terrain::generate_vertex_datas()
     {
         // Generate positions and uvs
         for (uint32_t y = 0; y < size; y++)
             for (uint32_t x = 0; x < size; x++)
             {
                 float height = height_map.at(x + y * size);
-                components::TerrainRenderer::Vertex v{};
+                components::Terrain::Vertex v{};
                 v.pos = {x * scale, height, y * scale};
                 v.tex_coord = {(float)x / size, (float)y / size};
                 v.normal = {0, 1, 0};
@@ -251,7 +250,7 @@ namespace gage::scene::components
         }
     }
 
-    TerrainRenderer::TerrainRenderer(SceneGraph &scene, Node &node, gfx::Graphics &gfx, uint32_t patch_count, uint32_t patch_size, float scale) :
+    Terrain::Terrain(SceneGraph &scene, Node &node, gfx::Graphics &gfx, uint32_t patch_count, uint32_t patch_size, float scale) :
         IComponent(scene, node),
         gfx(gfx),
         size(0),
@@ -283,22 +282,22 @@ namespace gage::scene::components
         generate_vertex_datas();
     }
 
-    uint32_t TerrainRenderer::get_current_lod(uint32_t patch_x, uint32_t patch_y)
+    uint32_t Terrain::get_current_lod(uint32_t patch_x, uint32_t patch_y)
     {
         return lod_regions.at(patch_x + this->patch_count * patch_y);
     }
 
-    void TerrainRenderer::render_imgui()
+    void Terrain::render_imgui()
     {
         
     }
 
-    nlohmann::json TerrainRenderer::to_json() const
+    nlohmann::json Terrain::to_json() const
     {
         return {};
     }
 
-    bool TerrainRenderer::is_inside_frustum(uint32_t x, uint32_t y, const glm::mat4x4 &view, const glm::mat4x4 &proj)
+    bool Terrain::is_inside_frustum(uint32_t x, uint32_t y, const glm::mat4x4 &view, const glm::mat4x4 &proj)
     {
         auto test = [](const glm::vec3 &p, const glm::mat4x4 &view, const glm::mat4x4 &proj) -> bool
         {
@@ -323,7 +322,7 @@ namespace gage::scene::components
         return inside_view_frustum;
     }
 
-    void TerrainRenderer::update_lod_regons(const glm::vec3 &camera_position)
+    void Terrain::update_lod_regons(const glm::vec3 &camera_position)
     {
         const uint32_t center_step = patch_size / 2;
         for (uint32_t patch_y = 0; patch_y < patch_count; patch_y++)

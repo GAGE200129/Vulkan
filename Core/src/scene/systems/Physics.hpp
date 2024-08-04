@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../components/CharacterController.hpp"
-#include "../components/TerrainRenderer.hpp"
+#include "../components/Terrain.hpp"
 #include <vector>
 #include <memory>
 
@@ -27,10 +27,10 @@ namespace gage::scene::systems
     {
         friend class scene::SceneGraph;
     private:
-        struct TerrainRenderer
+        struct Terrain
         {
             JPH::BodyID height_map_body{};
-            std::shared_ptr<components::TerrainRenderer> terrain_renderer;
+            std::shared_ptr<components::Terrain> terrain_renderer;
         };
     public:
         enum class GroundState
@@ -52,10 +52,10 @@ namespace gage::scene::systems
         static glm::vec3 character_get_velocity(components::CharacterController* character);
         static GroundState character_get_ground_state(components::CharacterController* character);
 
-        void add_terrain_renderer(std::shared_ptr<components::TerrainRenderer> terrain_renderer);
+        void add_terrain_renderer(std::shared_ptr<components::Terrain> terrain_renderer);
     private:
         phys::Physics& phys;
         std::vector<std::unique_ptr<components::CharacterController>> character_controllers; 
-        std::vector<TerrainRenderer> terrain_renderers;
+        std::vector<Terrain> terrain_renderers;
     };
 }

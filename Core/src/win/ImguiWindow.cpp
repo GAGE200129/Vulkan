@@ -9,7 +9,6 @@
 #include <Core/src/gfx/Graphics.hpp>
 #include <Core/src/gfx/data/Camera.hpp>
 #include <Core/src/gfx/data/Swapchain.hpp>
-#include <Core/src/gfx/data/PBRPipeline.hpp>
 
 #include <Core/src/scene/SceneGraph.hpp>
 #include <Core/src/mem.hpp>

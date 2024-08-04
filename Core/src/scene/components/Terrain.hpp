@@ -13,15 +13,15 @@
 
 namespace gage::scene::systems
 {
-    class Renderer;
+    class TerrainRenderer;
     class Physics;
 }
 
 namespace gage::scene::components
 {
-    class TerrainRenderer final : public IComponent
+    class Terrain final : public IComponent
     {
-        friend class systems::Renderer;
+        friend class systems::TerrainRenderer;
         friend class systems::Physics;
 
     public:
@@ -39,8 +39,8 @@ namespace gage::scene::components
         };
 
     public:
-        TerrainRenderer(SceneGraph &scene, Node &node, gfx::Graphics &gfx, uint32_t patch_count, uint32_t patch_size, uint32_t iteration, float scale, float min_height, float max_height, float filter);
-        TerrainRenderer(SceneGraph &scene, Node &node, gfx::Graphics &gfx, uint32_t patch_count, uint32_t patch_size, float scale);
+        Terrain(SceneGraph &scene, Node &node, gfx::Graphics &gfx, uint32_t patch_count, uint32_t patch_size, uint32_t iteration, float scale, float min_height, float max_height, float filter);
+        Terrain(SceneGraph &scene, Node &node, gfx::Graphics &gfx, uint32_t patch_count, uint32_t patch_size, float scale);
         
 
         nlohmann::json to_json() const final;
@@ -51,7 +51,7 @@ namespace gage::scene::components
         uint32_t get_current_lod(uint32_t patch_x, uint32_t patch_y);
 
         void render_imgui() final;
-        inline const char *get_name() const final { return "TerrainRenderer"; };
+        inline const char *get_name() const final { return "Terrain"; };
 
     private:
         void generate_vertex_datas();

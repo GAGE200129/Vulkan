@@ -94,9 +94,9 @@ namespace gage::scene::systems
         character_controllers.push_back(std::move(character_controller));
     }
 
-    void Physics::add_terrain_renderer(std::shared_ptr<components::TerrainRenderer> terrain_renderer)
+    void Physics::add_terrain_renderer(std::shared_ptr<components::Terrain> terrain_renderer)
     {
-        TerrainRenderer terrain_renderer_additional_datas{};
+        Terrain terrain_renderer_additional_datas{};
         terrain_renderer_additional_datas.terrain_renderer = terrain_renderer;
 
         terrain_renderers.push_back(std::move(terrain_renderer_additional_datas));

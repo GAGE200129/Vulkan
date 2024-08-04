@@ -4,6 +4,7 @@
 
 #include "data/Model.hpp"
 #include "systems/Renderer.hpp"
+#include "systems/TerrainRenderer.hpp"
 #include "systems/Animation.hpp"
 #include "systems/Physics.hpp"
 #include "systems/Generic.hpp"
@@ -75,6 +76,7 @@ namespace gage::scene
 
         const std::vector<std::unique_ptr<Node>>& get_nodes() const;
         systems::Renderer& get_renderer();
+        systems::TerrainRenderer& get_terrain_renderer();
         systems::Animation& get_animation();
         systems::Physics& get_physics();
         systems::Generic& get_generic();
@@ -87,6 +89,7 @@ namespace gage::scene
         void process_model_calculate_inverse_bind_transform(data::Model& model, data::ModelNode& root);
     private:
         systems::Renderer renderer;
+        systems::TerrainRenderer terrain_renderer;
         systems::Animation animation;
         systems::Physics physics;
         systems::Generic generic;

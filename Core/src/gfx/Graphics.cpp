@@ -9,14 +9,12 @@
 
 #include "data/g_buffer/GBuffer.hpp"
 #include "data/Camera.hpp"
-#include "data/PBRPipeline.hpp"
 #include "data/AmbientLight.hpp"
 #include "data/DirectionalLight.hpp"
 #include "data/ShadowPipeline.hpp"
 #include "data/PointLight.hpp"
 #include "data/SSAO.hpp"
 
-#include "data/terrain/TerrainPipeline.hpp"
 
 using namespace std::string_literals;
 
@@ -306,11 +304,6 @@ namespace gage::gfx
         delete_stack.push([this]()
                           { geometry_buffer.reset(); });
 
-
-        pbr_pipeline = std::make_unique<data::PBRPipeline>(*this);
-        delete_stack.push([this]()
-                          { pbr_pipeline.reset(); });
-
         final_ambient = std::make_unique<data::AmbientLight>(*this);
         delete_stack.push([this]()
                           { final_ambient.reset(); });
@@ -323,9 +316,6 @@ namespace gage::gfx
         delete_stack.push([this]()
                           { point_light.reset(); });
 
-        terrain_pipeline = std::make_unique<data::terrain::TerrainPipeline>(*this);
-        delete_stack.push([this]()
-                          { terrain_pipeline.reset(); });
 
         ssao = std::make_unique<data::SSAO>(*this);
         delete_stack.push([this]()
@@ -814,19 +804,10 @@ namespace gage::gfx
         return *ssao;
     }
 
-    const data::PBRPipeline &Graphics::get_pbr_pipeline() const
-    {
-        return *pbr_pipeline;
-    }
 
     const data::AmbientLight &Graphics::get_final_ambient() const
     {
         return *final_ambient;
-    }
-
-    const data::terrain::TerrainPipeline &Graphics::get_terrain_pipeline() const
-    {
-        return *terrain_pipeline;
     }
 
     const data::DirectionalLight &Graphics::get_directional_light() const
@@ -834,9 +815,33 @@ namespace gage::gfx
         return *directional_light;
     }
 
+    VkDescriptorSetLayout Graphics::get_global_desc_layout() const
+    {
+        return global_set_layout;
+    }
+
     const data::PointLight &Graphics::get_point_light() const
     {
         return *point_light;
+    }
+
+    VkDevice Graphics::get_device() const
+    {
+        return device;
+    }
+
+    VkDescriptorPool Graphics::get_desc_pool() const
+    {
+        return desc_pool;
+    }
+
+    uint32_t Graphics::get_directional_light_shadow_map_resolution() const
+    {
+        return directional_light_shadow_map_resolution;
+    }
+    const Graphics::FrameData& Graphics::get_frame_data() const
+    {
+        return frame_datas[frame_index];
     }
 
     uint32_t Graphics::get_current_frame_index() const

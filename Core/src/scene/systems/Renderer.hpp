@@ -1,10 +1,6 @@
 #pragma once
 
 #include "../components/MeshRenderer.hpp"
-#include "../components/TerrainRenderer.hpp"
-#include <Core/src/gfx/data/GPUBuffer.hpp>
-#include <Core/src/gfx/data/CPUBuffer.hpp>
-#include <Core/src/gfx/data/Image.hpp>
 
 #include <vector>
 #include <memory>
@@ -24,38 +20,54 @@ namespace gage::scene::systems
     class Renderer
     {
         friend class scene::SceneGraph;
-    private:
-        struct TerrainRenderer
-        {
-            //Additional datas
-            std::unique_ptr<gfx::data::GPUBuffer> vertex_buffer{};
-            std::unique_ptr<gfx::data::GPUBuffer> index_buffer{};
-            std::unique_ptr<gfx::data::Image> image{};
-            std::unique_ptr<gfx::data::CPUBuffer> uniform_buffer{};
-            VkDescriptorSet descriptor{};
 
-            //Original data
-            std::shared_ptr<components::TerrainRenderer> terrain_renderer;
+    public:
+        struct MaterialSetAllocInfo
+        {
+            size_t size_in_bytes{};
+            VkBuffer buffer{};
+            VkImageView albedo_view{};
+            VkSampler albedo_sampler{};
+            VkImageView metalic_roughness_view{};
+            VkSampler metalic_roughness_sampler{};
+            VkImageView normal_view{};
+            VkSampler normal_sampler{};
         };
 
     public:
-        Renderer(gfx::Graphics &gfx, const gfx::data::Camera& camera);
-        ~Renderer() = default;
+        Renderer(gfx::Graphics &gfx);
+        ~Renderer();
 
         void init();
-        void render_depth(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) const;
-        void render_depth_terrain(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) const;
-        void render_geometry(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) const;
-        void render_geometry_terrain(VkCommandBuffer cmd, VkPipelineLayout pipeline_layout) const;
         void shutdown();
 
+        void render_depth(VkCommandBuffer cmd) const;
+        void render(VkCommandBuffer cmd) const;
+
         void add_pbr_mesh_renderer(std::unique_ptr<components::MeshRenderer> mesh_renderer);
-        void add_terrain_renderer(std::shared_ptr<components::TerrainRenderer> terrain_renderer);
+
+        VkDescriptorSet allocate_material_set(const MaterialSetAllocInfo &info) const;
+        VkDescriptorSet allocate_animation_set(size_t size_in_bytes, VkBuffer buffer) const;
+        void free_descriptor_set(VkDescriptorSet set) const;
 
     private:
+        void create_pipeline();
+        void create_depth_pipeline();
+
+    private:
+        static constexpr uint8_t STENCIL_VALUE = 0x01;
         gfx::Graphics &gfx;
-        const gfx::data::Camera& camera;
         std::vector<std::unique_ptr<components::MeshRenderer>> mesh_renderers;
-        std::vector<TerrainRenderer> terrain_renderers;
+
+        VkDescriptorSetLayout material_set_layout{};
+        VkDescriptorSetLayout animation_set_layout{};
+
+        VkPipelineLayout pipeline_layout{};
+        VkPipeline pipeline{};
+
+        // Shadow map
+        VkPipelineLayout depth_pipeline_layout{};
+        VkPipeline depth_pipeline{};
+        // VkDescriptorSetLayout depth_desc_layout{};
     };
 }

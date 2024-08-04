@@ -6,14 +6,12 @@
 #include <Core/src/utils/FileLoader.hpp>
 #include <Core/src/gfx/data/Camera.hpp>
 #include <Core/src/gfx/data/g_buffer/GBuffer.hpp>
-#include <Core/src/gfx/data/PBRPipeline.hpp>
 #include <Core/src/gfx/data/ShadowPipeline.hpp>
 #include <Core/src/gfx/data/AmbientLight.hpp>
 #include <Core/src/gfx/data/DirectionalLight.hpp>
 #include <Core/src/gfx/data/PointLight.hpp>
 #include <Core/src/gfx/data/SSAO.hpp>
 #include <Core/src/gfx/Graphics.hpp>
-#include <Core/src/gfx/data/terrain/TerrainPipeline.hpp>
 #include <Core/src/utils/Cvar.hpp>
 
 #include <Core/src/phys/phys.hpp>
@@ -87,7 +85,7 @@ int main()
 
         auto terrain = scene->create_node();
         terrain->set_name("TErrain");
-        scene->add_component(terrain, std::make_unique<scene::components::TerrainRenderer>(*scene, *terrain, gfx, 8, 23, 1.0f));
+        scene->add_component(terrain, std::make_unique<scene::components::Terrain>(*scene, *terrain, gfx, 8, 23, 1.0f));
 
         scene->init();
 
@@ -128,22 +126,17 @@ int main()
             auto cmd = gfx.clear(camera);
 
             const auto &g_buffer = gfx.get_g_buffer();
-            const auto &pbr_pipeline = gfx.get_pbr_pipeline();
-            const auto &terrain_pipeline = gfx.get_terrain_pipeline();
+
 
             g_buffer.begin_shadowpass(cmd);
-            pbr_pipeline.bind_depth(cmd);
-            scene->get_renderer().render_depth(cmd, pbr_pipeline.get_depth_layout());
-            terrain_pipeline.bind_depth(cmd);
-            scene->get_renderer().render_depth_terrain(cmd, terrain_pipeline.get_depth_layout());
+            scene->get_renderer().render_depth(cmd);
+            scene->get_terrain_renderer().render_depth(cmd);
             g_buffer.end(cmd);
 
             g_buffer.begin_mainpass(cmd);
-            pbr_pipeline.bind(cmd);
-            scene->get_renderer().render_geometry(cmd, pbr_pipeline.get_layout());
+            scene->get_renderer().render(cmd);
 
-            terrain_pipeline.bind(cmd);
-            scene->get_renderer().render_geometry_terrain(cmd, pbr_pipeline.get_layout());
+            scene->get_terrain_renderer().render(cmd);
             
             g_buffer.end(cmd);
 
