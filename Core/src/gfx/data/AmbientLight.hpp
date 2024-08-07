@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
+#include <vk_mem_alloc.h>
 
 namespace gage::gfx
 {
@@ -12,6 +12,13 @@ namespace gage::gfx::data
 {
     class AmbientLight
     {   
+        struct FragmentPushConstant
+        {
+            float time{0.0f};
+            float fbm_scale{0.9};
+            float fbm_factor{2.0};
+            float height{1.0f};
+        };
     public:
         AmbientLight(Graphics& gfx);
         ~AmbientLight();
@@ -32,7 +39,10 @@ namespace gage::gfx::data
         VkPipelineLayout pipeline_layout{};
         VkPipeline pipeline{};
 
-        float time{0.0f};
-        float time_scale{0.01f};
+
+
+        float time_scale{0.1f};
+    public:
+        FragmentPushConstant fs_ps{};
     };
 }

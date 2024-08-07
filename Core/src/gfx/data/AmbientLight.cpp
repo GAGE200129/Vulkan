@@ -25,7 +25,6 @@ namespace gage::gfx::data
             vk_check(vkCreateDescriptorSetLayout(gfx.device, &ci, nullptr, &desc_layout));
         }
 
-
         // Allocate descriptor set
         {
             // Allocate descriptor set
@@ -35,28 +34,22 @@ namespace gage::gfx::data
             ai.pSetLayouts = &desc_layout;
             ai.descriptorSetCount = 1;
             vk_check(vkAllocateDescriptorSets(gfx.device, &ai, &desc));
-
-            link_desc_to_g_buffer();
         }
 
         // Create pipeline layout
         {
 
-            std::vector<VkDescriptorSetLayout> layouts = {gfx.global_set_layout,  desc_layout};
-            std::vector<VkPushConstantRange> push_constants = 
-            {
+            std::vector<VkDescriptorSetLayout> layouts = {gfx.global_set_layout, desc_layout};
+            std::vector<VkPushConstantRange> push_constants =
                 {
-                    .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-                    .offset = 0,
-                    .size = sizeof(float)
-                },
+                    {.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+                     .offset = 0,
+                     .size = sizeof(float)},
 
-                {
-                    .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-                    .offset = 16,
-                    .size = sizeof(float)
-                },
-            };
+                    {.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+                     .offset = 16,
+                     .size = sizeof(FragmentPushConstant)},
+                };
             VkPipelineLayoutCreateInfo ci = {};
             ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
             ci.pSetLayouts = layouts.data();
@@ -136,8 +129,7 @@ namespace gage::gfx::data
                         .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
                         .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
                         .alphaBlendOp = VK_BLEND_OP_ADD,
-                        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
-                    },
+                        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT},
                 };
 
             VkPipelineColorBlendStateCreateInfo color_blending = {};
@@ -177,10 +169,9 @@ namespace gage::gfx::data
             pipeline_shader_stages.push_back(shader_stage_ci);
 
             std::vector<VkDynamicState> dynamic_states =
-            {
-                VK_DYNAMIC_STATE_VIEWPORT,
-                VK_DYNAMIC_STATE_SCISSOR
-            };
+                {
+                    VK_DYNAMIC_STATE_VIEWPORT,
+                    VK_DYNAMIC_STATE_SCISSOR};
 
             VkPipelineDynamicStateCreateInfo dynamic_state_ci{};
             dynamic_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -207,9 +198,13 @@ namespace gage::gfx::data
             vkDestroyShaderModule(gfx.device, vertex_shader, nullptr);
             vkDestroyShaderModule(gfx.device, fragment_shader, nullptr);
         }
+
+        link_desc_to_g_buffer();
     }
     AmbientLight::~AmbientLight()
     {
+        
+
         vkDestroyDescriptorSetLayout(gfx.device, desc_layout, nullptr);
         vkFreeDescriptorSets(gfx.device, gfx.desc_pool, 1, &desc);
         vkDestroyPipelineLayout(gfx.device, pipeline_layout, nullptr);
@@ -239,13 +234,13 @@ namespace gage::gfx::data
         vkCmdSetScissor(cmd, 0, 1, &scissor);
         vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float), &gfx.draw_extent_scale);
 
-        vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 16, sizeof(float), &time);
+        vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 16, sizeof(FragmentPushConstant), &fs_ps);
         vkCmdDraw(cmd, 3, 1, 0, 0);
     }
 
     void AmbientLight::update(float delta)
     {
-        this->time += delta * time_scale;
+        this->fs_ps.time += delta * time_scale;
     }
 
     void AmbientLight::reset()
@@ -275,7 +270,7 @@ namespace gage::gfx::data
         descriptor_write.pTexelBufferView = nullptr;
         vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
 
-         // Link to ssao g_buffer
+        // Link to ssao g_buffer
         img_info.imageView = gfx.geometry_buffer->get_ssao_view();
         descriptor_write.dstSet = desc;
         descriptor_write.dstBinding = 0;
@@ -299,7 +294,7 @@ namespace gage::gfx::data
         descriptor_write.pTexelBufferView = nullptr;
         vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
 
-         // Link to stencil g_buffer
+        // Link to stencil g_buffer
         img_info.imageView = gfx.geometry_buffer->get_stencil_view();
         descriptor_write.dstSet = desc;
         descriptor_write.dstBinding = 1;
@@ -316,4 +311,8 @@ namespace gage::gfx::data
     {
         return pipeline_layout;
     }
+
+
+
+    
 }

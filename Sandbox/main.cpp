@@ -77,14 +77,14 @@ int main()
 
         scene::Node *animated_node = scene->instanciate_model(scene_model, {0, 0, 0});
         scene->add_component(animated_node, std::make_unique<scene::components::Animator>(*scene, *animated_node, scene_model));
-        animated_node->set_position({50, 150, 50});
+        animated_node->set_position({50, 10, 50});
         animated_node->set_name("Player");
         scene->add_component(animated_node, std::make_unique<scene::components::CharacterController>(*scene, *animated_node, phys));
         scene->add_component(animated_node, std::make_unique<FPSCharacterController>(*scene, *animated_node, phys, camera));
 
         auto terrain = scene->create_node();
         terrain->set_name("TErrain");
-        scene->add_component(terrain, std::make_unique<scene::components::Terrain>(*scene, *terrain, gfx, 64, 17, 64, 1.0, 0, 100, 0.3f));
+        scene->add_component(terrain, std::make_unique<scene::components::Terrain>(*scene, *terrain, gfx, 64, 17, 64, 1.0, 0, 1, 0.3f));
 
         scene->init();
 

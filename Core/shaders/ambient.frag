@@ -10,6 +10,9 @@ layout(push_constant) uniform PushConstant
 {
     layout(offset = 16)
     float time;
+    float fbm_scale;
+    float fbm_factor;
+    float height;
 } ps;
 
 
@@ -74,15 +77,9 @@ float sd_box(vec3 p, vec3 b)
 
 
 
-// Precision-adjusted variations of https://www.shadertoy.com/view/4djSRW
 float hash(float p) { p = fract(p * 0.011); p *= p + 7.5; p *= p + p; return fract(p); }
-float hash(vec2 p) {vec3 p3 = fract(vec3(p.xyx) * 0.13); p3 += dot(p3, p3.yzx + 3.333); return fract((p3.x + p3.y) * p3.z); }
-float hash13(vec3 p3)
-{
-	p3  = fract(p3 * .1031);
-    p3 += dot(p3, p3.zyx + 31.32);
-    return fract((p3.x + p3.y) * p3.z);
-}
+//float hash(vec2 p) {vec3 p3 = fract(vec3(p.xyx) * 0.13); p3 += dot(p3, p3.yzx + 3.333); return fract((p3.x + p3.y) * p3.z); }
+
 
 float noise(vec3 x) {
     const vec3 step = vec3(110, 241, 171);
@@ -101,14 +98,35 @@ float noise(vec3 x) {
                    mix( hash(n + dot(step, vec3(0, 1, 1))), hash(n + dot(step, vec3(1, 1, 1))), u.x), u.y), u.z);
 }
 
+// float sample_noise_image(vec3 x) {
+//     vec3 p = floor(x);
+//     vec3 f = fract(x);
+//     vec3 u = f * f * (3.0 - 2.0 * f);
+
+//     vec2 uv = (p.xy + vec2(37.0, 239.0) * p.z) + u.xy;
+//     vec2 tex = textureLod(noise_image, (uv + 0.5) / 256.0, 0.0).xx;
+
+//     return mix( tex.x, tex.y, u.z ) * 2.0 - 1.0;
+// }
+
+// float sample_noise_image(vec3 p)
+// {
+//     vec3 f = fract(p);
+//     vec3 u = f * f * (3. - 2. * f);
+//     vec2 uv = (p.xy + vec2(37.0, 239.0) * p.z) + u.xy;
+//     vec2 tex = textureLod(noise_image,(uv + 0.5) / 256.0, 0.0).yx;
+
+//     return mix( tex.x, tex.y, u.z ) * 2.0 - 1.0;
+// }
+
 
 float fbm(vec3 p) {
     vec3 q = p + ps.time * 0.5 * vec3(1.0, -0.2, -1.0);
     float g = noise(q);
 
     float f = 0.0;
-    float scale = 0.9;
-    float factor = 2.02;
+    float scale = ps.fbm_scale;
+    float factor = ps.fbm_factor;
 
     for (int i = 0; i < 6; i++) {
         f += scale * noise(q);
@@ -124,7 +142,7 @@ float fbm(vec3 p) {
 
 float map(vec3 p)
 {   
-    p.y -= 2.0;
+    p.y -= ps.height;
     float distance = sd_box(p, vec3(10.0, 0.5, 10.0));
 
     float noise = fbm(p);
@@ -133,8 +151,8 @@ float map(vec3 p)
 
 float map_sun(vec3 p)
 {   
-    p += descriptor_set_0_ubo.directional_light_direction * 0.5;
-    float distance = sd_sphere(p, 0.306);
+    p += descriptor_set_0_ubo.directional_light_direction;
+    float distance = sd_sphere(p, 0.3);
 
     return -distance ;
 }
@@ -147,14 +165,14 @@ void process_sky()
 
 
     vec3 ro = vec3(0, 0, 0);
-    //vec3 ro = vec3(descriptor_set_0_ubo.camera_position.x - 50.0, 0.0, descriptor_set_0_ubo.camera_position.z - 50.0);
+    //vec3 ro = vec3(descriptor_set_0_ubo.camera_position.x - 50.0, descriptor_set_0_ubo.camera_position.y, descriptor_set_0_ubo.camera_position.z - 50.0);
     vec3 rd = normalize(vec3(frag_coord, -1)) * mat3(descriptor_set_0_ubo.view);
 
     
 
     float t = 0;
-    vec3 color1 = vec3(0.4,0.6,0.7);
-    vec3 color2 = vec3(0.6,0.6,0.6);
+    vec3 color1 = vec3(1.0,1.0,1.0);
+    vec3 color2 = vec3(0.4,0.6,0.7);
     vec4 res = vec4(mix(color1, color2, (rd.y + 1.0) * 0.5), 0.6);
     for(int i = 0; i < 10; i++)
     {
@@ -162,6 +180,7 @@ void process_sky()
         
         float d = map(p);
         float d_sun = map_sun(p);
+
         if (d > 0.0) {
             float diffuse = clamp((map(p) - map(p + 0.3 * -descriptor_set_0_ubo.directional_light_direction)) / 0.3, 0.0, 1.0 );
 
@@ -171,13 +190,15 @@ void process_sky()
             color.rgb *= color.a;
             res += color * (1.0 - res.a);
         }
-
+        
         if(d_sun > 0.0)
         {
-            vec4 color = vec4(mix(vec3(1.0,1.0,1.0), vec3(0.0, 0.0, 0.0), d_sun), 1.0 );
+            vec4 color = vec4(mix(vec3(1.0,1.0,1.0), vec3(0.0, 0.0, 0.0), d_sun), 0.5 );
             color.rgb *= color.a;
             res += color * (1.0 - res.a);
         }
+
+        
 
         t += 0.8;
     }
