@@ -6,7 +6,6 @@
 #include <Core/src/utils/FileLoader.hpp>
 #include <Core/src/gfx/data/Camera.hpp>
 #include <Core/src/gfx/data/g_buffer/GBuffer.hpp>
-#include <Core/src/gfx/data/ShadowPipeline.hpp>
 #include <Core/src/gfx/data/AmbientLight.hpp>
 #include <Core/src/gfx/data/DirectionalLight.hpp>
 #include <Core/src/gfx/data/PointLight.hpp>
@@ -66,7 +65,7 @@ int main()
 
         gfx::data::Camera camera{};
         camera.far = 500.0f;
-        camera.field_of_view = 80.0f;
+        camera.field_of_view = 90.0f;
 
         std::vector<gfx::data::PointLight::Data> point_lights{};
 
@@ -78,21 +77,21 @@ int main()
 
         scene::Node *animated_node = scene->instanciate_model(scene_model, {0, 0, 0});
         scene->add_component(animated_node, std::make_unique<scene::components::Animator>(*scene, *animated_node, scene_model));
-        animated_node->set_position({50, 10, 50});
+        animated_node->set_position({50, 150, 50});
         animated_node->set_name("Player");
         scene->add_component(animated_node, std::make_unique<scene::components::CharacterController>(*scene, *animated_node, phys));
         scene->add_component(animated_node, std::make_unique<FPSCharacterController>(*scene, *animated_node, phys, camera));
 
         auto terrain = scene->create_node();
         terrain->set_name("TErrain");
-        scene->add_component(terrain, std::make_unique<scene::components::Terrain>(*scene, *terrain, gfx, 8, 23, 1.0f));
+        scene->add_component(terrain, std::make_unique<scene::components::Terrain>(*scene, *terrain, gfx, 64, 17, 64, 1.0, 0, 100, 0.3f));
 
         scene->init();
 
         auto previous = std::chrono::high_resolution_clock::now();
         uint64_t lag = 0;
 
-        double tick_time_in_seconds = 1.0 / 64.0;
+        double tick_time_in_seconds = 1.0 / 128.0;
         uint64_t tick_time_in_nanoseconds = tick_time_in_seconds * 1E9;
 
         while (!window.is_closing())
@@ -104,6 +103,8 @@ int main()
  
             while (lag >= tick_time_in_nanoseconds)
             {
+                gfx.get_final_ambient().update(tick_time_in_seconds);
+                
                 phys.update(tick_time_in_seconds);
                 scene->get_physics().update(tick_time_in_seconds);
                 scene->get_animation().update(tick_time_in_seconds);
@@ -135,9 +136,7 @@ int main()
 
             g_buffer.begin_mainpass(cmd);
             scene->get_renderer().render(cmd);
-
             scene->get_terrain_renderer().render(cmd);
-            
             g_buffer.end(cmd);
 
             g_buffer.begin_ssaopass(cmd);

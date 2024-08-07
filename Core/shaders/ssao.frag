@@ -1,7 +1,7 @@
 #version 460 core
 #extension GL_ARB_shading_language_include : require
 
-#define KERNEL_SIZE 32
+layout(constant_id = 0) const int KERNEL_SIZE = 64;
 
 #include "includes/descriptor_set_0.inc"
 

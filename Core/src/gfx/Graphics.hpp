@@ -33,6 +33,7 @@ namespace gage::gfx::data
     class DirectionalLight;
     class PointLight;
     class SSAO;
+    class Sky;
 
     namespace g_buffer
     {
@@ -110,6 +111,7 @@ namespace gage::gfx
         friend class data::DirectionalLight;
         friend class data::PointLight;
         friend class data::SSAO;
+        friend class data::Sky;
 
         friend class data::g_buffer::GBuffer;
         friend class data::g_buffer::MainPass;
@@ -145,6 +147,7 @@ namespace gage::gfx
         const data::Swapchain &get_swapchain() const;
         const data::g_buffer::GBuffer &get_g_buffer() const;
         const data::AmbientLight &get_final_ambient() const;
+        data::AmbientLight& get_final_ambient();
         const data::DirectionalLight &get_directional_light() const;
         const data::SSAO &get_ssao() const;
         const data::PointLight &get_point_light() const;

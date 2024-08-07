@@ -6,7 +6,6 @@
 
 #include <Core/src/utils/FileLoader.hpp>
 
-
 namespace gage::gfx::data
 {
     SSAO::SSAO(Graphics &gfx) : gfx(gfx)
@@ -45,13 +44,11 @@ namespace gage::gfx::data
         scissor.extent.width = gfx.get_scaled_draw_extent().width;
         scissor.extent.height = gfx.get_scaled_draw_extent().height;
 
-        PushConstantFragment ps_fs
-        {
-           .radius = gfx.ssao_radius,
-           .bias = gfx.ssao_bias,
-           .noise_scale = glm::vec2(gfx.draw_extent.width / 4.0 , gfx.draw_extent.height / 4.0),
-           .resolution_scale = gfx.draw_extent_scale
-        };
+        PushConstantFragment ps_fs{
+            .radius = gfx.ssao_radius,
+            .bias = gfx.ssao_bias,
+            .noise_scale = glm::vec2(gfx.draw_extent.width / 4.0, gfx.draw_extent.height / 4.0),
+            .resolution_scale = gfx.draw_extent_scale};
 
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &gfx.frame_datas[gfx.frame_index].global_set, 0, nullptr);
@@ -115,7 +112,6 @@ namespace gage::gfx::data
         descriptor_write.pTexelBufferView = nullptr;
         vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
 
-
         // Link to noise texture
         img_info.imageView = image->get_image_view();
         descriptor_write.dstSet = desc;
@@ -144,7 +140,7 @@ namespace gage::gfx::data
             ci.pBindings = bindings.data();
             vk_check(vkCreateDescriptorSetLayout(gfx.device, &ci, nullptr, &desc_layout));
         }
-        //Allocate descriptor set
+        // Allocate descriptor set
         {
             // Allocate descriptor set
             VkDescriptorSetAllocateInfo ai{};
@@ -158,20 +154,15 @@ namespace gage::gfx::data
         // Create pipeline layout
         {
 
-            std::vector<VkDescriptorSetLayout> layouts = {gfx.global_set_layout,  desc_layout};
-            std::vector<VkPushConstantRange> push_constants = 
-            {
+            std::vector<VkDescriptorSetLayout> layouts = {gfx.global_set_layout, desc_layout};
+            std::vector<VkPushConstantRange> push_constants =
                 {
-                    .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-                    .offset = 0,
-                    .size = sizeof(float)
-                },
-                {
-                    .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-                    .offset = 16,
-                    .size = sizeof(PushConstantFragment)
-                }
-            };
+                    {.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+                     .offset = 0,
+                     .size = sizeof(float)},
+                    {.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+                     .offset = 16,
+                     .size = sizeof(PushConstantFragment)}};
             VkPipelineLayoutCreateInfo ci = {};
             ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
             ci.pSetLayouts = layouts.data();
@@ -181,7 +172,7 @@ namespace gage::gfx::data
             vk_check(vkCreatePipelineLayout(gfx.device, &ci, nullptr, &pipeline_layout));
         }
 
-         // Create pipeline
+        // Create pipeline
         {
 
             VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
@@ -251,8 +242,7 @@ namespace gage::gfx::data
                         .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
                         .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
                         .alphaBlendOp = VK_BLEND_OP_ADD,
-                        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT
-                    },
+                        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT},
                 };
 
             VkPipelineColorBlendStateCreateInfo color_blending = {};
@@ -261,6 +251,31 @@ namespace gage::gfx::data
             color_blending.logicOp = VK_LOGIC_OP_COPY;
             color_blending.attachmentCount = blend_attachments.size();
             color_blending.pAttachments = blend_attachments.data();
+
+            // Constants
+
+            struct SpecializationData
+            {
+                uint32_t kernel_size; 
+            } specialization_data;
+            specialization_data.kernel_size = KERNEL_SIZE;
+
+
+            std::vector<VkSpecializationMapEntry> specialization_map_entries = 
+            {
+                VkSpecializationMapEntry{
+                    .constantID = 0,
+                    .offset = 0,
+                    .size = sizeof(uint32_t),
+                }
+            };
+        
+
+            VkSpecializationInfo specialization_info{};
+            specialization_info.dataSize = sizeof(specialization_data);
+            specialization_info.mapEntryCount = specialization_map_entries.size();
+            specialization_info.pMapEntries = specialization_map_entries.data();
+            specialization_info.pData = &specialization_data;
 
             std::vector<VkPipelineShaderStageCreateInfo> pipeline_shader_stages{};
             VkShaderModule vertex_shader{};
@@ -289,13 +304,15 @@ namespace gage::gfx::data
             shader_stage_ci.module = fragment_shader;
             shader_stage_ci.pName = "main";
             shader_stage_ci.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+            //Constant id = 0
+            shader_stage_ci.pSpecializationInfo = &specialization_info;
             pipeline_shader_stages.push_back(shader_stage_ci);
 
             std::vector<VkDynamicState> dynamic_states =
-            {
-                VK_DYNAMIC_STATE_VIEWPORT,
-                VK_DYNAMIC_STATE_SCISSOR
-            };
+                {
+                    VK_DYNAMIC_STATE_VIEWPORT,
+                    VK_DYNAMIC_STATE_SCISSOR};
 
             VkPipelineDynamicStateCreateInfo dynamic_state_ci{};
             dynamic_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -339,8 +356,7 @@ namespace gage::gfx::data
             glm::vec3 sample(
                 random_floats(generator) * 2.0 - 1.0,
                 random_floats(generator) * 2.0 - 1.0,
-                random_floats(generator)
-            );
+                random_floats(generator));
             float scale = (float)i / 64.0;
             scale = lerp(0.1f, 1.0f, scale * scale);
             sample = glm::normalize(sample);
@@ -355,14 +371,13 @@ namespace gage::gfx::data
             glm::vec3 noise(
                 random_floats(generator) * 2.0 - 1.0,
                 random_floats(generator) * 2.0 - 1.0,
-                0.0f
-            );
+                0.0f);
             noises.push_back(noise);
         }
 
         ImageCreateInfo image_ci{noises.data(), 4, 4, 1, 12 * 4 * 4, VK_FORMAT_R32G32B32_SFLOAT, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT};
 
-        image = std::make_unique<Image>(gfx,  image_ci);
+        image = std::make_unique<Image>(gfx, image_ci);
 
         kernel_buffer = std::make_unique<GPUBuffer>(gfx, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(glm::vec4) * KERNEL_SIZE, kernel.data());
     }

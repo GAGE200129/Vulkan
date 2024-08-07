@@ -1,21 +1,42 @@
 #include <pch.hpp>
-#include "AmbientLight.hpp"
+#include "Sky.hpp"
 
 #include "../Graphics.hpp"
 #include "g_buffer/GBuffer.hpp"
 
 #include <Core/src/utils/FileLoader.hpp>
-#include <Core/src/utils/VulkanHelper.hpp>
 
 namespace gage::gfx::data
 {
-    AmbientLight::AmbientLight(Graphics &gfx) : gfx(gfx)
+    Sky::Sky(const gfx::Graphics& gfx) :
+        gfx(gfx)
     {
-        // Create descriptor set layout
+        create_pipeline();
+        link_desc_to_g_buffer();
+    }
+    Sky::~Sky()
+    {
+        vkDestroyDescriptorSetLayout(gfx.device, desc_layout, nullptr);
+        vkDestroyPipelineLayout(gfx.device, pipeline_layout, nullptr);
+        vkDestroyPipeline(gfx.device, pipeline, nullptr);
+        vkFreeDescriptorSets(gfx.device, gfx.desc_pool, 1, &desc);
+    }
+
+    void Sky::process(VkCommandBuffer cmd) const
+    {
+    }
+    void Sky::reset()
+    {
+    }
+    void Sky::link_desc_to_g_buffer()
+    {
+    }
+    void Sky::create_pipeline()
+    {
+         // Create descriptor set layout
         {
             std::vector<VkDescriptorSetLayoutBinding> bindings{
-                {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 3, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
-                {.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
+               
             };
 
             VkDescriptorSetLayoutCreateInfo ci{};
@@ -24,8 +45,6 @@ namespace gage::gfx::data
             ci.pBindings = bindings.data();
             vk_check(vkCreateDescriptorSetLayout(gfx.device, &ci, nullptr, &desc_layout));
         }
-
-
         // Allocate descriptor set
         {
             // Allocate descriptor set
@@ -35,28 +54,16 @@ namespace gage::gfx::data
             ai.pSetLayouts = &desc_layout;
             ai.descriptorSetCount = 1;
             vk_check(vkAllocateDescriptorSets(gfx.device, &ai, &desc));
-
-            link_desc_to_g_buffer();
         }
 
         // Create pipeline layout
         {
 
-            std::vector<VkDescriptorSetLayout> layouts = {gfx.global_set_layout,  desc_layout};
-            std::vector<VkPushConstantRange> push_constants = 
-            {
+            std::vector<VkDescriptorSetLayout> layouts = {gfx.global_set_layout, desc_layout};
+            std::vector<VkPushConstantRange> push_constants =
                 {
-                    .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-                    .offset = 0,
-                    .size = sizeof(float)
-                },
-
-                {
-                    .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-                    .offset = 16,
-                    .size = sizeof(float)
-                },
-            };
+                    
+                };
             VkPipelineLayoutCreateInfo ci = {};
             ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
             ci.pSetLayouts = layouts.data();
@@ -108,16 +115,16 @@ namespace gage::gfx::data
             VkViewport viewport = {};
             viewport.x = 0;
             viewport.y = 0;
-            viewport.width = gfx.get_scaled_draw_extent().width;
-            viewport.height = gfx.get_scaled_draw_extent().height;
+            viewport.width = 0;
+            viewport.height = 0;
             viewport.minDepth = 0.f;
             viewport.maxDepth = 1.f;
 
             VkRect2D scissor = {};
             scissor.offset.x = 0;
             scissor.offset.y = 0;
-            scissor.extent.width = gfx.draw_extent.width;
-            scissor.extent.height = gfx.draw_extent.height;
+            scissor.extent.width = 0;
+            scissor.extent.height = 0;
 
             VkPipelineViewportStateCreateInfo viewport_state{};
             viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -129,7 +136,7 @@ namespace gage::gfx::data
             std::vector<VkPipelineColorBlendAttachmentState> blend_attachments =
                 {
                     VkPipelineColorBlendAttachmentState{
-                        .blendEnable = false,
+                        .blendEnable = true,
                         .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
                         .dstColorBlendFactor = VK_BLEND_FACTOR_ONE,
                         .colorBlendOp = VK_BLEND_OP_ADD,
@@ -147,11 +154,15 @@ namespace gage::gfx::data
             color_blending.attachmentCount = blend_attachments.size();
             color_blending.pAttachments = blend_attachments.data();
 
+            // Constants
+
+            
+
             std::vector<VkPipelineShaderStageCreateInfo> pipeline_shader_stages{};
             VkShaderModule vertex_shader{};
             VkShaderModule fragment_shader{};
             auto vertex_binary = utils::file_path_to_binary("Core/shaders/compiled/vertex_generator.vert.spv");
-            auto fragment_binary = utils::file_path_to_binary("Core/shaders/compiled/ambient.frag.spv");
+            auto fragment_binary = utils::file_path_to_binary("Core/shaders/compiled/sky.frag.spv");
 
             VkShaderModuleCreateInfo shader_module_ci = {};
             shader_module_ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -177,10 +188,9 @@ namespace gage::gfx::data
             pipeline_shader_stages.push_back(shader_stage_ci);
 
             std::vector<VkDynamicState> dynamic_states =
-            {
-                VK_DYNAMIC_STATE_VIEWPORT,
-                VK_DYNAMIC_STATE_SCISSOR
-            };
+                {
+                    VK_DYNAMIC_STATE_VIEWPORT,
+                    VK_DYNAMIC_STATE_SCISSOR};
 
             VkPipelineDynamicStateCreateInfo dynamic_state_ci{};
             dynamic_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -207,113 +217,5 @@ namespace gage::gfx::data
             vkDestroyShaderModule(gfx.device, vertex_shader, nullptr);
             vkDestroyShaderModule(gfx.device, fragment_shader, nullptr);
         }
-    }
-    AmbientLight::~AmbientLight()
-    {
-        vkDestroyDescriptorSetLayout(gfx.device, desc_layout, nullptr);
-        vkFreeDescriptorSets(gfx.device, gfx.desc_pool, 1, &desc);
-        vkDestroyPipelineLayout(gfx.device, pipeline_layout, nullptr);
-        vkDestroyPipeline(gfx.device, pipeline, nullptr);
-    }
-
-    void AmbientLight::process(VkCommandBuffer cmd) const
-    {
-        VkViewport viewport = {};
-        viewport.x = 0;
-        viewport.y = 0;
-        viewport.width = gfx.get_scaled_draw_extent().width;
-        viewport.height = gfx.get_scaled_draw_extent().height;
-        viewport.minDepth = 0.f;
-        viewport.maxDepth = 1.f;
-
-        VkRect2D scissor = {};
-        scissor.offset.x = 0;
-        scissor.offset.y = 0;
-        scissor.extent.width = gfx.get_scaled_draw_extent().width;
-        scissor.extent.height = gfx.get_scaled_draw_extent().height;
-
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &gfx.frame_datas[gfx.frame_index].global_set, 0, nullptr);
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 1, 1, &desc, 0, nullptr);
-        vkCmdSetViewport(cmd, 0, 1, &viewport);
-        vkCmdSetScissor(cmd, 0, 1, &scissor);
-        vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float), &gfx.draw_extent_scale);
-
-        vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 16, sizeof(float), &time);
-        vkCmdDraw(cmd, 3, 1, 0, 0);
-    }
-
-    void AmbientLight::update(float delta)
-    {
-        this->time += delta * time_scale;
-    }
-
-    void AmbientLight::reset()
-    {
-        link_desc_to_g_buffer();
-    }
-
-    void AmbientLight::link_desc_to_g_buffer()
-    {
-        // Link to position g_buffer
-        VkDescriptorImageInfo img_info{};
-        img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        img_info.sampler = gfx.default_sampler;
-
-        VkWriteDescriptorSet descriptor_write{};
-        descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-
-        // Link to albedo g_buffer
-        img_info.imageView = gfx.geometry_buffer->get_albedo_view();
-        descriptor_write.dstSet = desc;
-        descriptor_write.dstBinding = 0;
-        descriptor_write.dstArrayElement = 0;
-        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptor_write.descriptorCount = 1;
-        descriptor_write.pBufferInfo = nullptr;
-        descriptor_write.pImageInfo = &img_info;
-        descriptor_write.pTexelBufferView = nullptr;
-        vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
-
-         // Link to ssao g_buffer
-        img_info.imageView = gfx.geometry_buffer->get_ssao_view();
-        descriptor_write.dstSet = desc;
-        descriptor_write.dstBinding = 0;
-        descriptor_write.dstArrayElement = 1;
-        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptor_write.descriptorCount = 1;
-        descriptor_write.pBufferInfo = nullptr;
-        descriptor_write.pImageInfo = &img_info;
-        descriptor_write.pTexelBufferView = nullptr;
-        vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
-
-        // Link to depth g_buffer
-        img_info.imageView = gfx.geometry_buffer->get_depth_view();
-        descriptor_write.dstSet = desc;
-        descriptor_write.dstBinding = 0;
-        descriptor_write.dstArrayElement = 2;
-        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptor_write.descriptorCount = 1;
-        descriptor_write.pBufferInfo = nullptr;
-        descriptor_write.pImageInfo = &img_info;
-        descriptor_write.pTexelBufferView = nullptr;
-        vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
-
-         // Link to stencil g_buffer
-        img_info.imageView = gfx.geometry_buffer->get_stencil_view();
-        descriptor_write.dstSet = desc;
-        descriptor_write.dstBinding = 1;
-        descriptor_write.dstArrayElement = 0;
-        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptor_write.descriptorCount = 1;
-        descriptor_write.pBufferInfo = nullptr;
-        descriptor_write.pImageInfo = &img_info;
-        descriptor_write.pTexelBufferView = nullptr;
-        vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
-    }
-
-    VkPipelineLayout AmbientLight::get_layout() const
-    {
-        return pipeline_layout;
     }
 }

@@ -16,6 +16,8 @@ namespace gage::gfx::data
         AmbientLight(Graphics& gfx);
         ~AmbientLight();
 
+        void update(float delta);
+
         void process(VkCommandBuffer cmd) const;
 
         void reset();
@@ -29,5 +31,8 @@ namespace gage::gfx::data
         VkDescriptorSet desc{};
         VkPipelineLayout pipeline_layout{};
         VkPipeline pipeline{};
+
+        float time{0.0f};
+        float time_scale{0.01f};
     };
 }

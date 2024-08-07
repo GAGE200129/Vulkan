@@ -11,7 +11,6 @@
 #include "data/Camera.hpp"
 #include "data/AmbientLight.hpp"
 #include "data/DirectionalLight.hpp"
-#include "data/ShadowPipeline.hpp"
 #include "data/PointLight.hpp"
 #include "data/SSAO.hpp"
 
@@ -806,6 +805,10 @@ namespace gage::gfx
 
 
     const data::AmbientLight &Graphics::get_final_ambient() const
+    {
+        return *final_ambient;
+    }
+    data::AmbientLight& Graphics::get_final_ambient()
     {
         return *final_ambient;
     }

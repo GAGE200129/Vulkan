@@ -20,7 +20,7 @@ void main()
 {
     
     gl_Position = descriptor_set_0_ubo.projection * descriptor_set_0_ubo.view * vec4(in_pos, 1.0);
-    vs_out.tex_coord = in_tex_coord ;
+    vs_out.tex_coord = in_tex_coord * 200.0;
     vs_out.normal = in_normal;
 
 
