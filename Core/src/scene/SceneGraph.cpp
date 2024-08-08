@@ -163,58 +163,7 @@ namespace gage::scene
         new_model->nodes.reserve(gltf_model.nodes.size());
         for (uint32_t i = 0; i < gltf_model.nodes.size(); i++)
         {
-            const auto &gltf_node = gltf_model.nodes.at(i);
-
-            data::ModelNode model_node{};
-            model_node.name = gltf_node.name;
-            model_node.bone_id = i;
-
-            if (gltf_node.mesh > -1)
-            {
-                model_node.has_mesh = true;
-                model_node.mesh_index = gltf_node.mesh;
-            }
-
-            if (gltf_node.skin > -1)
-            {
-                model_node.has_skin = true;
-                model_node.skin_index = gltf_node.skin;
-            }
-
-            glm::vec3 &position = model_node.position;
-            glm::quat &rotation = model_node.rotation;
-            glm::vec3 &scale = model_node.scale;
-
-            assert(gltf_node.matrix.size() == 0);
-
-            if (gltf_node.translation.size() != 0)
-            {
-                position.x = gltf_node.translation.at(0);
-                position.y = gltf_node.translation.at(1);
-                position.z = gltf_node.translation.at(2);
-            }
-
-            if (gltf_node.scale.size() != 0)
-            {
-                scale.x = gltf_node.scale.at(0);
-                scale.y = gltf_node.scale.at(1);
-                scale.z = gltf_node.scale.at(2);
-            }
-
-            if (gltf_node.rotation.size() != 0)
-            {
-                rotation.x = gltf_node.rotation.at(0);
-                rotation.y = gltf_node.rotation.at(1);
-                rotation.z = gltf_node.rotation.at(2);
-                rotation.w = gltf_node.rotation.at(3);
-            }
-
-            for (const auto &child : gltf_node.children)
-            {
-                model_node.children.push_back(child);
-            }
-
-            new_model->nodes.push_back(model_node);
+            new_model->nodes.emplace_back(gltf_model.nodes.at(i), i);
         }
 
         // Process mesh
@@ -330,16 +279,6 @@ namespace gage::scene
         child->parent = parent;
     }
 
-    Node *SceneGraph::find_node(uint64_t id)
-    {
-        for (const auto &node : nodes)
-        {
-            if (node->id == id)
-                return node.get();
-        }
-
-        return nullptr;
-    }
 
     void SceneGraph::add_component(Node *node, std::unique_ptr<components::IComponent> component)
     {

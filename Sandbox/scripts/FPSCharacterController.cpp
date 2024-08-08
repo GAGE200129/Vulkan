@@ -119,6 +119,13 @@ void FPSCharacterController::update(float delta, const hid::Keyboard &keyboard, 
     hips->set_rotation(glm::quat(glm::vec3(0.0f, glm::pi<float>() + glm::radians(yaw), 0.0f)));
 }
 
+nlohmann::json FPSCharacterController::to_json() const
+{
+    nlohmann::json script = Script::to_json(); 
+    script["name"] = "FPSCharacterController";
+    return script;
+}
+
 void FPSCharacterController::late_update(float delta, const hid::Keyboard &keyboard, const hid::Mouse &mouse)
 {
     auto head_global_transform = head_node->get_global_transform();

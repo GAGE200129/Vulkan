@@ -26,7 +26,7 @@ public:
     void late_update(float delta, const gage::hid::Keyboard &keyboard, const gage::hid::Mouse &mouse) final;
     void shutdown() final;
 
-
+    nlohmann::json to_json() const final;
 private:
     gage::gfx::data::Camera &camera;
 

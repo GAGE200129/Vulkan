@@ -1,5 +1,8 @@
 #pragma once
 
+
+#include "ModelNode.hpp"
+
 #include <Core/src/gfx/data/GPUBuffer.hpp>
 #include <Core/src/gfx/data/CPUBuffer.hpp>
 #include <Core/src/gfx/data/Image.hpp>
@@ -14,22 +17,6 @@
 
 namespace gage::scene::data
 {
-    struct ModelNode
-    {
-        std::string name{};
-        uint32_t bone_id{};
-        glm::vec3 position{0, 0, 0};
-        glm::vec3 scale{1, 1, 1};
-        glm::quat rotation{1, 0, 0, 0};
-        glm::mat4x4 inverse_bind_transform{1.0f};
-        bool has_skin{false};
-        uint32_t skin_index{};
-        
-        bool has_mesh{false};
-        uint32_t mesh_index{};
-        std::vector<uint32_t> children;
-    };
-
     struct ModelMesh
     {
         struct MeshSection

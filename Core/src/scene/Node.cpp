@@ -44,15 +44,18 @@ namespace gage::scene
             }
         }
         j["inverse_bind_transform"] = inverse_bind_matrix;
-        for (const auto &child : children)
-        {
-            j["children"].push_back(child->to_json());
-        }
 
         for (const auto &component : this->component_ptrs)
         {
             j["components"].push_back(component->to_json());
         }
+        
+        for (const auto &child : children)
+        {
+            j["children"].push_back(child->to_json());
+        }
+
+        
         return j;
     }
 

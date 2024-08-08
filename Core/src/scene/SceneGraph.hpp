@@ -63,7 +63,6 @@ namespace gage::scene
         void build_node_transform();
 
         Node* create_node();
-        Node* find_node(uint64_t id);
         void add_component(Node* node, std::unique_ptr<components::IComponent> component);
         
 

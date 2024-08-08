@@ -20,7 +20,7 @@ namespace gage::scene::components
 
     nlohmann::json CharacterController::to_json() const
     {
-        return {"type", get_name()};
+        return {{"type", get_name()}};
     }
 
 }

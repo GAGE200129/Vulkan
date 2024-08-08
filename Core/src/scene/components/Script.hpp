@@ -29,7 +29,7 @@ namespace gage::scene::components
         inline virtual void update(float, const hid::Keyboard&, const hid::Mouse&)  {}
         inline virtual void late_update(float, const hid::Keyboard&, const hid::Mouse&)  {}
         inline virtual void shutdown() {}
-        inline nlohmann::json to_json() const final { return {}; };
+        inline nlohmann::json to_json() const override { return { {"type", get_name()} }; };
 
         inline virtual void render_imgui()  {};
         inline const char* get_name() const final { return "Script"; };
