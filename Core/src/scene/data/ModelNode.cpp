@@ -46,6 +46,7 @@ namespace gage::scene::data
             rotation.w = node.rotation.at(3);
         }
 
+        children.reserve(node.children.size());
         for (const auto &child : node.children)
         {
             children.push_back(child);

@@ -14,9 +14,9 @@ namespace gage::gfx::data
     public:
         CPUBuffer(Graphics& gfx, VkBufferUsageFlags flags, size_t size_in_bytes, const void* data);
         CPUBuffer(const CPUBuffer&) = delete;
-        CPUBuffer(CPUBuffer&&) = delete;
         CPUBuffer operator=(const CPUBuffer&) = delete;
         ~CPUBuffer();
+        CPUBuffer(CPUBuffer&&) = default;
 
 
 

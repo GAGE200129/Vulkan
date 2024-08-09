@@ -2,6 +2,7 @@
 
 
 #include "ModelNode.hpp"
+#include "ModelMesh.hpp"
 
 #include <Core/src/gfx/data/GPUBuffer.hpp>
 #include <Core/src/gfx/data/CPUBuffer.hpp>
@@ -17,23 +18,7 @@
 
 namespace gage::scene::data
 {
-    struct ModelMesh
-    {
-        struct MeshSection
-        {
-            uint32_t vertex_count{};
-            std::unique_ptr<gfx::data::GPUBuffer> index_buffer{}; 
-            std::unique_ptr<gfx::data::GPUBuffer> position_buffer{}; 
-            std::unique_ptr<gfx::data::GPUBuffer> normal_buffer{}; 
-            std::unique_ptr<gfx::data::GPUBuffer> texcoord_buffer{};
-            std::unique_ptr<gfx::data::GPUBuffer> bone_id_buffer{};
-            std::unique_ptr<gfx::data::GPUBuffer> bone_weight_buffer{};
-            int32_t material_index{};
-            bool has_skin{};
-        };
-        std::vector<MeshSection> sections{};
-        std::vector<uint32_t> skin_joints;
-    };
+    
 
     struct ModelMaterial
     {

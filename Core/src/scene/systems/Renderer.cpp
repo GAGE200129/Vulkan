@@ -73,24 +73,24 @@ namespace gage::scene::systems
                                         depth_pipeline_layout,
                                         1,
                                         1, &mesh->animation_descs[gfx.get_current_frame_index()], 0, nullptr);
-            for (const auto &section : mesh->model_mesh.sections)
+            for (const auto &primitive : mesh->model_mesh.primitives)
             {
-                if (section.material_index < 0)
+                if (primitive.material_index < 0)
                     continue;
 
                 VkBuffer buffers[] =
                     {
-                        section.position_buffer->get_buffer_handle(),
-                        section.bone_id_buffer->get_buffer_handle(),
-                        section.bone_weight_buffer->get_buffer_handle(),
+                        primitive.position_buffer->get_buffer_handle(),
+                        primitive.bone_id_buffer->get_buffer_handle(),
+                        primitive.bone_weight_buffer->get_buffer_handle(),
                     };
                 VkDeviceSize offsets[] =
                     {0, 0, 0};
 
                 vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), glm::value_ptr(mesh->node.get_global_transform()));
                 vkCmdBindVertexBuffers(cmd, 0, sizeof(buffers) / sizeof(buffers[0]), buffers, offsets);
-                vkCmdBindIndexBuffer(cmd, section.index_buffer->get_buffer_handle(), 0, VK_INDEX_TYPE_UINT32);
-                vkCmdDrawIndexed(cmd, section.vertex_count, 1, 0, 0, 0);
+                vkCmdBindIndexBuffer(cmd, primitive.index_buffer->get_buffer_handle(), 0, VK_INDEX_TYPE_UINT32);
+                vkCmdDrawIndexed(cmd, primitive.vertex_count, 1, 0, 0, 0);
             }
         }
     }
@@ -118,25 +118,25 @@ namespace gage::scene::systems
         {
             // Update animation buffer
             std::memcpy(mesh->animation_buffers[gfx.get_current_frame_index()]->get_mapped(), &mesh->animation_buffer_data, sizeof(components::MeshRenderer::AnimationBuffer));
-            for (const auto &section : mesh->model_mesh.sections)
+            for (const auto &primitive : mesh->model_mesh.primitives)
             {
-                if (section.material_index < 0)
+                if (primitive.material_index < 0)
                     continue;
 
                 VkBuffer buffers[] =
                     {
-                        section.position_buffer->get_buffer_handle(),
-                        section.normal_buffer->get_buffer_handle(),
-                        section.texcoord_buffer->get_buffer_handle(),
-                        section.bone_id_buffer->get_buffer_handle(),
-                        section.bone_weight_buffer->get_buffer_handle(),
+                        primitive.position_buffer->get_buffer_handle(),
+                        primitive.normal_buffer->get_buffer_handle(),
+                        primitive.texcoord_buffer->get_buffer_handle(),
+                        primitive.bone_id_buffer->get_buffer_handle(),
+                        primitive.bone_weight_buffer->get_buffer_handle(),
                     };
                 VkDeviceSize offsets[] =
                     {0, 0, 0, 0, 0};
 
                 // Build transform
 
-                const VkDescriptorSet &material_set = mesh->model.materials.at(section.material_index).descriptor_set;
+                const VkDescriptorSet &material_set = mesh->model.materials.at(primitive.material_index).descriptor_set;
                 vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), glm::value_ptr(mesh->node.get_global_transform()));
                 vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                         pipeline_layout,
@@ -149,8 +149,8 @@ namespace gage::scene::systems
                                         1, &mesh->animation_descs[gfx.get_current_frame_index()], 0, nullptr);
 
                 vkCmdBindVertexBuffers(cmd, 0, sizeof(buffers) / sizeof(buffers[0]), buffers, offsets);
-                vkCmdBindIndexBuffer(cmd, section.index_buffer->get_buffer_handle(), 0, VK_INDEX_TYPE_UINT32);
-                vkCmdDrawIndexed(cmd, section.vertex_count, 1, 0, 0, 0);
+                vkCmdBindIndexBuffer(cmd, primitive.index_buffer->get_buffer_handle(), 0, VK_INDEX_TYPE_UINT32);
+                vkCmdDrawIndexed(cmd, primitive.vertex_count, 1, 0, 0, 0);
             }
         }
     }
