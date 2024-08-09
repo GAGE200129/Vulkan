@@ -4,7 +4,6 @@
 #include <vk_mem_alloc.h>
 #include <vector>
 #include <functional>
-#include <optional>
 
 #include "Exception.hpp"
 #include "data/Swapchain.hpp"
@@ -138,26 +137,7 @@ namespace gage::gfx
         // Shadowmap size
         void resize_shadow_map(uint32_t shadow_map_size);
 
-        uint32_t get_current_frame_index() const;
-        VkDevice get_device() const;
-        VkDescriptorPool get_desc_pool() const;
-        VkDescriptorSetLayout get_global_desc_layout() const;
-        const glm::mat4 &get_projection() const;
-        const glm::mat4 &get_view() const;
-        const data::Swapchain &get_swapchain() const;
-        const data::g_buffer::GBuffer &get_g_buffer() const;
-        const data::AmbientLight &get_final_ambient() const;
-        data::AmbientLight& get_final_ambient();
-        const data::DirectionalLight &get_directional_light() const;
-        const data::SSAO &get_ssao() const;
-        const data::PointLight &get_point_light() const;
-
-
-        const FrameData& get_frame_data() const;
-        uint32_t get_directional_light_shadow_map_resolution() const;
-        
-        GlobalUniform &get_global_uniform();
-        VkExtent2D get_scaled_draw_extent();
+        VkExtent2D get_scaled_draw_extent() const;
 
         void set_ssao_bias_and_radius(float bias, float radius);
 
@@ -166,8 +146,7 @@ namespace gage::gfx
         void create_default_image_sampler();
         void destroy_default_image_sampler();
 
-    private:
-        std::mutex uploading_mutex{};
+    public:
         std::string app_name{};
         std::stack<std::function<void()>> delete_stack{};
 
@@ -184,7 +163,7 @@ namespace gage::gfx
 
         uint32_t swapchain_image_index{};
 
-        std::optional<data::Swapchain> swapchain{};
+        std::unique_ptr<data::Swapchain> swapchain{};
 
         VkDescriptorPool desc_pool{};
         VkDescriptorSetLayout global_set_layout{};

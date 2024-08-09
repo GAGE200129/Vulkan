@@ -44,7 +44,7 @@ namespace gage::scene::systems
             std::shared_ptr<components::Terrain> terrain;
         };
     public:
-        TerrainRenderer(gfx::Graphics &gfx, const gfx::data::Camera& camera);
+        TerrainRenderer(const  gfx::Graphics &gfx, const gfx::data::Camera& camera);
         ~TerrainRenderer();
 
         void init();
@@ -64,7 +64,7 @@ namespace gage::scene::systems
         void create_depth_pipeline();
     private:
         static constexpr uint8_t STENCIL_VALUE = 0x02;
-        gfx::Graphics& gfx;
+        const gfx::Graphics& gfx;
         const gfx::data::Camera& camera;
 
         VkPipelineLayout pipeline_layout{};

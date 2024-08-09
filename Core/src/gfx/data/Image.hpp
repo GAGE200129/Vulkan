@@ -24,9 +24,9 @@ namespace gage::gfx::data
     class Image
     {
     public:
-        Image(Graphics& gfx, ImageCreateInfo ci);
+        Image(const Graphics& gfx, ImageCreateInfo ci);
+        Image(Image&&) = default;
         Image(const Image&) = delete;
-        Image(Image&&) = delete;
         Image operator=(const Image&) = delete;
         ~Image();
 
@@ -36,7 +36,7 @@ namespace gage::gfx::data
     private:
         void generate_mip_maps(VkCommandBuffer cmd, uint32_t mip_levels, uint32_t width, uint32_t height);
     private:
-        Graphics& gfx;
+        const Graphics& gfx;
         VkImage image{};
         VkImageView image_view{};
         VmaAllocation allocation{};

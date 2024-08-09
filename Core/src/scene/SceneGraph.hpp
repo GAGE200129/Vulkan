@@ -81,8 +81,6 @@ namespace gage::scene
         systems::Generic& get_generic();
 
     private:
-        void process_model_mesh(const tinygltf::Model& gltf_model, const tinygltf::Mesh& gltf_mesh, data::ModelMesh& mesh);
-        void process_model_material(const tinygltf::Model& gltf_model, const tinygltf::Material& gltf_material, data::ModelMaterial& material);
         void process_model_animation( const tinygltf::Model& gltf_model, const tinygltf::Animation& gltf_animation, data::ModelAnimation& animation);
         void process_model_skin(const tinygltf::Model& gltf_model, const tinygltf::Skin& gltf_skin, data::ModelSkin& skin);
         void process_model_calculate_inverse_bind_transform(data::Model& model, data::ModelNode& root);

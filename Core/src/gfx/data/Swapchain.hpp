@@ -15,6 +15,8 @@ namespace gage::gfx::data
         ~Swapchain();
         VkSwapchainKHR get() const;
 
+        void reset();
+
         VkImage at(size_t i) const;
     private:
         static constexpr VkFormat COLOR_FORMAT = VK_FORMAT_B8G8R8A8_UNORM; 

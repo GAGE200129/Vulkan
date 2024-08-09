@@ -7,11 +7,10 @@
 
 namespace gage::gfx::data
 {
-    CPUBuffer::CPUBuffer(Graphics &gfx, VkBufferUsageFlags flags, size_t size_in_bytes, const void *data) :
+    CPUBuffer::CPUBuffer(const Graphics &gfx, VkBufferUsageFlags flags, size_t size_in_bytes, const void *data) :
         gfx(gfx)
     {
         log().trace("Allocating vulkan cpu buffer: size: {} bytes, address: {}, flags: {}", size_in_bytes, data, string_VkBufferUsageFlags(flags));
-        gfx.uploading_mutex.lock();
         assert(size_in_bytes != 0);
         std::vector<unsigned char> null_buffer(size_in_bytes, 0xAA);
         if(data == nullptr)
@@ -30,8 +29,6 @@ namespace gage::gfx::data
         vk_check(vmaCreateBuffer(gfx.allocator, &staging_buffer_info, &staging_alloc_info, &buffer_handle, &allocation, &info));
 
         std::memcpy(info.pMappedData, data, size_in_bytes);
-
-        gfx.uploading_mutex.unlock();
     }
     CPUBuffer::~CPUBuffer()
     {

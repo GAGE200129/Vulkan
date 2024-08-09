@@ -12,10 +12,11 @@ namespace gage::gfx::data
     class CPUBuffer
     {
     public:
-        CPUBuffer(Graphics& gfx, VkBufferUsageFlags flags, size_t size_in_bytes, const void* data);
+        CPUBuffer(const Graphics& gfx, VkBufferUsageFlags flags, size_t size_in_bytes, const void* data);
+        ~CPUBuffer();
+
         CPUBuffer(const CPUBuffer&) = delete;
         CPUBuffer operator=(const CPUBuffer&) = delete;
-        ~CPUBuffer();
         CPUBuffer(CPUBuffer&&) = default;
 
 
@@ -23,7 +24,7 @@ namespace gage::gfx::data
         VkBuffer get_buffer_handle() const;
         void* get_mapped() const;
     private:
-        Graphics&           gfx;
+        const Graphics&           gfx;
         VkBuffer            buffer_handle{};
         VmaAllocation       allocation{};
         VmaAllocationInfo   info{};

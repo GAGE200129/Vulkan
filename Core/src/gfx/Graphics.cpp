@@ -29,8 +29,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     {
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
     {
-        gfx::log().info("{}", gfx->get_app_name());
-        gfx::log().trace("{}", p_callback_data->pMessage);
+        gfx::log().info("{}", p_callback_data->pMessage);
 
         break;
     }
@@ -75,6 +74,10 @@ namespace gage::gfx
         auto vkb_instance_result = builder.set_app_name(app_name.c_str())
                                        .request_validation_layers(true)
                                        .set_debug_callback(debugCallback)
+                                       .set_debug_messenger_severity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
+                                       .set_debug_messenger_severity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+                                       .set_debug_messenger_severity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
+                                       .set_debug_messenger_severity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
                                        .set_debug_callback_user_data_pointer(this)
                                        .enable_extensions(ENABLED_INSTANCE_EXTENSIONS.size(), ENABLED_INSTANCE_EXTENSIONS.data())
                                        .require_api_version(1, 3, 0)
@@ -155,7 +158,7 @@ namespace gage::gfx
         delete_stack.push([this]()
                           { vmaDestroyAllocator(allocator); });
 
-        swapchain.emplace(*this);
+        swapchain = std::make_unique<data::Swapchain>(*this);
         delete_stack.push([this]()
                           { swapchain.reset(); });
 
@@ -340,7 +343,6 @@ namespace gage::gfx
 
     VkCommandBuffer Graphics::clear(const data::Camera &camera)
     {
-        uploading_mutex.lock();
 
         VkSemaphore &present_semaphore = frame_datas[frame_index].present_semaphore;
         VkFence &render_fence = frame_datas[frame_index].render_fence;
@@ -355,8 +357,7 @@ namespace gage::gfx
         {
             vkDeviceWaitIdle(device);
             draw_extent = draw_extent_temp;
-            swapchain.reset();
-            swapchain.emplace(*this);
+            swapchain->reset();
             geometry_buffer->reset();
             final_ambient->reset();
             directional_light->reset();
@@ -522,19 +523,8 @@ namespace gage::gfx
         }
 
         frame_index = (frame_index + 1) % FRAMES_IN_FLIGHT;
-
-        uploading_mutex.unlock();
     }
 
-    Graphics::GlobalUniform &Graphics::get_global_uniform()
-    {
-        return global_uniform;
-    }
-
-    const std::string &Graphics::get_app_name() const noexcept
-    {
-        return app_name;
-    }
 
     void Graphics::set_resolution_scale(float scale)
     {
@@ -787,71 +777,6 @@ namespace gage::gfx
         return glm::orthoRH_ZO(min.x, max.x, min.y, max.y, min.z, max.z) * light_view;
     }
 
-    const data::Swapchain &Graphics::get_swapchain() const
-    {
-        return swapchain.value();
-    }
-
-    const data::g_buffer::GBuffer &Graphics::get_g_buffer() const
-    {
-        return *geometry_buffer;
-    }
-
-
-    const data::SSAO &Graphics::get_ssao() const
-    {
-        return *ssao;
-    }
-
-
-    const data::AmbientLight &Graphics::get_final_ambient() const
-    {
-        return *final_ambient;
-    }
-    data::AmbientLight& Graphics::get_final_ambient()
-    {
-        return *final_ambient;
-    }
-
-    const data::DirectionalLight &Graphics::get_directional_light() const
-    {
-        return *directional_light;
-    }
-
-    VkDescriptorSetLayout Graphics::get_global_desc_layout() const
-    {
-        return global_set_layout;
-    }
-
-    const data::PointLight &Graphics::get_point_light() const
-    {
-        return *point_light;
-    }
-
-    VkDevice Graphics::get_device() const
-    {
-        return device;
-    }
-
-    VkDescriptorPool Graphics::get_desc_pool() const
-    {
-        return desc_pool;
-    }
-
-    uint32_t Graphics::get_directional_light_shadow_map_resolution() const
-    {
-        return directional_light_shadow_map_resolution;
-    }
-    const Graphics::FrameData& Graphics::get_frame_data() const
-    {
-        return frame_datas[frame_index];
-    }
-
-    uint32_t Graphics::get_current_frame_index() const
-    {
-        return frame_index;
-    }
-
     void Graphics::resize(int width, int height)
     {
         draw_extent_temp.width = width;
@@ -868,7 +793,7 @@ namespace gage::gfx
         ssao_bias = bias;
         ssao_radius = radius;
     }
-    VkExtent2D Graphics::get_scaled_draw_extent()
+    VkExtent2D Graphics::get_scaled_draw_extent() const
     {
         return VkExtent2D{(unsigned int)std::floor(draw_extent.width * draw_extent_scale),
                           (unsigned int)std::floor(draw_extent.height * draw_extent_scale)};

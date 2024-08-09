@@ -5,12 +5,11 @@
 
 namespace gage::gfx::data
 {
-    Image::Image(Graphics &gfx, ImageCreateInfo ci) : gfx(gfx)
+    Image::Image(const Graphics &gfx, ImageCreateInfo ci) : gfx(gfx)
     {
         // size_t size_in_bytes = width * height * 4;
         log().trace("Allocating image: width: {}, height: {}, size_in_bytes: {}", ci.width, ci.height, ci.size_in_bytes);
 
-        gfx.uploading_mutex.lock();
 
         {
             VkImageCreateInfo img_ci = {};
@@ -198,8 +197,6 @@ namespace gage::gfx::data
 
             vk_check(vkCreateSampler(gfx.device, &sampler_info, nullptr, &sampler));
         }
-
-        gfx.uploading_mutex.unlock();
     }
     Image::~Image()
     {

@@ -103,7 +103,7 @@ int main()
  
             while (lag >= tick_time_in_nanoseconds)
             {
-                gfx.get_final_ambient().update(tick_time_in_seconds);
+                gfx.final_ambient->update(tick_time_in_seconds);
                 
                 phys.update(tick_time_in_seconds);
                 scene->get_physics().update(tick_time_in_seconds);
@@ -126,7 +126,7 @@ int main()
 
             auto cmd = gfx.clear(camera);
 
-            const auto &g_buffer = gfx.get_g_buffer();
+            const auto &g_buffer = *gfx.geometry_buffer;
 
 
             g_buffer.begin_shadowpass(cmd);
@@ -140,15 +140,14 @@ int main()
             g_buffer.end(cmd);
 
             g_buffer.begin_ssaopass(cmd);
-            gfx.get_ssao().process(cmd);
+            gfx.ssao->process(cmd);
             g_buffer.end(cmd);
 
-            const auto &final_ambient = gfx.get_final_ambient();
-            const auto &directional_light = gfx.get_directional_light();
-            const auto &point_light = gfx.get_point_light();
+            const auto &final_ambient = gfx.final_ambient;
+            const auto &directional_light = gfx.directional_light;
             g_buffer.begin_lightpass(cmd);
-            final_ambient.process(cmd);
-            directional_light.process(cmd);
+            final_ambient->process(cmd);
+            directional_light->process(cmd);
 
             g_buffer.end(cmd);
 

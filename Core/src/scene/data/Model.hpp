@@ -3,6 +3,7 @@
 
 #include "ModelNode.hpp"
 #include "ModelMesh.hpp"
+#include "ModelMaterial.hpp"
 
 #include <Core/src/gfx/data/GPUBuffer.hpp>
 #include <Core/src/gfx/data/CPUBuffer.hpp>
@@ -18,26 +19,7 @@
 
 namespace gage::scene::data
 {
-    
 
-    struct ModelMaterial
-    {
-        struct UniformBuffer
-        {
-            glm::vec4 color{1, 1, 1, 1};
-            float specular_intensity{1.0};
-            float specular_power{32};
-            uint32_t has_albedo{};
-            uint32_t has_metalic{};
-            uint32_t has_normal{};
-        } uniform_buffer_data{};
-
-        std::unique_ptr<gfx::data::CPUBuffer> uniform_buffer;
-        std::unique_ptr<gfx::data::Image> albedo_image;
-        std::unique_ptr<gfx::data::Image> metalic_roughness_image;
-        std::unique_ptr<gfx::data::Image> normal_image;
-        VkDescriptorSet descriptor_set{};
-    };
 
     struct ModelAnimation
     {

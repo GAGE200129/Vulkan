@@ -35,7 +35,7 @@ namespace gage::scene::systems
         };
 
     public:
-        Renderer(gfx::Graphics &gfx);
+        Renderer(const gfx::Graphics &gfx);
         ~Renderer();
 
         void init();
@@ -48,7 +48,6 @@ namespace gage::scene::systems
 
         VkDescriptorSet allocate_material_set(const MaterialSetAllocInfo &info) const;
         VkDescriptorSet allocate_animation_set(size_t size_in_bytes, VkBuffer buffer) const;
-        void free_descriptor_set(VkDescriptorSet set) const;
 
     private:
         void create_pipeline();
@@ -56,7 +55,7 @@ namespace gage::scene::systems
 
     private:
         static constexpr uint8_t STENCIL_VALUE = 0x01;
-        gfx::Graphics &gfx;
+        const gfx::Graphics &gfx;
         std::vector<std::unique_ptr<components::MeshRenderer>> mesh_renderers;
 
         VkDescriptorSetLayout material_set_layout{};
