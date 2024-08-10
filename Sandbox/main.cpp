@@ -73,7 +73,7 @@ int main()
         scene.emplace(gfx, phys, camera);
 
 
-        const scene::data::Model &scene_model = scene->import_model("res/models/human_base.glb", scene::SceneGraph::ImportMode::Binary);
+        const scene::data::Model &scene_model = scene->import_model("res/models/human_base.glb", scene::data::ModelImportMode::Binary);
 
         scene::Node *animated_node = scene->instanciate_model(scene_model, {0, 0, 0});
         scene->add_component(animated_node, std::make_unique<scene::components::Animator>(*scene, *animated_node, scene_model));

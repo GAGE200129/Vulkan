@@ -194,7 +194,7 @@ namespace gage::scene::systems
 
                 for (const auto mesh_renderer : animator->p_mesh_renderers)
                 {
-                    link_skeleton_id(animator->skeleton_id_to_joint_map, animator->bone_id_to_joint_map, mesh_renderer->get_skin()->joints);
+                    link_skeleton_id(animator->skeleton_id_to_joint_map, animator->bone_id_to_joint_map, *mesh_renderer->joints);
                 }
 
                 log().trace("skeleton_id_to_joint_map.size(): {}", animator->skeleton_id_to_joint_map.size());

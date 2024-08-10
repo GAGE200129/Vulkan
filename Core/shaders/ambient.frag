@@ -173,34 +173,34 @@ void process_sky()
     vec3 color1 = vec3(1.0,1.0,1.0);
     vec3 color2 = vec3(0.4,0.6,0.7);
     vec4 res = vec4(mix(color1, color2, (rd.y + 1.0) * 0.5), 0.6);
-    // for(int i = 0; i < 10; i++)
-    // {
-    //     vec3 p = ro + rd * t;
+    for(int i = 0; i < 10; i++)
+    {
+        vec3 p = ro + rd * t;
         
-    //     //float d = map(p);
-    //     float d_sun = map_sun(p);
+        float d = map(p);
+        //float d_sun = map_sun(p);
 
-    //     // if (d > 0.0) {
-    //     //     float diffuse = clamp((map(p) - map(p + 0.3 * -descriptor_set_0_ubo.directional_light_direction)) / 0.3, 0.0, 1.0 );
+        if (d > 0.0) {
+            float diffuse = clamp((map(p) - map(p + 0.3 * -descriptor_set_0_ubo.directional_light_direction)) / 0.3, 0.0, 1.0 );
 
-    //     //     vec3 lin = color2 * 1.1 + 0.8 * color1 * diffuse;
-    //     //     vec4 color = vec4(mix(vec3(1.0,1.0,1.0), vec3(0.0, 0.0, 0.0), d), d );
-    //     //     color.rgb *= lin;
-    //     //     color.rgb *= color.a;
-    //     //     res += color * (1.0 - res.a);
-    //     // }
+            vec3 lin = color2 * 1.1 + 0.8 * color1 * diffuse;
+            vec4 color = vec4(mix(vec3(1.0,1.0,1.0), vec3(0.0, 0.0, 0.0), d), d );
+            color.rgb *= lin;
+            color.rgb *= color.a;
+            res += color * (1.0 - res.a);
+        }
         
-    //     if(d_sun > 0.0)
-    //     {
-    //         vec4 color = vec4(mix(vec3(1.0,1.0,1.0), vec3(0.0, 0.0, 0.0), d_sun), 0.5 );
-    //         color.rgb *= color.a;
-    //         res += color * (1.0 - res.a);
-    //     }
+        // if(d_sun > 0.0)
+        // {
+        //     vec4 color = vec4(mix(vec3(1.0,1.0,1.0), vec3(0.0, 0.0, 0.0), d_sun), 0.5 );
+        //     color.rgb *= color.a;
+        //     res += color * (1.0 - res.a);
+        // }
 
         
 
-    //     t += 0.8;
-    // }
+        t += 0.2;
+    }
 
 
 

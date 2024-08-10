@@ -30,7 +30,7 @@ namespace gage::scene::components
             uint32_t enabled{}; 
         };
     public:
-        MeshRenderer(SceneGraph& scene, Node& node, gfx::Graphics& gfx, const data::Model& model, const data::ModelMesh& model_mesh, const data::ModelSkin* model_skin);
+        MeshRenderer(SceneGraph& scene, Node& node, const gfx::Graphics& gfx, const data::Model& model, const data::ModelMesh& model_mesh, const std::vector<uint32_t>* joints);
 
         nlohmann::json to_json() const final;
 
@@ -40,12 +40,11 @@ namespace gage::scene::components
         AnimationBuffer& get_animation_buffer();
         const data::ModelSkin* get_skin();
     private:
-        
-        gfx::Graphics& gfx;
+        const gfx::Graphics& gfx;
         const data::Model& model;
         const data::ModelMesh& model_mesh;
-        const data::ModelSkin* model_skin{};
-
+    public:
+        const std::vector<uint32_t>* joints{};
         AnimationBuffer animation_buffer_data{};
         std::unique_ptr<gfx::data::CPUBuffer> animation_buffers[gfx::Graphics::FRAMES_IN_FLIGHT]{};
         VkDescriptorSet animation_descs[gfx::Graphics::FRAMES_IN_FLIGHT]{};

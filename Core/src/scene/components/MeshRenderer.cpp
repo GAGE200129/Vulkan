@@ -9,12 +9,16 @@
 
 namespace gage::scene::components
 {
-    MeshRenderer::MeshRenderer(SceneGraph &scene, Node &node, gfx::Graphics &gfx, const data::Model &model, const data::ModelMesh &model_mesh, const data::ModelSkin* model_skin) : 
+    MeshRenderer::MeshRenderer(SceneGraph &scene,
+         Node &node, const gfx::Graphics &gfx,
+         const data::Model &model,
+         const data::ModelMesh &model_mesh,
+         const std::vector<uint32_t>* joints) : 
         IComponent(scene, node),
         gfx(gfx),
         model(model),
         model_mesh(model_mesh),
-        model_skin(model_skin)
+        joints(joints)
 
     {}
 
@@ -30,8 +34,4 @@ namespace gage::scene::components
         return animation_buffer_data;
     }
 
-    const data::ModelSkin* MeshRenderer::get_skin()
-    {
-        return model_skin;
-    }
 }

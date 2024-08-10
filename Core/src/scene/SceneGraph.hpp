@@ -46,14 +46,9 @@ namespace gage::scene
     class SceneGraph
     {
     public:
-        enum class ImportMode
-        {
-            Binary,
-            ASCII
-        };
         static constexpr std::string_view ROOT_NAME = "ROOT";
     public:
-        SceneGraph(gfx::Graphics& gfx, phys::Physics& phys, const gfx::data::Camera& camera);
+        SceneGraph(const gfx::Graphics& gfx, phys::Physics& phys, const gfx::data::Camera& camera);
         ~SceneGraph();
 
         void render_imgui();
@@ -67,7 +62,7 @@ namespace gage::scene
         
 
 
-        const data::Model& import_model(const std::string& file_path, ImportMode mode);
+        const data::Model& import_model(const std::string& file_path, data::ModelImportMode mode);
         Node* instanciate_model(const data::Model& model, glm::vec3 initial_position);
 
 
@@ -79,18 +74,14 @@ namespace gage::scene
         systems::Animation& get_animation();
         systems::Physics& get_physics();
         systems::Generic& get_generic();
-
     private:
-        void process_model_animation( const tinygltf::Model& gltf_model, const tinygltf::Animation& gltf_animation, data::ModelAnimation& animation);
-        void process_model_skin(const tinygltf::Model& gltf_model, const tinygltf::Skin& gltf_skin, data::ModelSkin& skin);
-        void process_model_calculate_inverse_bind_transform(data::Model& model, data::ModelNode& root);
-    private:
+        const gfx::Graphics& gfx;
+    public:
         systems::Renderer renderer;
         systems::TerrainRenderer terrain_renderer;
         systems::Animation animation;
         systems::Physics physics;
         systems::Generic generic;
-        gfx::Graphics& gfx;
         uint64_t id{0};
         std::vector<std::unique_ptr<Node>> nodes{};
         std::vector<std::unique_ptr<data::Model>> models{};

@@ -148,9 +148,9 @@ namespace gage::win
 
             ImGui::ColorEdit3("Ambient: color", &ubo.ambient_light_color.x);
             ImGui::DragFloat("Ambient: intensity", &ubo.ambient_light_intensity, 0.01f, 0.0f, 10.0f);
-            ImGui::DragFloat("Ambient: sky scale", &window.get_graphics().final_ambient->fs_ps.fbm_scale, 0.0f, 2.0f, 0.01f);
-            ImGui::DragFloat("Ambient: sky factor", &window.get_graphics().final_ambient->fs_ps.fbm_factor, 0.0f, 10.0f, 0.01f);
-            ImGui::DragFloat("Ambient: sky height", &window.get_graphics().final_ambient->fs_ps.height, 0.0f, 100.0f, 0.01f);
+            ImGui::DragFloat("Ambient: sky scale", &window.get_graphics().final_ambient->fs_ps.fbm_scale, 0.01f, 0.0f, 10.01f);
+            ImGui::DragFloat("Ambient: sky factor", &window.get_graphics().final_ambient->fs_ps.fbm_factor, 0.01f, 0.0f, 10.01f);
+            ImGui::DragFloat("Ambient: sky height", &window.get_graphics().final_ambient->fs_ps.height, 0.01f, 0.0f, 10.01f);
             bool ssao_dirty = false;
             ssao_dirty |= ImGui::DragFloat("Ambient: SSAO radius", &ssao_radius, 0.01f, 0.001f, 1.0f);
             ssao_dirty |= ImGui::DragFloat("Ambient: SSAO bias", &ssao_bias, 0.001f, 0.001f, 1.0f);

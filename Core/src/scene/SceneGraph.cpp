@@ -67,7 +67,7 @@ namespace tinygltf
 
 namespace gage::scene
 {
-    SceneGraph::SceneGraph(gfx::Graphics &gfx, phys::Physics &phys, const gfx::data::Camera &camera) : gfx(gfx),
+    SceneGraph::SceneGraph(const gfx::Graphics &gfx, phys::Physics &phys, const gfx::data::Camera &camera) : gfx(gfx),
                                                                                                        renderer(gfx),
                                                                                                        terrain_renderer(gfx, camera),
                                                                                                        physics(phys)
@@ -127,81 +127,9 @@ namespace gage::scene
         traverse_scene_graph_recursive(nodes.at(0).get(), glm::mat4x4(1.0f));
     }
 
-    const data::Model &SceneGraph::import_model(const std::string &file_path, ImportMode mode)
+    const data::Model &SceneGraph::import_model(const std::string &file_path, data::ModelImportMode mode)
     {
-        log().info("Importing scene: {}", file_path);
-
-        auto new_model = std::make_unique<data::Model>();
-        new_model->name = file_path;
-
-        tinygltf::Model gltf_model;
-        tinygltf::TinyGLTF loader;
-        std::string err;
-        std::string warn;
-        loader.SetImageLoader(tinygltf::LoadImageData, nullptr);
-        loader.SetImageWriter(tinygltf::WriteImageData, nullptr);
-
-        bool ret = false;
-        switch (mode)
-        {
-        case ImportMode::Binary:
-            ret = loader.LoadBinaryFromFile(&gltf_model, &err, &warn, file_path);
-            break;
-        case ImportMode::ASCII:
-            ret = loader.LoadASCIIFromFile(&gltf_model, &err, &warn, file_path);
-            break;
-        }
-
-        if (!ret)
-        {
-            log().critical("Failed to import scene: {} | {} | {}", file_path, warn, err);
-            throw SceneException{"Failed to import scene: " + file_path + "| " + warn + "| " + err};
-        }
-        new_model->root_node = gltf_model.scenes.at(gltf_model.defaultScene).nodes.at(0);
-
-        // Import nodes
-        new_model->nodes.reserve(gltf_model.nodes.size());
-        for (uint32_t i = 0; i < gltf_model.nodes.size(); i++)
-        {
-            new_model->nodes.emplace_back(gltf_model.nodes.at(i), i);
-        }
-
-        // Process mesh
-        new_model->meshes.reserve(gltf_model.meshes.size());
-        for (const auto &gltf_mesh : gltf_model.meshes)
-        {
-            new_model->meshes.emplace_back(gfx, gltf_model, gltf_mesh);
-        }
-
-
-        // Process material
-        new_model->materials.reserve(gltf_model.materials.size());
-        for (const auto &gltf_material : gltf_model.materials)
-        {
-            new_model->materials.emplace_back(gfx, renderer, gltf_model, gltf_material);
-        }
-
-        // Process animations
-        new_model->animations.reserve(gltf_model.animations.size());
-        for (const auto &gltf_animation : gltf_model.animations)
-        {
-            auto new_animation = data::ModelAnimation{};
-            this->process_model_animation(gltf_model, gltf_animation, new_animation);
-            new_model->animations.push_back(std::move(new_animation));
-        }
-
-        // Process skins
-        new_model->skins.reserve(gltf_model.skins.size());
-        for (const auto &gltf_skin : gltf_model.skins)
-        {
-            auto new_skin = data::ModelSkin{};
-            this->process_model_skin(gltf_model, gltf_skin, new_skin);
-            new_model->skins.push_back(std::move(new_skin));
-        }
-
-        // Calculate inverse bind transform for skinning
-        process_model_calculate_inverse_bind_transform(*new_model, new_model->nodes.at(new_model->root_node));
-
+        std::unique_ptr<data::Model> new_model = std::make_unique<data::Model>(gfx, renderer, file_path, mode);
         auto model_ptr = new_model.get();
         models.push_back(std::move(new_model));
         return *model_ptr;
@@ -224,12 +152,12 @@ namespace gage::scene
 
             if (model_node.has_mesh)
             {
-                const data::ModelSkin *skin = nullptr;
+                const std::vector<uint32_t> *joints = nullptr;
                 if (model_node.has_skin)
                 {
-                    skin = &model.skins.at(model_node.skin_index);
+                    joints = &model.skins.at(model_node.skin_index);
                 }
-                add_component(new_node, std::make_unique<components::MeshRenderer>(*this, *new_node, gfx, model, model.meshes.at(model_node.mesh_index), skin));
+                add_component(new_node, std::make_unique<components::MeshRenderer>(*this, *new_node, gfx, model, model.meshes.at(model_node.mesh_index), joints));
             }
 
             for (const uint32_t &node : model_node.children)
@@ -275,7 +203,6 @@ namespace gage::scene
         parent->children.push_back(child);
         child->parent = parent;
     }
-
 
     void SceneGraph::add_component(Node *node, std::unique_ptr<components::IComponent> component)
     {
@@ -326,9 +253,9 @@ namespace gage::scene
     {
         return animation;
     }
-    systems::TerrainRenderer& SceneGraph::get_terrain_renderer()
+    systems::TerrainRenderer &SceneGraph::get_terrain_renderer()
     {
-        return terrain_renderer; 
+        return terrain_renderer;
     }
     systems::Physics &SceneGraph::get_physics()
     {
@@ -338,136 +265,6 @@ namespace gage::scene
     systems::Generic &SceneGraph::get_generic()
     {
         return generic;
-    }
-
-
-    void SceneGraph::process_model_skin(const tinygltf::Model &gltf_model, const tinygltf::Skin &gltf_skin, data::ModelSkin &skin)
-    {
-        for (const auto &joint : gltf_skin.joints)
-        {
-            skin.joints.push_back(joint);
-        }
-    }
-
-    
-
-    void SceneGraph::process_model_calculate_inverse_bind_transform(data::Model &model, data::ModelNode &root)
-    {
-        std::function<void(data::ModelNode & node, glm::mat4x4 accumulated_transform)> traverse_scene_graph_recursive;
-        traverse_scene_graph_recursive = [&](data::ModelNode &node, glm::mat4x4 accumulated_transform)
-        {
-            // Build node model transform
-            accumulated_transform = glm::translate(accumulated_transform, node.position);
-            accumulated_transform = glm::scale(accumulated_transform, node.scale);
-            accumulated_transform *= glm::mat4x4(node.rotation);
-            node.inverse_bind_transform = glm::inverse(accumulated_transform); // get inverse
-
-            for (const auto &child : node.children)
-            {
-                traverse_scene_graph_recursive(model.nodes.at(child), accumulated_transform);
-            }
-        };
-
-        traverse_scene_graph_recursive(root, glm::mat4x4(1.0f));
-    }
-
-    void SceneGraph::process_model_animation(const tinygltf::Model &gltf_model, const tinygltf::Animation &gltf_animation, data::ModelAnimation &animation)
-    {
-        animation.name = gltf_animation.name;
-        try
-        {
-            log().trace("Animation name: {}", gltf_animation.name);
-
-            auto extract_buffer_from_accessor = [&](const tinygltf::Accessor &accessor)
-                -> std::vector<unsigned char>
-            {
-                const auto &buffer_view = gltf_model.bufferViews.at(accessor.bufferView);
-                const auto &buffer = gltf_model.buffers.at(buffer_view.buffer);
-
-                std::vector<unsigned char> result(buffer_view.byteLength);
-                std::memcpy(result.data(), buffer.data.data() + buffer_view.byteOffset, buffer_view.byteLength);
-
-                return result;
-            };
-
-            animation.duration = std::numeric_limits<float>::min();
-            for (const auto &gltf_channel : gltf_animation.channels)
-            {
-                const auto &gltf_sampler = gltf_animation.samplers.at(gltf_channel.sampler);
-                const auto &time_point_accessor = gltf_model.accessors.at(gltf_sampler.input);
-                auto time_points = extract_buffer_from_accessor(time_point_accessor); // .size() in bytes
-                animation.duration = std::max(animation.duration, time_point_accessor.maxValues.at(0));
-                if (gltf_channel.target_path.compare("translation") == 0)
-                {
-                    data::ModelAnimation::PositionChannel channel{};
-                    channel.target_node = gltf_channel.target_node;
-                    const auto &data_accessor = gltf_model.accessors.at(gltf_sampler.output);
-                    auto data = extract_buffer_from_accessor(data_accessor); // .size() in bytes
-
-                    channel.time_points.resize(time_point_accessor.count); // .size() in n * floats(4 bytes)
-                    channel.positions.resize(data_accessor.count);         // .size() in n * glm::vec3 ( 12 bytes )
-                    // log().info("Time point size: {} bytes, data size: {} bytes", time_points.size(),  data.size());
-
-                    std::memcpy(channel.time_points.data(), time_points.data(), time_point_accessor.count * sizeof(float));
-                    std::memcpy(channel.positions.data(), data.data(), data_accessor.count * sizeof(glm::vec3));
-
-                    animation.pos_channels.push_back(std::move(channel));
-                }
-                else if (gltf_channel.target_path.compare("scale") == 0)
-                {
-                    data::ModelAnimation::ScaleChannel channel{};
-                    channel.target_node = gltf_channel.target_node;
-                    const auto &data_accessor = gltf_model.accessors.at(gltf_sampler.output);
-                    auto data = extract_buffer_from_accessor(data_accessor); // .size() in bytes
-
-                    channel.time_points.resize(time_point_accessor.count); // .size() in n * floats(4 bytes)
-                    channel.scales.resize(data_accessor.count);            // .size() in n * glm::vec3 ( 12 bytes )
-                    // log().info("Time point size: {} bytes, data size: {} bytes", time_points.size(),  data.size());
-
-                    std::memcpy(channel.time_points.data(), time_points.data(), time_point_accessor.count * sizeof(float));
-                    std::memcpy(channel.scales.data(), data.data(), data_accessor.count * sizeof(glm::vec3));
-
-                    animation.scale_channels.push_back(std::move(channel));
-                }
-
-                else if (gltf_channel.target_path.compare("rotation") == 0)
-                {
-                    data::ModelAnimation::RotationChannel channel{};
-                    channel.target_node = gltf_channel.target_node;
-                    const auto &data_accessor = gltf_model.accessors.at(gltf_sampler.output);
-                    auto data = extract_buffer_from_accessor(data_accessor); // .size() in bytes
-
-                    channel.time_points.resize(time_point_accessor.count); // .size() in n * floats(4 bytes)
-                    std::memcpy(channel.time_points.data(), time_points.data(), time_point_accessor.count * sizeof(float));
-
-                    if (data_accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT)
-                    {
-                        channel.rotations.reserve(data_accessor.count);
-                        for (uint32_t i = 0; i < data_accessor.count; i++)
-                        {
-                            float x = *(float *)&data.at(i * sizeof(glm::quat) + sizeof(float) * 0);
-                            float y = *(float *)&data.at(i * sizeof(glm::quat) + sizeof(float) * 1);
-                            float z = *(float *)&data.at(i * sizeof(glm::quat) + sizeof(float) * 2);
-                            float w = *(float *)&data.at(i * sizeof(glm::quat) + sizeof(float) * 3);
-                            channel.rotations.push_back(glm::quat{w, x, y, z});
-                        }
-                    }
-                    else
-                    {
-                        log().critical("Animation rotation channel is not in float ! TO DO LIST !");
-                        throw SceneException{};
-                    }
-
-                    animation.rotation_channels.push_back(std::move(channel));
-                }
-            }
-            log().trace("Animation duration: {}", animation.duration);
-        }
-        catch (std::out_of_range &e)
-        {
-            log().critical("Process model animation out of range caught !");
-            throw SceneException{};
-        }
     }
 
     void SceneGraph::render_imgui()
@@ -527,13 +324,13 @@ namespace gage::scene
         {
             ImGui::Text("Renderer");
             ImGui::Text("Num mesh renderers: %lu", renderer.mesh_renderers.size());
-            for(const auto& mesh_renderer : renderer.mesh_renderers)
+            for (const auto &mesh_renderer : renderer.mesh_renderers)
             {
                 ImGui::Text("unique_ptr: %p", mesh_renderer.get());
             }
 
             ImGui::Text("Num terrain renderers: %lu", terrain_renderer.terrains.size());
-            for(const auto& terrain: terrain_renderer.terrains)
+            for (const auto &terrain : terrain_renderer.terrains)
             {
                 ImGui::Text("shared_ptr: %p", terrain.terrain.get());
             }
@@ -541,7 +338,7 @@ namespace gage::scene
 
             ImGui::Text("Animation");
             ImGui::Text("Num animators: %lu", animation.animators.size());
-            for(const auto& animator : animation.animators)
+            for (const auto &animator : animation.animators)
             {
                 ImGui::Text("unique_ptr: %p", animator.get());
             }
@@ -549,19 +346,16 @@ namespace gage::scene
 
             ImGui::Text("Physics");
             ImGui::Text("Num character: %lu", physics.character_controllers.size());
-            for(const auto& character_controller : physics.character_controllers)
+            for (const auto &character_controller : physics.character_controllers)
             {
                 ImGui::Text("unique_ptr: %p", character_controller.get());
             }
 
             ImGui::Text("Num terrains: %lu", physics.terrain_renderers.size());
-            for(const auto& terrain : physics.terrain_renderers)
+            for (const auto &terrain : physics.terrain_renderers)
             {
                 ImGui::Text("shared_ptr: %p", terrain.terrain_renderer.get());
             }
-            
-
-
         }
         ImGui::End();
     }
