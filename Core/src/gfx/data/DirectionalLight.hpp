@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
-#include <glm/vec3.hpp>
 
 
 namespace gage::gfx

@@ -8,7 +8,7 @@
 
 namespace gage::gfx::data
 {
-    SSAO::SSAO(Graphics &gfx) : gfx(gfx)
+    SSAO::SSAO(const Graphics &gfx) : gfx(gfx)
     {
         generate_kernel_and_noises();
         create_pipeline();
@@ -44,11 +44,14 @@ namespace gage::gfx::data
         scissor.extent.width = gfx.get_scaled_draw_extent().width;
         scissor.extent.height = gfx.get_scaled_draw_extent().height;
 
-        PushConstantFragment ps_fs{
-            .radius = gfx.ssao_radius,
-            .bias = gfx.ssao_bias,
-            .noise_scale = glm::vec2(gfx.draw_extent.width / 4.0, gfx.draw_extent.height / 4.0),
-            .resolution_scale = gfx.draw_extent_scale};
+        // PushConstantFragment ps_fs{
+        //     .radius = ssao_radius,
+        //     .bias = ssao_bias,
+        //     .noise_scale = ),
+        //     .resolution_scale = gfx.draw_extent_scale};
+
+        fs_ps.noise_scale = glm::vec2(gfx.draw_extent.width / 4.0, gfx.draw_extent.height / 4.0);
+        fs_ps.resolution_scale = gfx.draw_extent_scale;
 
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &gfx.frame_datas[gfx.frame_index].global_set, 0, nullptr);
@@ -56,7 +59,7 @@ namespace gage::gfx::data
         vkCmdSetViewport(cmd, 0, 1, &viewport);
         vkCmdSetScissor(cmd, 0, 1, &scissor);
         vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float), &gfx.draw_extent_scale);
-        vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 16, sizeof(PushConstantFragment), &ps_fs);
+        vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 16, sizeof(PushConstantFragment), &fs_ps);
         vkCmdDraw(cmd, 3, 1, 0, 0);
     }
 

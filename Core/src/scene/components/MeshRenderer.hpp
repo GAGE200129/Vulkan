@@ -2,8 +2,11 @@
 
 #include "IComponent.hpp"
 
-#include <Core/src/gfx/Graphics.hpp>
-#include <Core/src/gfx/data/CPUBuffer.hpp>
+
+namespace gage::gfx
+{
+    class Graphics;
+}
 
 namespace gage::scene::data
 {
@@ -22,7 +25,6 @@ namespace gage::scene::components
 {
     class MeshRenderer final : public IComponent
     {
-        friend class systems::Renderer;
     public:
         struct AnimationBuffer
         {
@@ -41,12 +43,10 @@ namespace gage::scene::components
         const data::ModelSkin* get_skin();
     private:
         const gfx::Graphics& gfx;
+    public:
         const data::Model& model;
         const data::ModelMesh& model_mesh;
-    public:
         const std::vector<uint32_t>* joints{};
         AnimationBuffer animation_buffer_data{};
-        std::unique_ptr<gfx::data::CPUBuffer> animation_buffers[gfx::Graphics::FRAMES_IN_FLIGHT]{};
-        VkDescriptorSet animation_descs[gfx::Graphics::FRAMES_IN_FLIGHT]{};
     };
 }

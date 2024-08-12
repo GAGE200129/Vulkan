@@ -21,9 +21,6 @@ namespace gage::scene::components
 {
     class Terrain final : public IComponent
     {
-        friend class systems::TerrainRenderer;
-        friend class systems::Physics;
-
     public:
         struct Vertex
         {
@@ -39,8 +36,8 @@ namespace gage::scene::components
         };
 
     public:
-        Terrain(SceneGraph &scene, Node &node, gfx::Graphics &gfx, uint32_t patch_count, uint32_t patch_size, uint32_t iteration, float scale, float min_height, float max_height, float filter);
-        Terrain(SceneGraph &scene, Node &node, gfx::Graphics &gfx, uint32_t patch_count, uint32_t patch_size, float scale);
+        Terrain(SceneGraph &scene, Node &node, const gfx::Graphics &gfx, uint32_t patch_count, uint32_t patch_size, uint32_t iteration, float scale, float min_height, float max_height, float filter);
+        Terrain(SceneGraph &scene, Node &node, const gfx::Graphics &gfx, uint32_t patch_count, uint32_t patch_size, float scale);
         
 
         nlohmann::json to_json() const final;
@@ -55,9 +52,9 @@ namespace gage::scene::components
 
     private:
         void generate_vertex_datas();
-        
     private:
-        gfx::Graphics &gfx;
+        const gfx::Graphics &gfx;
+    public:
         uint32_t size{};
         uint32_t patch_size{};
         uint32_t patch_count{};

@@ -86,7 +86,7 @@ project "Core"
 
    
    --Linux--
-   filter "Debug"
+   filter {"configurations:Debug", "system:linux"}
       buildoptions 
       {
          "-Wall -Wextra -Wpedantic -fsanitize=address -static-libasan"

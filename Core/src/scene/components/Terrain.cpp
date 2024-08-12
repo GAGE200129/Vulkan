@@ -11,7 +11,7 @@
 namespace gage::scene::components
 {
     Terrain::Terrain(SceneGraph &scene, Node &node,
-                                     gfx::Graphics &gfx,
+                                     const gfx::Graphics &gfx,
                                      uint32_t patch_count,
                                      uint32_t patch_size,
                                      uint32_t iteration,
@@ -250,7 +250,7 @@ namespace gage::scene::components
         }
     }
 
-    Terrain::Terrain(SceneGraph &scene, Node &node, gfx::Graphics &gfx, uint32_t patch_count, uint32_t patch_size, float scale) :
+    Terrain::Terrain(SceneGraph &scene, Node &node, const gfx::Graphics &gfx, uint32_t patch_count, uint32_t patch_size, float scale) :
         IComponent(scene, node),
         gfx(gfx),
         size(0),

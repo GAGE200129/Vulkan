@@ -31,6 +31,7 @@ namespace gage::scene::components
 
     protected:
         SceneGraph& scene;
+    public:
         Node& node;
     };
 }

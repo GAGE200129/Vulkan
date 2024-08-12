@@ -62,6 +62,7 @@ namespace tinygltf
         std::string * /* out_uri */, void * /* user_pointer */)
     {
         assert(false);
+        return true;
     }
 }
 
@@ -326,7 +327,7 @@ namespace gage::scene
             ImGui::Text("Num mesh renderers: %lu", renderer.mesh_renderers.size());
             for (const auto &mesh_renderer : renderer.mesh_renderers)
             {
-                ImGui::Text("unique_ptr: %p", mesh_renderer.get());
+                ImGui::Text("unique_ptr: %p", mesh_renderer.mesh_renderer.get());
             }
 
             ImGui::Text("Num terrain renderers: %lu", terrain_renderer.terrains.size());

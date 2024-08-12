@@ -176,10 +176,8 @@ namespace gage::scene::systems
 
         for (const auto &terrain : terrains)
         {
-
             terrain.terrain->update_lod_regons(camera.position);
 
-            // std::memcpy(terrain.uniform_buffer->get_mapped(), &terrain.uniform_buffer_data, sizeof(Terrain::UniformBuffer));
             VkBuffer buffers[] =
                 {
                     terrain.vertex_buffer->get_buffer_handle()

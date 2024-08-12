@@ -1,10 +1,10 @@
 #include <pch.hpp>
 #include "Graphics.hpp"
 
-#include "gfx.hpp"
 #include <Core/src/utils/VulkanHelper.hpp>
 #include <Core/src/utils/FileLoader.hpp>
 
+#include "gfx.hpp"
 #include "Exception.hpp"
 
 #include "data/g_buffer/GBuffer.hpp"
@@ -13,6 +13,7 @@
 #include "data/DirectionalLight.hpp"
 #include "data/PointLight.hpp"
 #include "data/SSAO.hpp"
+#include "data/Swapchain.hpp"
 
 
 using namespace std::string_literals;
@@ -106,21 +107,20 @@ namespace gage::gfx
         // features.ver
         // features12.ver
 
-        // vulkan 1.3 features
+        // vulkan 1.0 features
         VkPhysicalDeviceFeatures features{};
         features.geometryShader = true;
 
-        VkPhysicalDeviceVulkan13Features features13 = {};
-        features13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-        features13.dynamicRendering = true;
-        features13.synchronization2 = true;
+        // VkPhysicalDeviceVulkan13Features features13 = {};
+        // features13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+        // features13.dynamicRendering = false;
+        // features13.synchronization2 = false;
 
         // use vkbootstrap to select a gpu.
         vkb::PhysicalDeviceSelector selector{vkb_inst};
         auto physical_device_result = selector
                                           .set_minimum_version(1, 3)
                                           .set_required_features(features)
-                                          .set_required_features_13(features13)
                                           .add_required_extensions(ENABLED_DEVICE_EXTENSIONS.size(), ENABLED_DEVICE_EXTENSIONS.data())
                                           .set_surface(surface)
                                           .select();
@@ -339,11 +339,8 @@ namespace gage::gfx
         vkDeviceWaitIdle(device);
     }
 
-    // }
-
     VkCommandBuffer Graphics::clear(const data::Camera &camera)
     {
-
         VkSemaphore &present_semaphore = frame_datas[frame_index].present_semaphore;
         VkFence &render_fence = frame_datas[frame_index].render_fence;
         VmaAllocationInfo &global_alloc_info = frame_datas[frame_index].global_alloc_info;
@@ -404,8 +401,6 @@ namespace gage::gfx
         cmd_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
         vk_check(vkBeginCommandBuffer(cmd, &cmd_begin_info));
-
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, final_ambient->get_layout(), 0, 1, &frame_datas[frame_index].global_set, 0, nullptr);
 
         return cmd;
     }
@@ -492,8 +487,7 @@ namespace gage::gfx
         VkPipelineStageFlags wait_stages[] = {
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
-        std::array<VkSemaphore, 1> wait_semaphores = {
-            present_semaphore};
+        std::array<VkSemaphore, 1> wait_semaphores = {present_semaphore};
         submit.waitSemaphoreCount = wait_semaphores.size();
         submit.pWaitSemaphores = wait_semaphores.data();
         submit.pWaitDstStageMask = wait_stages;
@@ -525,12 +519,6 @@ namespace gage::gfx
         frame_index = (frame_index + 1) % FRAMES_IN_FLIGHT;
     }
 
-
-    void Graphics::set_resolution_scale(float scale)
-    {
-        assert(scale >= 0.0f && scale <= 2.0f);
-        draw_extent_scale = scale;
-    }
 
     void Graphics::create_default_image_sampler()
     {
@@ -788,11 +776,7 @@ namespace gage::gfx
         directional_light_shadow_map_resolution_temp = shadow_map_size;
         directional_light_shadow_map_resize_requested = true;
     }
-    void Graphics::set_ssao_bias_and_radius(float bias, float radius)
-    {
-        ssao_bias = bias;
-        ssao_radius = radius;
-    }
+    
     VkExtent2D Graphics::get_scaled_draw_extent() const
     {
         return VkExtent2D{(unsigned int)std::floor(draw_extent.width * draw_extent_scale),

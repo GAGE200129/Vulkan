@@ -3,5 +3,5 @@
 
 namespace gage
 {
-    uint32_t get_allocated_bytes();
+    size_t get_allocated_bytes();
 };

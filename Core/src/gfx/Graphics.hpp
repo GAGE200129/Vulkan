@@ -6,7 +6,6 @@
 #include <functional>
 
 #include "Exception.hpp"
-#include "data/Swapchain.hpp"
 
 namespace vkb
 {
@@ -23,6 +22,7 @@ namespace gage::gfx::data
 {
     class Camera;
 
+    class Swapchain;
     class GPUBuffer;
     class CPUBuffer;
     class DescriptorSet;
@@ -96,28 +96,6 @@ namespace gage::gfx
             glm::mat4x4 directional_light_proj_views[CASCADE_COUNT]{};
             glm::vec4 directional_light_cascade_planes[CASCADE_COUNT]{{10, 0, 0, 0}, {30, 0, 0, 0}, {50, 0, 0, 0}};
         };
-
-    private:
-        friend class bind::IBindable;
-        friend class data::Swapchain;
-        friend class data::ShadowPipeline;
-        friend class data::CPUBuffer;
-        friend class data::GPUBuffer;
-        friend class data::DescriptorSet;
-        friend class data::Image;
-
-        friend class data::AmbientLight;
-        friend class data::DirectionalLight;
-        friend class data::PointLight;
-        friend class data::SSAO;
-        friend class data::Sky;
-
-        friend class data::g_buffer::GBuffer;
-        friend class data::g_buffer::MainPass;
-        friend class data::g_buffer::ShadowPass;
-        friend class data::g_buffer::LightPass;
-        friend class data::g_buffer::SSAOPass;
-
     public:
         Graphics(GLFWwindow *window, std::string app_name);
         Graphics(const Graphics &) = delete;
@@ -128,18 +106,14 @@ namespace gage::gfx
         VkCommandBuffer clear(const data::Camera &camera);
         void end_frame(VkCommandBuffer cmd);
 
-        const std::string &get_app_name() const noexcept;
 
-        // Swapchain size
+
         void resize(int width, int height);
-        void set_resolution_scale(float scale);
 
         // Shadowmap size
         void resize_shadow_map(uint32_t shadow_map_size);
 
         VkExtent2D get_scaled_draw_extent() const;
-
-        void set_ssao_bias_and_radius(float bias, float radius);
 
     private:
         glm::mat4x4 calculate_directional_light_proj_view(const data::Camera &camera, float near, float far);
@@ -191,12 +165,8 @@ namespace gage::gfx
         std::unique_ptr<data::AmbientLight> final_ambient{};
         std::unique_ptr<data::DirectionalLight> directional_light{};
         std::unique_ptr<data::PointLight> point_light{};
-
-        float ssao_bias = 0.025f;
-        float ssao_radius = 0.5f;
         std::unique_ptr<data::SSAO> ssao{};
 
-    public:
         // Default data
         VkImage default_image{};
         VkImageView default_image_view{};

@@ -7,6 +7,7 @@
 #include <imgui/imgui_impl_opengl3.h>
 #include <imgui/imgui_impl_glfw.h>
 #include <Core/src/gfx/Graphics.hpp>
+#include <Core/src/gfx/data/SSAO.hpp>
 #include <Core/src/gfx/data/Camera.hpp>
 #include <Core/src/gfx/data/Swapchain.hpp>
 #include <Core/src/gfx/data/AmbientLight.hpp>
@@ -112,10 +113,7 @@ namespace gage::win
             ImGui::InputInt2("Resoltuion", resolutions);
 
             static float resolution_scale = 1.0f;
-            if(ImGui::DragFloat("Resolution scale", &resolution_scale, 0.01f, 0.1f, 1.0f))
-            {
-                window.get_graphics().set_resolution_scale(resolution_scale);
-            }
+            ImGui::DragFloat("Resolution scale", &window.get_graphics().draw_extent_scale, 0.01f, 0.1f, 1.0f);
             
 
             if (ImGui::Button("Apply"))
@@ -125,7 +123,7 @@ namespace gage::win
             ImGui::Separator();
              static float arr[] = { 0.6f, 0.1f, 1.0f, 0.5f, 0.92f, 0.1f, 0.2f };
             ImGui::Text("Frame time: %f ms", stats.frame_time);
-            ImGui::Text("Mem allocated: %u bytes", gage::get_allocated_bytes());
+            ImGui::Text("Mem allocated: %lu bytes", gage::get_allocated_bytes());
             
         }
         ImGui::End();
@@ -151,13 +149,9 @@ namespace gage::win
             ImGui::DragFloat("Ambient: sky scale", &window.get_graphics().final_ambient->fs_ps.fbm_scale, 0.01f, 0.0f, 10.01f);
             ImGui::DragFloat("Ambient: sky factor", &window.get_graphics().final_ambient->fs_ps.fbm_factor, 0.01f, 0.0f, 10.01f);
             ImGui::DragFloat("Ambient: sky height", &window.get_graphics().final_ambient->fs_ps.height, 0.01f, 0.0f, 10.01f);
-            bool ssao_dirty = false;
-            ssao_dirty |= ImGui::DragFloat("Ambient: SSAO radius", &ssao_radius, 0.01f, 0.001f, 1.0f);
-            ssao_dirty |= ImGui::DragFloat("Ambient: SSAO bias", &ssao_bias, 0.001f, 0.001f, 1.0f);
-            if(ssao_dirty)
-            {
-                window.get_graphics().set_ssao_bias_and_radius(ssao_bias, ssao_radius);
-            }
+            ImGui::DragFloat("Ambient: SSAO radius", &window.get_graphics().ssao->fs_ps.radius, 0.01f, 0.001f, 1.0f);
+            ImGui::DragFloat("Ambient: SSAO bias", &window.get_graphics().ssao->fs_ps.bias, 0.001f, 0.001f, 1.0f);
+    
             ImGui::DragFloat("Ambient: Fog begin", &ubo.ambient_fog_begin, 0.1f, 10.0f, 10000.0f);
             ImGui::DragFloat("Ambient: Fog end", &ubo.ambient_fog_end, 0.1f, 10.0f, 10000.0f);
             ImGui::Separator();

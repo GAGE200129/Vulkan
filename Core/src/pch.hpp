@@ -8,7 +8,6 @@
 #include <glm/gtx/norm.hpp>
 
 #include <glad/glad.h>
-#define GLFW_INCLUDE_VULKAN //Makes intelisense happy
 #include <GLFW/glfw3.h>
 
 #include <vk_mem_alloc.h>

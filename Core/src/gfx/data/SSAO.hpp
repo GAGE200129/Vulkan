@@ -16,7 +16,15 @@ namespace gage::gfx::data
     class SSAO
     {
     public:
-        SSAO(Graphics& gfx);
+        struct PushConstantFragment
+        {
+            float radius{0.025f};
+            float bias{0.01f};
+            glm::vec2 noise_scale;
+            float resolution_scale;
+        };
+    public:
+        SSAO(const Graphics& gfx);
         ~SSAO();
 
         void process(VkCommandBuffer cmd) const;
@@ -27,17 +35,13 @@ namespace gage::gfx::data
     private:
         void generate_kernel_and_noises();
         void create_pipeline();
-        
+    
     private:
-        static constexpr size_t KERNEL_SIZE = 8;
-        struct PushConstantFragment
-        {
-            float radius;
-            float bias;
-            glm::vec2 noise_scale;
-            float resolution_scale;
-        };
-        Graphics& gfx;
+        static constexpr size_t KERNEL_SIZE = 64;
+        const Graphics& gfx;
+
+    public:
+        
         std::vector<glm::vec4> kernel{};
         std::vector<glm::vec3> noises{};
         std::unique_ptr<Image> image{};
@@ -47,6 +51,9 @@ namespace gage::gfx::data
         VkPipelineLayout pipeline_layout{};
         VkPipeline pipeline{};
         VkDescriptorSet desc{};
+
+        mutable PushConstantFragment fs_ps{};
+
 
     };
 }
