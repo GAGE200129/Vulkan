@@ -84,15 +84,8 @@ namespace gage::scene
         component_ptrs.push_back(component);
     }
 
-    void Node::set_name(const std::string &name)
-    {
-        this->name = name;
-    }
-
-    uint64_t Node::get_id() const
-    {
-        return id;
-    }
+   
+    
 
     void *Node::get_requested_component(const char *typeid_name)
     {
@@ -157,54 +150,5 @@ namespace gage::scene
             }
         }
         return nullptr;
-    }
-
-    const std::vector<Node *> &Node::get_children() const
-    {
-        return children;
-    }
-
-    const std::string &Node::get_name() const
-    {
-        return name;
-    }
-    const glm::mat4x4 &Node::get_global_transform() const
-    {
-        return global_transform;
-    }
-    const glm::mat4x4 &Node::get_inverse_bind_transform() const
-    {
-        return inverse_bind_transform;
-    }
-
-    uint32_t Node::get_bone_id() const
-    {
-        return bone_id;
-    }
-
-    const glm::vec3 &Node::get_position()
-    {
-        return position;
-    }
-    const glm::vec3 &Node::get_scale()
-    {
-        return scale;
-    }
-    const glm::quat &Node::get_rotation()
-    {
-        return rotation;
-    }
-
-    void Node::set_position(const glm::vec3 &position)
-    {
-        this->position = position;
-    }
-    void Node::set_scale(const glm::vec3 &scale)
-    {
-        this->scale = scale;
-    }
-    void Node::set_rotation(const glm::quat &rotation)
-    {
-        this->rotation = rotation;
     }
 }

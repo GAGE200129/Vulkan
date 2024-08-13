@@ -11,6 +11,7 @@
 #include <Core/src/gfx/data/Camera.hpp>
 #include <Core/src/gfx/data/Swapchain.hpp>
 #include <Core/src/gfx/data/AmbientLight.hpp>
+#include <Core/src/gfx/data/DirectionalLight.hpp>
 
 #include <Core/src/scene/SceneGraph.hpp>
 #include <Core/src/mem.hpp>
@@ -20,7 +21,7 @@
 
 namespace gage::win
 {
-    ImguiWindow::ImguiWindow(gfx::Graphics &gfx)
+    ImguiWindow::ImguiWindow(gfx::Graphics &gfx) : gfx(gfx)
     {
         glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -113,12 +114,13 @@ namespace gage::win
             ImGui::InputInt2("Resoltuion", resolutions);
 
             static float resolution_scale = 1.0f;
-            ImGui::DragFloat("Resolution scale", &window.get_graphics().draw_extent_scale, 0.01f, 0.1f, 1.0f);
+            ImGui::DragFloat("Resolution scale", &gfx.draw_extent_scale, 0.01f, 0.1f, 1.0f);
             
 
             if (ImGui::Button("Apply"))
             {
                 window.resize((win::WindowMode)selected_window_mode, resolutions[0], resolutions[1]);
+                gfx.resize(resolutions[0], resolutions[1]);
             }
             ImGui::Separator();
              static float arr[] = { 0.6f, 0.1f, 1.0f, 0.5f, 0.92f, 0.1f, 0.2f };
@@ -142,15 +144,15 @@ namespace gage::win
             static float distances[] = {10.0f, 20.0f, 50.0f};
             static float ssao_radius = 0.5f;
             static float ssao_bias = 0.025f;
-            auto& ubo = window.get_graphics().global_uniform;
+            auto& ubo = gfx.global_uniform;
 
             ImGui::ColorEdit3("Ambient: color", &ubo.ambient_light_color.x);
             ImGui::DragFloat("Ambient: intensity", &ubo.ambient_light_intensity, 0.01f, 0.0f, 10.0f);
-            ImGui::DragFloat("Ambient: sky scale", &window.get_graphics().final_ambient->fs_ps.fbm_scale, 0.01f, 0.0f, 10.01f);
-            ImGui::DragFloat("Ambient: sky factor", &window.get_graphics().final_ambient->fs_ps.fbm_factor, 0.01f, 0.0f, 10.01f);
-            ImGui::DragFloat("Ambient: sky height", &window.get_graphics().final_ambient->fs_ps.height, 0.01f, 0.0f, 10.01f);
-            ImGui::DragFloat("Ambient: SSAO radius", &window.get_graphics().ssao->fs_ps.radius, 0.01f, 0.001f, 1.0f);
-            ImGui::DragFloat("Ambient: SSAO bias", &window.get_graphics().ssao->fs_ps.bias, 0.001f, 0.001f, 1.0f);
+            ImGui::DragFloat("Ambient: sky scale", &gfx.final_ambient->fs_ps.fbm_scale, 0.01f, 0.0f, 10.01f);
+            ImGui::DragFloat("Ambient: sky factor", &gfx.final_ambient->fs_ps.fbm_factor, 0.01f, 0.0f, 10.01f);
+            ImGui::DragFloat("Ambient: sky height", &gfx.final_ambient->fs_ps.height, 0.01f, 0.0f, 10.01f);
+            ImGui::DragFloat("Ambient: SSAO radius", &gfx.ssao->fs_ps.radius, 0.01f, 0.001f, 1.0f);
+            ImGui::DragFloat("Ambient: SSAO bias", &gfx.ssao->fs_ps.bias, 0.001f, 0.001f, 1.0f);
     
             ImGui::DragFloat("Ambient: Fog begin", &ubo.ambient_fog_begin, 0.1f, 10.0f, 10000.0f);
             ImGui::DragFloat("Ambient: Fog end", &ubo.ambient_fog_end, 0.1f, 10.0f, 10000.0f);
@@ -162,7 +164,7 @@ namespace gage::win
             ImGui::ColorEdit3("Directional: color", &ubo.directional_light_color.x);
             if(ImGui::DragInt("Directional: Shadow map resolution", &resolution, 1.0f, 512, 4096))
             {
-                window.get_graphics().resize_shadow_map(resolution);
+                gfx.resize_shadow_map(resolution);
             }
             bool distances_dirty = ImGui::DragFloat("Directional: Shadow map cascade distance 1", &distances[0], 0.1f, 0.1f, 2048.0f);
             distances_dirty |= ImGui::DragFloat("Directional: Shadow map cascade distance 2", &distances[1], 0.1f, 0.1f, 2048.0f);

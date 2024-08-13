@@ -74,7 +74,7 @@ namespace gage::scene::systems
                     int index = get_key_frame_index(animator->current_time, channel.time_points);
                     float scale_factor = get_scale_factor(channel.time_points.at(index), channel.time_points.at(index + 1), animator->current_time);
                     glm::vec3 position = glm::mix(channel.positions.at(index), channel.positions.at(index + 1), scale_factor);
-                    animator->bone_id_to_joint_map.at(channel.target_node)->set_position(position);
+                    animator->bone_id_to_joint_map.at(channel.target_node)->position = position;
                 }
             }
 
@@ -87,7 +87,7 @@ namespace gage::scene::systems
                     int index = get_key_frame_index(animator->current_time, channel.time_points);
                     float scale_factor = get_scale_factor(channel.time_points.at(index), channel.time_points.at(index + 1), animator->current_time);
                     glm::vec3 scale = glm::mix(channel.scales.at(index), channel.scales.at(index + 1), scale_factor);
-                    animator->bone_id_to_joint_map.at(channel.target_node)->set_scale(scale);
+                    animator->bone_id_to_joint_map.at(channel.target_node)->scale = scale;
                 }
             }
 
@@ -100,7 +100,7 @@ namespace gage::scene::systems
                     int index = get_key_frame_index(animator->current_time, channel.time_points);
                     float scale_factor = get_scale_factor(channel.time_points.at(index), channel.time_points.at(index + 1), animator->current_time);
                     glm::quat rotation = glm::slerp(channel.rotations.at(index), channel.rotations.at(index + 1), scale_factor);
-                    animator->bone_id_to_joint_map.at(channel.target_node)->set_rotation(rotation);
+                    animator->bone_id_to_joint_map.at(channel.target_node)->rotation = rotation;
                 }
             }
 
@@ -117,7 +117,7 @@ namespace gage::scene::systems
             {
                 for (const auto mesh_renderer : animator->p_mesh_renderers)
                 {
-                    mesh_renderer->get_animation_buffer().bone_matrices[skeleton_id] = joint->get_global_transform() * joint->get_inverse_bind_transform();
+                    mesh_renderer->get_animation_buffer().bone_matrices[skeleton_id] = joint->global_transform * joint->inverse_bind_transform;
                 }
             }
         }
@@ -153,12 +153,12 @@ namespace gage::scene::systems
 
             for (uint32_t bone_id : bone_ids)
             {
-                if (bone_id == node->get_bone_id())
+                if (bone_id == node->bone_id)
                 {
                     out_joints.insert({bone_id, node});
                 }
             }
-            for (const auto &child : node->get_children())
+            for (const auto &child : node->children)
             {
                 link_bone_id_recursive(out_joints, animation, child);
             }

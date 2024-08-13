@@ -1,8 +1,8 @@
 #version 460
 #extension GL_ARB_shading_language_include : require
 
-#include "includes/descriptor_set_0.inc"
-#include "includes/pbr_descriptor_set_1_frag.inc"
+#include "../includes/descriptor_set_0.inc"
+#include "../includes/pbr_descriptor_set_1_frag.inc"
 
 layout(location = 0) in VSOutput
 {

@@ -24,32 +24,18 @@ namespace gage::scene
 
         void render_imgui();
 
-        void set_name(const std::string& name);
-        uint64_t get_id() const;
-        const std::vector<Node*>& get_children() const;
-        const std::string& get_name() const;
-        const glm::mat4x4& get_global_transform() const;
-        
-        const glm::mat4x4& get_inverse_bind_transform() const;
-        uint32_t get_bone_id() const;
 
         void add_component_ptr(components::IComponent* component);
         void* get_requested_component(const char* typeid_name);
         void* get_requested_component_recursive(const char* typeid_name);
         void get_requested_component_accumulate_recursive(const char* typeid_name, std::vector<void*>& out_components);
 
-        void set_position(const glm::vec3& position);
-        void set_scale(const glm::vec3& scale);
-        void set_rotation(const glm::quat& rotation);
-
-        const glm::vec3& get_position();
-        const glm::vec3& get_scale   ();
-        const glm::quat& get_rotation();
         
         Node* search_child_by_name(const std::string& name);
 
     private:  
         SceneGraph& scene;
+    public:
         uint64_t id;
         std::string name;
         std::vector<components::IComponent*> component_ptrs;

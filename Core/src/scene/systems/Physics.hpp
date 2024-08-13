@@ -2,6 +2,7 @@
 
 #include "../components/CharacterController.hpp"
 #include "../components/Terrain.hpp"
+#include "../components/Map.hpp"
 #include <vector>
 #include <memory>
 
@@ -32,6 +33,12 @@ namespace gage::scene::systems
             JPH::BodyID height_map_body{};
             std::shared_ptr<components::Terrain> terrain_renderer;
         };
+
+        struct Map
+        {
+            JPH::BodyID body{};
+            std::shared_ptr<components::Map> map;
+        };
     public:
         enum class GroundState
         {
@@ -53,9 +60,11 @@ namespace gage::scene::systems
         static GroundState character_get_ground_state(components::CharacterController* character);
 
         void add_terrain_renderer(std::shared_ptr<components::Terrain> terrain_renderer);
+        void add_map(std::shared_ptr<components::Map> map);
     private:
         phys::Physics& phys;
         std::vector<std::unique_ptr<components::CharacterController>> character_controllers; 
         std::vector<Terrain> terrain_renderers;
+        std::vector<Map> maps;
     };
 }

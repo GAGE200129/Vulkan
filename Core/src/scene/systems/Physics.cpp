@@ -9,6 +9,9 @@
 #include <Core/src/phys/Layers.hpp>
 #include <Jolt/Physics/Character/Character.h>
 #include <Jolt/Physics/Collision/Shape/HeightFieldShape.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 
 namespace gage::scene::systems
@@ -21,7 +24,7 @@ namespace gage::scene::systems
     {
         for (auto &character_controller : character_controllers)
         {
-            character_controller->character = phys.create_character(character_controller->node.get_position(), character_controller->node.get_rotation());
+            character_controller->character = phys.create_character(character_controller->node.position, character_controller->node.rotation);
         }
 
         for (auto &terrain_renderer : terrain_renderers)
@@ -35,6 +38,24 @@ namespace gage::scene::systems
             setting.mFriction = 0.2f;
 
             terrain_renderer.height_map_body = this->phys.get_body_interface()->CreateAndAddBody(setting, JPH::EActivation::DontActivate);
+        }
+
+        for (auto &map : maps)
+        {
+            if(map.map->aabb_walls.size() == 0)
+                continue;
+            
+            JPH::StaticCompoundShapeSettings compound_shape_settings;
+            for (const auto &aabb_wall : map.map->aabb_walls)
+            {
+                auto offset = aabb_wall.a + map.map->node.position;
+                compound_shape_settings.AddShape(JPH::Vec3(offset.x, offset.y, offset.z), JPH::Quat::sIdentity(),
+                    new JPH::BoxShape(JPH::Vec3(aabb_wall.b.x, aabb_wall.b.y, aabb_wall.b.z)));
+            }
+            JPH::BodyCreationSettings setting(compound_shape_settings.Create().Get(),
+                                              JPH::RVec3(0.0, -1.0, 0.0),
+                                              JPH::Quat::sIdentity(), JPH::EMotionType::Static, phys::Layers::NON_MOVING);
+            map.body = this->phys.get_body_interface()->CreateAndAddBody(setting, JPH::EActivation::DontActivate);
         }
     }
 
@@ -58,7 +79,7 @@ namespace gage::scene::systems
         {
             character_controller->character->PostSimulation(0.1f);
             auto position = character_controller->character->GetPosition(false);
-            character_controller->node.set_position({position.GetX(), position.GetY(), position.GetZ()});
+            character_controller->node.position = {position.GetX(), position.GetY(), position.GetZ()};
 
             {
                 JPH::CharacterBase::EGroundState state = character_controller->character->GetGroundState();
@@ -130,6 +151,13 @@ namespace gage::scene::systems
         }
 
         return GroundState::GROUND;
+    }
+
+    void Physics::add_map(std::shared_ptr<components::Map> map)
+    {
+        Map additional_data{};
+        additional_data.map = map;
+        maps.push_back(std::move(additional_data));
     }
 
 }

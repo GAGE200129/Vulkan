@@ -68,9 +68,10 @@ namespace tinygltf
 
 namespace gage::scene
 {
-    SceneGraph::SceneGraph(const gfx::Graphics &gfx, phys::Physics &phys, const gfx::data::Camera &camera) : gfx(gfx),
+    SceneGraph::SceneGraph(const gfx::Graphics &gfx, phys::Physics &phys, gfx::data::Camera &camera) : gfx(gfx),
                                                                                                        renderer(gfx),
                                                                                                        terrain_renderer(gfx, camera),
+                                                                                                       map_renderer(gfx),
                                                                                                        physics(phys)
     {
         // Create root node
@@ -85,6 +86,7 @@ namespace gage::scene
         generic.shutdown();
         renderer.shutdown();
         terrain_renderer.shutdown();
+        map_renderer.shutdown();
         animation.shutdown();
         physics.shutdown();
     }
@@ -103,6 +105,7 @@ namespace gage::scene
     {
         renderer.init();
         terrain_renderer.init();
+        map_renderer.init();
         animation.init();
         physics.init();
         generic.init();
@@ -119,7 +122,7 @@ namespace gage::scene
             accumulated_transform *= glm::mat4x4(node->rotation);
             node->global_transform = accumulated_transform;
 
-            for (const auto &child : node->get_children())
+            for (const auto &child : node->children)
             {
                 traverse_scene_graph_recursive(child, accumulated_transform);
             }
@@ -205,7 +208,7 @@ namespace gage::scene
         child->parent = parent;
     }
 
-    void SceneGraph::add_component(Node *node, std::unique_ptr<components::IComponent> component)
+    void* SceneGraph::add_component(Node *node, std::unique_ptr<components::IComponent> component)
     {
         // Release component
         components::IComponent *ptr = component.release();
@@ -233,11 +236,19 @@ namespace gage::scene
         {
             generic.add_script(std::unique_ptr<components::Script>(static_cast<components::Script *>(ptr)));
         }
+        else if (std::strcmp(ptr->get_name(), "Map") == 0)
+        {
+            auto map = std::shared_ptr<components::Map>(static_cast<components::Map*>(ptr));
+            map_renderer.add_map(map);
+            physics.add_map(map);
+        }
         else
         {
             log().critical("Unknown system for component: {}", ptr->get_name());
             throw SceneException{};
         }
+
+        return ptr;
     }
 
     const std::vector<std::unique_ptr<Node>> &SceneGraph::get_nodes() const
@@ -245,28 +256,6 @@ namespace gage::scene
         return nodes;
     }
 
-    systems::Renderer &SceneGraph::get_renderer()
-    {
-        return renderer;
-    }
-
-    systems::Animation &SceneGraph::get_animation()
-    {
-        return animation;
-    }
-    systems::TerrainRenderer &SceneGraph::get_terrain_renderer()
-    {
-        return terrain_renderer;
-    }
-    systems::Physics &SceneGraph::get_physics()
-    {
-        return physics;
-    }
-
-    systems::Generic &SceneGraph::get_generic()
-    {
-        return generic;
-    }
 
     void SceneGraph::render_imgui()
     {
@@ -286,13 +275,13 @@ namespace gage::scene
             std::function<void(scene::Node * node)> browse_scene_graph_recursive;
             browse_scene_graph_recursive = [&browse_scene_graph_recursive](scene::Node *node)
             {
-                const std::string &node_name = node->get_name();
-                std::string id_string = std::to_string(node->get_id());
+                const std::string &node_name = node->name;
+                std::string id_string = std::to_string(node->id);
                 std::string name = !node_name.empty() ? node_name + "|" + id_string : id_string;
 
                 ImGuiTreeNodeFlags flags = 0;
                 flags |= selected_node == node ? ImGuiTreeNodeFlags_Selected : 0;
-                flags |= node->get_children().empty() ? ImGuiTreeNodeFlags_Leaf : 0;
+                flags |= node->children.empty() ? ImGuiTreeNodeFlags_Leaf : 0;
 
                 if (ImGui::TreeNodeEx(name.c_str(), flags))
                 {
@@ -300,7 +289,7 @@ namespace gage::scene
                     {
                         selected_node = node;
                     }
-                    for (const auto &child : node->get_children())
+                    for (const auto &child : node->children)
                     {
                         browse_scene_graph_recursive(child);
                     }

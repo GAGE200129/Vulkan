@@ -58,30 +58,30 @@ project "Core"
    filter {"files:**.vert"}
       buildmessage "Compiling vertex shader %{file.relpath}"
       buildcommands {
-         "glslc %{file.relpath} -o %{file.directory}/compiled/%{file.name}.spv"
+         "glslc %{file.relpath} -o %{prj.location}/shaders/compiled/%{file.name}.spv"
       }
-      buildoutputs { "%{file.directory}/compiled/%{file.name}.spv" }
+      buildoutputs { "%{prj.location}/shaders/compiled/%{file.name}.spv" }
 
    filter {"files:**.geom"}
       buildmessage "Compiling geometry shader %{file.relpath}"
       buildcommands {
-         "glslc %{file.relpath} -o %{file.directory}/compiled/%{file.name}.spv"
+         "glslc %{file.relpath} -o %{prj.location}/shaders/compiled/%{file.name}.spv"
       }
-      buildoutputs { "%{file.directory}/compiled/%{file.name}.spv" }
+      buildoutputs { "%{prj.location}/shaders/compiled/%{file.name}.spv" }
 
    filter {"files:**.frag"}
       buildmessage "Compiling fragment shader %{file.relpath}"
       buildcommands {
-         "glslc %{file.relpath} -o %{file.directory}/compiled/%{file.name}.spv"
+         "glslc %{file.relpath} -o %{prj.location}/shaders/compiled/%{file.name}.spv"
       }
-      buildoutputs { "%{file.directory}/compiled/%{file.name}.spv" }
+      buildoutputs { "%{prj.location}/shaders/compiled/%{file.name}.spv" }
 
    filter {"files:**.comp"}
       buildmessage "Compiling compute shader %{file.relpath}"
       buildcommands {
-         "glslc %{file.relpath} -o %{file.directory}/compiled/%{file.name}.spv"
+         "glslc %{file.relpath} -o %{prj.location}/shaders/compiled/%{file.name}.spv"
       }
-      buildoutputs { "%{file.directory}/compiled/%{file.name}.spv" }
+      buildoutputs { "%{prj.location}/shaders/compiled/%{file.name}.spv" }
 
 
    

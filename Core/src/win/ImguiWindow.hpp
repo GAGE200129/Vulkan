@@ -35,10 +35,8 @@ namespace gage::win
 
         void clear();
         void end_frame();
-
-
-
     private:
+        gfx::Graphics& gfx;
         GLFWwindow *p_window{};
     };
 };

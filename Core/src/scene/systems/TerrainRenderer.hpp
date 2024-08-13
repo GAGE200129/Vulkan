@@ -57,8 +57,6 @@ namespace gage::scene::systems
         void render_depth(VkCommandBuffer cmd) const;
 
         VkDescriptorSet allocate_descriptor_set(VkImageView image_view, VkSampler sampler) const;
-
-        void reset();
     private:
         void create_pipeline();
         void create_depth_pipeline();

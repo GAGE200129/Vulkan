@@ -18,13 +18,10 @@ namespace gage::win
         {
             throw WindowException{ "Failed to create window !" };
         }
-
-        p_graphics = std::make_unique<gfx::Graphics>(p_window, title);
     }
     Window::~Window()
     {
         glfwDestroyWindow(p_window);
-        p_graphics.reset();
     }
 
     bool Window::is_closing() const 
@@ -40,7 +37,6 @@ namespace gage::win
         {
             glfwSetWindowMonitor(p_window, nullptr, 0, 0, width, height, 0);
             glfwSetWindowSize(p_window, width, height);
-            p_graphics->resize(width, height);
             break;
         }
         case WindowMode::FullscreenBorderless:
@@ -48,7 +44,6 @@ namespace gage::win
             const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
             glfwSetWindowMonitor(p_window,  glfwGetPrimaryMonitor(), 0, 0, mode->width, mode->height, mode->refreshRate);
             glfwSetWindowSize(p_window, mode->width, mode->height);
-            p_graphics->resize(mode->width, mode->height);
             break;
         }
         case WindowMode::FullscreenExclusive:
@@ -56,7 +51,6 @@ namespace gage::win
             const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
             glfwSetWindowMonitor(p_window,  glfwGetPrimaryMonitor(), 0, 0, mode->width, mode->height, mode->refreshRate);
             glfwSetWindowSize(p_window, width, height);
-            p_graphics->resize(width, height);
             break;
         }
 
@@ -64,15 +58,6 @@ namespace gage::win
         }
     }
 
-    gfx::Graphics& Window::get_graphics()
-    {
-        return *p_graphics;
-    }
-
-    GLFWwindow* Window::get_handle() const
-    {
-        return p_window;
-    }
 
     void init()
     {

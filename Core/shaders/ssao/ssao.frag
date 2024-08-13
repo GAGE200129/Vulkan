@@ -3,7 +3,7 @@
 
 layout(constant_id = 0) const int KERNEL_SIZE = 64;
 
-#include "includes/descriptor_set_0.inc"
+#include "../includes/descriptor_set_0.inc"
 
 layout(location = 0) out float out_color;
   

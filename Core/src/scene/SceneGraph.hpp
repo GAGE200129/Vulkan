@@ -8,6 +8,7 @@
 #include "systems/Animation.hpp"
 #include "systems/Physics.hpp"
 #include "systems/Generic.hpp"
+#include "systems/MapRenderer.hpp"
 
 #include <vector>
 #include <cstdint>
@@ -48,7 +49,7 @@ namespace gage::scene
     public:
         static constexpr std::string_view ROOT_NAME = "ROOT";
     public:
-        SceneGraph(const gfx::Graphics& gfx, phys::Physics& phys, const gfx::data::Camera& camera);
+        SceneGraph(const gfx::Graphics& gfx, phys::Physics& phys, gfx::data::Camera& camera);
         ~SceneGraph();
 
         void render_imgui();
@@ -58,7 +59,7 @@ namespace gage::scene
         void build_node_transform();
 
         Node* create_node();
-        void add_component(Node* node, std::unique_ptr<components::IComponent> component);
+        void* add_component(Node* node, std::unique_ptr<components::IComponent> component);
         
 
 
@@ -69,20 +70,16 @@ namespace gage::scene
         static void make_parent(Node* parent, Node* child);
 
         const std::vector<std::unique_ptr<Node>>& get_nodes() const;
-        systems::Renderer& get_renderer();
-        systems::TerrainRenderer& get_terrain_renderer();
-        systems::Animation& get_animation();
-        systems::Physics& get_physics();
-        systems::Generic& get_generic();
     private:
         const gfx::Graphics& gfx;
+        uint64_t id{0};
     public:
         systems::Renderer renderer;
         systems::TerrainRenderer terrain_renderer;
+        systems::MapRenderer map_renderer;
         systems::Animation animation;
         systems::Physics physics;
         systems::Generic generic;
-        uint64_t id{0};
         std::vector<std::unique_ptr<Node>> nodes{};
         std::vector<std::unique_ptr<data::Model>> models{};
     };

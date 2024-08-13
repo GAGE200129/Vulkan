@@ -1,23 +1,23 @@
 #include <pch.hpp>
-#include "TerrainRenderer.hpp"
+#include "MapRenderer.hpp"
+
+#include "../Node.hpp"
 
 #include <Core/src/gfx/Graphics.hpp>
-#include <Core/src/gfx/data/Camera.hpp>
 #include <Core/src/utils/FileLoader.hpp>
 #include <Core/src/gfx/data/g_buffer/GBuffer.hpp>
-#include <glm/gtc/type_ptr.hpp>
+#include <Core/src/gfx/data/GPUBuffer.hpp>
 
-#include "../scene.hpp"
+#include <glm/gtc/type_ptr.hpp>
 
 namespace gage::scene::systems
 {
-    TerrainRenderer::TerrainRenderer(const gfx::Graphics &gfx, const gfx::data::Camera &camera) : gfx(gfx),
-                                                                                            camera(camera)
+    MapRenderer::MapRenderer(const gfx::Graphics &gfx) : gfx(gfx)
     {
         create_pipeline();
         create_depth_pipeline();
     }
-    TerrainRenderer::~TerrainRenderer()
+    MapRenderer::~MapRenderer()
     {
         vkDestroyPipelineLayout(gfx.device, depth_pipeline_layout, nullptr);
         vkDestroyPipeline(gfx.device, depth_pipeline, nullptr);
@@ -27,70 +27,108 @@ namespace gage::scene::systems
         vkDestroyPipeline(gfx.device, pipeline, nullptr);
     }
 
-    void TerrainRenderer::init()
+    void MapRenderer::init()
     {
-        // Init terrain renderers
-        for (auto &terrain : terrains)
+        struct MapVertex
         {
-            terrain.vertex_buffer =
-                std::make_unique<gfx::data::GPUBuffer>(gfx,
-                                                       VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                                                       terrain.terrain->vertex_data.size() * sizeof(components::Terrain::Vertex),
-                                                       terrain.terrain->vertex_data.data());
-
-            terrain.index_buffer =
-                std::make_unique<gfx::data::GPUBuffer>(gfx,
-                                                       VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                                                       terrain.terrain->indices_data.size() * sizeof(uint32_t),
-                                                       terrain.terrain->indices_data.data());
-
-            // Load test image
+            glm::vec3 position, normal;
+        };
+        for (auto &map : maps)
+        {
+            std::vector<MapVertex> vertices;
+            map.vertex_count = 0;
+            for (const auto &aabb_wall : map.map->aabb_walls)
             {
-                int w, h, comp;
-                stbi_uc *data = stbi_load("res/textures/grass_tiled.jpg", &w, &h, &comp, STBI_rgb);
-                if (!data)
-                {
-                    log().critical("Failed to terrain load image: {}", "res/textures/grass_tiled.jpg");
-                    throw SceneException{};
-                }
+                glm::vec3 max = aabb_wall.a + aabb_wall.b;
+                glm::vec3 min = aabb_wall.a - aabb_wall.b;
+                glm::vec3 n_front = {0, 0, -1};
+                glm::vec3 n_back = {0, 0, 1};
+                glm::vec3 n_top = {0, 1, 0};
+                glm::vec3 n_bottom = {0, -1, 0};
 
-                uint32_t size_in_bytes = w * h * 3;
-                gfx::data::ImageCreateInfo image_ci{data, w, h, 1, size_in_bytes, VK_FORMAT_R8G8B8_UNORM, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT};
 
-                image_ci.mip_levels = std::floor(std::log2(std::max(w, h))) + 1;
-                terrain.image = std::make_unique<gfx::data::Image>(gfx, image_ci);
-                stbi_image_free(data);
+                // front
+                vertices.push_back({min, n_front});
+                vertices.push_back({{min.x, max.y, min.z}, n_front});
+                vertices.push_back({{max.x, max.y, min.z}, n_front});
+                map.vertex_count += 3;
+
+                vertices.push_back({min, n_front});
+                vertices.push_back({{max.x, max.y, min.z}, n_front});
+                vertices.push_back({{max.x, min.y, min.z}, n_front});
+                map.vertex_count += 3;
+
+                //back
+                vertices.push_back({max, n_back});
+                vertices.push_back({{min.x, min.y, max.z}, n_back});
+                vertices.push_back({{max.x, min.y, max.z}, n_back});
+                map.vertex_count += 3;
+
+                vertices.push_back({max, n_back});
+                vertices.push_back({{min.x, max.y, max.z}, n_back});
+                vertices.push_back({{min.x, min.y, max.z}, n_back});
+                map.vertex_count += 3;
+
+                //Top
+                vertices.push_back({{min.x, max.y, min.z}, n_top});
+                vertices.push_back({{min.x, max.y, max.z}, n_top});
+                vertices.push_back({{max.x, max.y, min.z}, n_top});
+                map.vertex_count += 3;
+
+                vertices.push_back({max, n_top});
+                vertices.push_back({{max.x, max.y, min.z}, n_top});
+                vertices.push_back({{min.x, max.y, max.z}, n_top});
+                map.vertex_count += 3;
+
+                //Bottom
+                vertices.push_back({{max.x, min.y, max.z}, n_bottom});
+                vertices.push_back({{min.x, min.y, max.z}, n_bottom});
+                vertices.push_back({{max.x, min.y, min.z}, n_bottom});
+                map.vertex_count += 3;
+
+                vertices.push_back({min, n_bottom});
+                vertices.push_back({{max.x, min.y, min.z}, n_bottom});
+                vertices.push_back({{min.x, min.y, max.z}, n_bottom});
+                map.vertex_count += 3;
+
+                //right
+                vertices.push_back({{max.x, min.y, min.z}});
+                vertices.push_back({{max.x, max.y, min.z}});
+                vertices.push_back({{max.x, min.y, max.z}});
+                map.vertex_count += 3;
+
+                vertices.push_back({{max.x, min.y, max.z}});
+                vertices.push_back({{max.x, max.y, min.z}});
+                vertices.push_back({max});
+                map.vertex_count += 3;
+
+                //left
+                vertices.push_back({{min.x, max.y, max.z}});
+                vertices.push_back({{min.x, max.y, min.z}});
+                vertices.push_back({{min.x, min.y, max.z}});
+                map.vertex_count += 3;
+
+                vertices.push_back({{min.x, min.y, max.z}});
+                vertices.push_back({{min.x, max.y, min.z}});
+                vertices.push_back({min});
+                map.vertex_count += 3;
             }
 
-            // Create descriptor
-            {
-                // terrain.uniform_buffer_data.min_height = terrain.terrain->min_height;
-                // terrain.uniform_buffer_data.max_height = terrain.terrain->max_height;
-                // terrain.uniform_buffer_data.uv_scale = terrain.terrain->size;
-
-                // terrain.uniform_buffer = std::make_unique<gfx::data::CPUBuffer>(gfx, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Terrain::UniformBuffer), nullptr);
-                terrain.descriptor = this->allocate_descriptor_set(terrain.image->get_image_view(), terrain.image->get_sampler());
-            }
+            map.vertex_buffer = std::make_unique<gfx::data::GPUBuffer>(gfx, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(MapVertex) * vertices.size(), vertices.data());
         }
     }
-    void TerrainRenderer::shutdown()
+    void MapRenderer::shutdown()
     {
-        for (const auto &terrain : terrains)
-        {
-            vkFreeDescriptorSets(gfx.device, gfx.desc_pool, 1, &terrain.descriptor);
-        }
-        terrains.clear();
+        maps.clear();
     }
-
-    void TerrainRenderer::add_terrain(std::shared_ptr<components::Terrain> terrain)
+    void MapRenderer::add_map(std::shared_ptr<components::Map> map)
     {
-        Terrain additional_terrain_datas{};
-        additional_terrain_datas.terrain = terrain;
+        Map additional_data{};
+        additional_data.map = map;
 
-        this->terrains.push_back(std::move(additional_terrain_datas));
+        maps.push_back(std::move(additional_data));
     }
-
-    void TerrainRenderer::render(VkCommandBuffer cmd) const
+    void MapRenderer::render(VkCommandBuffer cmd) const
     {
         VkViewport viewport = {};
         viewport.x = 0;
@@ -110,50 +148,21 @@ namespace gage::scene::systems
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &gfx.frame_datas[gfx.frame_index].global_set, 0, nullptr);
         vkCmdSetViewport(cmd, 0, 1, &viewport);
         vkCmdSetScissor(cmd, 0, 1, &scissor);
-
-        for (const auto &terrain : terrains)
+        for (const auto &map : maps)
         {
-
-            terrain.terrain->update_lod_regons(camera.position);
-
-            // std::memcpy(terrain.uniform_buffer->get_mapped(), &terrain.uniform_buffer_data, sizeof(Terrain::UniformBuffer));
             VkBuffer buffers[] =
                 {
-                    terrain.vertex_buffer->get_buffer_handle()
-
+                    map.vertex_buffer->get_buffer_handle()
                 };
-            VkDeviceSize offsets[] = {
-                0};
-            glm::mat4x4 transform(1.0f);
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline_layout, 1, 1, &terrain.descriptor, 0, nullptr);
-            vkCmdPushConstants(cmd, this->pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), glm::value_ptr(transform));
-            vkCmdBindVertexBuffers(cmd, 0, 1, buffers, offsets);
-            vkCmdBindIndexBuffer(cmd, terrain.index_buffer->get_buffer_handle(), 0, VK_INDEX_TYPE_UINT32);
-            for (uint32_t patch_y = 0; patch_y < terrain.terrain->patch_count; patch_y++)
-                for (uint32_t patch_x = 0; patch_x < terrain.terrain->patch_count; patch_x++)
-                {
-                    uint32_t x = patch_x * (terrain.terrain->patch_size - 1);
-                    uint32_t y = patch_y * (terrain.terrain->patch_size - 1);
+            VkDeviceSize offsets[] =
+                {0, 0, 0, 0, 0};
 
-                    uint32_t lod = terrain.terrain->get_current_lod(patch_x, patch_y);
-                    if (lod != 0)
-                    {
-                        auto proj = glm::perspectiveFovRH_ZO(glm::radians(camera.get_field_of_view()),
-                                                             (float)gfx.get_scaled_draw_extent().width, (float)gfx.get_scaled_draw_extent().height,
-                                                             0.001f, camera.get_far());
-                        if (!terrain.terrain->is_inside_frustum(x, y, camera.get_view(), proj))
-                        {
-                            continue;
-                        }
-                    }
-                    uint32_t base_vertex = x + y * terrain.terrain->size;
-                    uint32_t base_index = terrain.terrain->lod_infos.at(lod).start;
-                    uint32_t vertex_count = terrain.terrain->lod_infos.at(lod).count;
-                    vkCmdDrawIndexed(cmd, vertex_count, 1, base_index, base_vertex, 0);
-                }
+            vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), glm::value_ptr(map.map->node.global_transform));
+            vkCmdBindVertexBuffers(cmd, 0, sizeof(buffers) / sizeof(buffers[0]), buffers, offsets);
+            vkCmdDraw(cmd, map.vertex_count, 1, 0, 0);
         }
     }
-    void TerrainRenderer::render_depth(VkCommandBuffer cmd) const
+    void MapRenderer::render_depth(VkCommandBuffer cmd) const
     {
         VkViewport viewport = {};
         viewport.x = 0;
@@ -171,103 +180,28 @@ namespace gage::scene::systems
 
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, depth_pipeline);
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, depth_pipeline_layout, 0, 1, &gfx.frame_datas[gfx.frame_index].global_set, 0, nullptr);
-
         vkCmdSetViewport(cmd, 0, 1, &viewport);
         vkCmdSetScissor(cmd, 0, 1, &scissor);
-
-        for (const auto &terrain : terrains)
+        for (const auto &map : maps)
         {
-            terrain.terrain->update_lod_regons(camera.position);
-
             VkBuffer buffers[] =
                 {
-                    terrain.vertex_buffer->get_buffer_handle()
-
+                    map.vertex_buffer->get_buffer_handle()
                 };
-            VkDeviceSize offsets[] = {
-                0};
-            glm::mat4x4 transform(1.0f);
-            vkCmdBindVertexBuffers(cmd, 0, 1, buffers, offsets);
-            vkCmdBindIndexBuffer(cmd, terrain.index_buffer->get_buffer_handle(), 0, VK_INDEX_TYPE_UINT32);
-            for (uint32_t patch_y = 0; patch_y < terrain.terrain->patch_count; patch_y++)
-                for (uint32_t patch_x = 0; patch_x < terrain.terrain->patch_count; patch_x++)
-                {
-                    uint32_t x = patch_x * (terrain.terrain->patch_size - 1);
-                    uint32_t y = patch_y * (terrain.terrain->patch_size - 1);
+            VkDeviceSize offsets[] =
+                {0, 0, 0, 0, 0};
+            vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), glm::value_ptr(map.map->node.global_transform));
 
-                    uint32_t lod = terrain.terrain->get_current_lod(patch_x, patch_y);
-                    if (lod != 0)
-                    {
-                        auto proj = glm::perspectiveFovRH_ZO(glm::radians(camera.get_field_of_view()),
-                                                             (float)gfx.get_scaled_draw_extent().width, (float)gfx.get_scaled_draw_extent().height,
-                                                             0.001f, camera.get_far());
-                        if (!terrain.terrain->is_inside_frustum(x, y, camera.get_view(), proj))
-                        {
-                            continue;
-                        }
-                    }
-                    uint32_t base_vertex = x + y * terrain.terrain->size;
-                    uint32_t base_index = terrain.terrain->lod_infos.at(lod).start;
-                    uint32_t vertex_count = terrain.terrain->lod_infos.at(lod).count;
-                    vkCmdDrawIndexed(cmd, vertex_count, 1, base_index, base_vertex, 0);
-                }
+            vkCmdBindVertexBuffers(cmd, 0, sizeof(buffers) / sizeof(buffers[0]), buffers, offsets);
+            vkCmdDraw(cmd, map.vertex_count, 1, 0, 0);
         }
     }
 
-    VkDescriptorSet TerrainRenderer::allocate_descriptor_set(VkImageView image_view, VkSampler sampler) const
+    void MapRenderer::create_pipeline()
     {
-        VkDescriptorSet res{};
-        VkDescriptorSetAllocateInfo alloc_info{};
-        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        alloc_info.descriptorSetCount = 1;
-        alloc_info.descriptorPool = gfx.desc_pool;
-        alloc_info.pSetLayouts = &desc_layout;
-        vk_check(vkAllocateDescriptorSets(gfx.device, &alloc_info, &res));
-
-        // // Set 1 binding 0 = uniform buffer
-        // VkDescriptorBufferInfo buffer_desc_info{};
-        // buffer_desc_info.buffer = buffer;
-        // buffer_desc_info.offset = 0;
-        // buffer_desc_info.range = size_in_bytes;
-
-        VkWriteDescriptorSet descriptor_write{};
-        descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        // descriptor_write.dstSet = res;
-        // descriptor_write.dstBinding = 0;
-        // descriptor_write.dstArrayElement = 0;
-        // descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        // descriptor_write.descriptorCount = 1;
-        // descriptor_write.pBufferInfo = &buffer_desc_info;
-        // descriptor_write.pImageInfo = nullptr;
-        // descriptor_write.pTexelBufferView = nullptr;
-        // vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
-
-        // Set 1 binding 0 = texture
-
-        VkDescriptorImageInfo img_info{};
-        img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        img_info.imageView = image_view;
-        img_info.sampler = sampler;
-
-        descriptor_write.dstSet = res;
-        descriptor_write.dstBinding = 0;
-        descriptor_write.dstArrayElement = 0; // Array index 0
-        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptor_write.descriptorCount = 1;
-        descriptor_write.pBufferInfo = nullptr;
-        descriptor_write.pImageInfo = &img_info;
-        descriptor_write.pTexelBufferView = nullptr;
-        vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
-
-        return res;
-    }
-
-    void TerrainRenderer::create_pipeline()
-    {
-         // PER INSTANCE SET LAYOUT
+        // PER INSTANCE SET LAYOUT
         std::vector<VkDescriptorSetLayoutBinding> instance_bindings{
-            {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
-            //{.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
+            //{.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr},
         };
 
         VkDescriptorSetLayoutCreateInfo layout_ci{};
@@ -283,7 +217,7 @@ namespace gage::scene::systems
                 sizeof(glm::mat4x4)}};
 
         std::vector<VkDescriptorSetLayout> layouts = {gfx.global_set_layout, desc_layout};
-        VkPipelineLayoutCreateInfo pipeline_layout_info = {}; 
+        VkPipelineLayoutCreateInfo pipeline_layout_info = {};
         pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipeline_layout_info.pushConstantRangeCount = push_constants.size();
         pipeline_layout_info.pPushConstantRanges = push_constants.data();
@@ -293,15 +227,13 @@ namespace gage::scene::systems
 
         // Create pipelie
         std::vector<VkVertexInputBindingDescription> vertex_bindings{
-            {.binding = 0, .stride = (sizeof(float) * 8), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX},
-            //{.binding = 0, .stride = (sizeof(float) * 5), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX},
-            //{.binding = 2, .stride = (sizeof(float) * 2), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX},
+            {.binding = 0, .stride = (sizeof(float) * 6), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX},
         };
 
         std::vector<VkVertexInputAttributeDescription> vertex_attributes{
-            {.location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0},              // position
-            {.location = 1, .binding = 0, .format = VK_FORMAT_R32G32_SFLOAT, .offset = sizeof(float) * 3}, // tex coord
-            {.location = 2, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = sizeof(float) * 5},
+            {.location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0}, // position
+            {.location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = sizeof(float) * 3}, // normal
+            // {.location = 2, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = sizeof(float) * 5},
         };
 
         VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
@@ -320,7 +252,7 @@ namespace gage::scene::systems
         rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth = 1.f;
-        rasterizer.cullMode = VK_CULL_MODE_NONE;
+        rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
         rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
         VkPipelineMultisampleStateCreateInfo multisampling{};
@@ -377,16 +309,6 @@ namespace gage::scene::systems
 
         std::vector<VkPipelineColorBlendAttachmentState> blend_attachments =
             {
-                // VkPipelineColorBlendAttachmentState{
-                //     .blendEnable = false,
-                //     .srcColorBlendFactor = VK_BLEND_FACTOR_ZERO,
-                //     .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
-                //     .colorBlendOp = VK_BLEND_OP_ADD,
-                //     .srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-                //     .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-                //     .alphaBlendOp = VK_BLEND_OP_ADD,
-                //     .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT},
-
                 VkPipelineColorBlendAttachmentState{
                     .blendEnable = false,
                     .srcColorBlendFactor = VK_BLEND_FACTOR_ZERO,
@@ -418,8 +340,6 @@ namespace gage::scene::systems
                     .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT},
             };
 
-        // setup dummy color blending. We arent using transparent objects yet
-        // the blending is just "no blend", but we do write to the color attachment
         VkPipelineColorBlendStateCreateInfo color_blending = {};
         color_blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 
@@ -428,16 +348,11 @@ namespace gage::scene::systems
         color_blending.attachmentCount = blend_attachments.size();
         color_blending.pAttachments = blend_attachments.data();
 
-        // build the actual pipeline
-        // we now use all of the info structs we have been writing into into this one
-        // to create the pipeline
-
         std::vector<VkPipelineShaderStageCreateInfo> pipeline_shader_stages{};
         VkShaderModule vertex_shader{};
-        // VkShaderModule geometry_shader{};
         VkShaderModule fragment_shader{};
-        auto vertex_binary = utils::file_path_to_binary("Core/shaders/compiled/terrain.vert.spv");
-        auto fragment_binary = utils::file_path_to_binary("Core/shaders/compiled/terrain.frag.spv");
+        auto vertex_binary = utils::file_path_to_binary("Core/shaders/compiled/map.vert.spv");
+        auto fragment_binary = utils::file_path_to_binary("Core/shaders/compiled/map.frag.spv");
 
         VkShaderModuleCreateInfo shader_module_ci = {};
         shader_module_ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -452,15 +367,6 @@ namespace gage::scene::systems
         shader_stage_ci.pName = "main";
         shader_stage_ci.stage = VK_SHADER_STAGE_VERTEX_BIT;
         pipeline_shader_stages.push_back(shader_stage_ci);
-
-        // Geometry shader
-        // shader_module_ci.codeSize = geometry_binary.size();
-        // shader_module_ci.pCode = (uint32_t *)geometry_binary.data();
-        // vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &geometry_shader));
-        // shader_stage_ci.module = geometry_shader;
-        // shader_stage_ci.pName = "main";
-        // shader_stage_ci.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
-        // pipeline_shader_stages.push_back(shader_stage_ci);
 
         // Fragment shader
         shader_module_ci.codeSize = fragment_binary.size();
@@ -481,15 +387,8 @@ namespace gage::scene::systems
         dynamic_state_ci.dynamicStateCount = dynamic_states.size();
         dynamic_state_ci.pDynamicStates = dynamic_states.data();
 
-        // VkPipelineRenderingCreateInfo render_info{};
-        // render_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-        // render_info.colorAttachmentCount = 1;
-        // render_info.pColorAttachmentFormats = &color_attachment_format;
-        // render_info.depthAttachmentFormat = depth_attachment_format;
-
         VkGraphicsPipelineCreateInfo pipeline_info = {};
         pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        // pipeline_info.pNext = &render_info;
         pipeline_info.stageCount = (uint32_t)pipeline_shader_stages.size();
         pipeline_info.pStages = pipeline_shader_stages.data();
         pipeline_info.pVertexInputState = &vertex_input_info;
@@ -506,12 +405,10 @@ namespace gage::scene::systems
         vk_check(vkCreateGraphicsPipelines(gfx.device, nullptr, 1, &pipeline_info, nullptr, &pipeline));
 
         vkDestroyShaderModule(gfx.device, vertex_shader, nullptr);
-        // vkDestroyShaderModule(gfx.device, geometry_shader, nullptr);
         vkDestroyShaderModule(gfx.device, fragment_shader, nullptr);
     }
 
-
-    void TerrainRenderer::create_depth_pipeline()
+    void MapRenderer::create_depth_pipeline()
     {
         std::vector<VkPushConstantRange> push_constants{};
 
@@ -526,13 +423,13 @@ namespace gage::scene::systems
 
         // Create pipelie
         std::vector<VkVertexInputBindingDescription> vertex_bindings{
-            {.binding = 0, .stride = (sizeof(float) * 8), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX},
-            //{.binding = 0, .stride = (sizeof(float) * 5), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX},
-            //{.binding = 2, .stride = (sizeof(float) * 2), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX},
+            {.binding = 0, .stride = (sizeof(float) * 6), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX},
         };
 
         std::vector<VkVertexInputAttributeDescription> vertex_attributes{
             {.location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0}, // position
+            {.location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = sizeof(float) * 3}, // normal
+            // {.location = 2, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = sizeof(float) * 5},
         };
 
         VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
@@ -618,7 +515,7 @@ namespace gage::scene::systems
         VkShaderModule geometry_shader{};
         VkShaderModule fragment_shader{};
 
-        auto vertex_binary = utils::file_path_to_binary("Core/shaders/compiled/terrain_shadow.vert.spv");
+        auto vertex_binary = utils::file_path_to_binary("Core/shaders/compiled/map_shadow.vert.spv");
         auto geometry_binary = utils::file_path_to_binary("Core/shaders/compiled/shadow.geom.spv");
         auto fragment_binary = utils::file_path_to_binary("Core/shaders/compiled/shadow.frag.spv");
 
@@ -686,4 +583,5 @@ namespace gage::scene::systems
         vkDestroyShaderModule(gfx.device, geometry_shader, nullptr);
         vkDestroyShaderModule(gfx.device, fragment_shader, nullptr);
     }
+
 }

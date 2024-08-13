@@ -1,8 +1,8 @@
 #version 460
 #extension GL_ARB_shading_language_include : require
 
-#include "includes/descriptor_set_0.inc"
-#include "includes/pbr_descriptor_set_2_vert.inc"
+#include "../includes/descriptor_set_0.inc"
+#include "../includes/pbr_descriptor_set_2_vert.inc"
 
 layout(location = 0) in vec3 in_pos;
 layout(location = 1) in vec3 in_normal;

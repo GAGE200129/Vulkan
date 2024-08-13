@@ -11,7 +11,7 @@ namespace gage::gfx
 
 
 #ifndef NDEBUG
-#define vk_check(x) {VkResult result = x; if (result != VK_SUCCESS) { utils::StackTrace stack_trace; log().critical("{}", stack_trace.print());  throw gage::gfx::GraphicsException{}; } }
+#define vk_check(x) {VkResult result = x; if (result != VK_SUCCESS) { gage::utils::StackTrace stack_trace; gage::gfx::log().critical("{}", stack_trace.print());  throw gage::gfx::GraphicsException{}; } }
 #define vkb_check(x, ...) { if(!x) { log().critical("{}", x.error().message());  utils::StackTrace stack_trace; log().critical("{}", stack_trace.print()); throw gage::gfx::GraphicsException{};} }
 #else
 #define vk_check(x, ...) x

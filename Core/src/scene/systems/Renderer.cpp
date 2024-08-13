@@ -87,7 +87,7 @@ namespace gage::scene::systems
                 VkDeviceSize offsets[] =
                     {0, 0, 0};
 
-                vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), glm::value_ptr(mesh.mesh_renderer->node.get_global_transform()));
+                vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), glm::value_ptr(mesh.mesh_renderer->node.global_transform));
                 vkCmdBindVertexBuffers(cmd, 0, sizeof(buffers) / sizeof(buffers[0]), buffers, offsets);
                 vkCmdBindIndexBuffer(cmd, primitive.index_buffer->get_buffer_handle(), 0, VK_INDEX_TYPE_UINT32);
                 vkCmdDrawIndexed(cmd, primitive.vertex_count, 1, 0, 0, 0);
@@ -137,7 +137,7 @@ namespace gage::scene::systems
                 // Build transform
 
                 const VkDescriptorSet &material_set = mesh.mesh_renderer->model.materials.at(primitive.material_index).descriptor_set;
-                vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), glm::value_ptr(mesh.mesh_renderer->node.get_global_transform()));
+                vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), glm::value_ptr(mesh.mesh_renderer->node.global_transform));
                 vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                         pipeline_layout,
                                         1,
@@ -165,7 +165,7 @@ namespace gage::scene::systems
                 vkFreeDescriptorSets(gfx.device, gfx.desc_pool, 1, &mesh.animation_descs[i]);
             }
         }
-
+        mesh_renderers.clear();
        
     }
 

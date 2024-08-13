@@ -115,8 +115,8 @@ void FPSCharacterController::update(float delta, const hid::Keyboard &keyboard, 
 
 
     // camera.position = translation;
-    spine->set_rotation(glm::quat(glm::vec3(glm::radians(-pitch), 0.0f, glm::radians(roll))));
-    hips->set_rotation(glm::quat(glm::vec3(0.0f, glm::pi<float>() + glm::radians(yaw), 0.0f)));
+    spine->rotation = glm::quat(glm::vec3(glm::radians(-pitch), 0.0f, glm::radians(roll)));
+    hips->rotation = glm::quat(glm::vec3(0.0f, glm::pi<float>() + glm::radians(yaw), 0.0f));
 }
 
 nlohmann::json FPSCharacterController::to_json() const
@@ -128,7 +128,7 @@ nlohmann::json FPSCharacterController::to_json() const
 
 void FPSCharacterController::late_update(float delta, const hid::Keyboard &keyboard, const hid::Mouse &mouse)
 {
-    auto head_global_transform = head_node->get_global_transform();
+    auto head_global_transform = head_node->global_transform;
     glm::vec3 scale;
     glm::quat rotation;
     glm::vec3 translation;

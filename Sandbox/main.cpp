@@ -2,8 +2,9 @@
 
 #include <Core/src/win/Window.hpp>
 #include <Core/src/win/ImguiWindow.hpp>
-#include <Core/src/gfx/Exception.hpp>
 #include <Core/src/utils/FileLoader.hpp>
+#include <Core/src/gfx/Exception.hpp>
+#include <Core/src/gfx/Graphics.hpp>
 #include <Core/src/gfx/data/Camera.hpp>
 #include <Core/src/gfx/data/g_buffer/GBuffer.hpp>
 #include <Core/src/gfx/data/AmbientLight.hpp>
@@ -11,6 +12,7 @@
 #include <Core/src/gfx/data/PointLight.hpp>
 #include <Core/src/gfx/data/SSAO.hpp>
 #include <Core/src/gfx/Graphics.hpp>
+#include <Core/src/gfx/data/DebugRenderer.hpp>
 #include <Core/src/utils/Cvar.hpp>
 
 #include <Core/src/phys/phys.hpp>
@@ -19,6 +21,7 @@
 #include <Core/src/scene/scene.hpp>
 #include <Core/src/scene/SceneGraph.hpp>
 #include <Core/src/scene/components/Animator.hpp>
+#include <Core/src/scene/components/Map.hpp>
 #include "scripts/FPSCharacterController.hpp"
 
 #include <Core/src/hid/hid.hpp>
@@ -48,7 +51,10 @@ int main()
         phys::Physics phys;
 
         win::Window window(800, 600, "Hello world");
-        hid::Keyboard keyboard(window.get_handle());
+        gfx::Graphics gfx(window.p_window, "VulkanEngine");
+        win::ImguiWindow imgui_window(gfx);
+
+        hid::Keyboard keyboard(window.p_window);
         keyboard.register_action(hid::KeyCodes::W, "FORWARD");
         keyboard.register_action(hid::KeyCodes::A, "LEFT");
         keyboard.register_action(hid::KeyCodes::S, "BACKWARD");
@@ -58,10 +64,7 @@ int main()
         keyboard.register_action(hid::KeyCodes::LEFT_ALT, "WALK");
         keyboard.register_action(hid::KeyCodes::Q, "LEAN_LEFT");
         keyboard.register_action(hid::KeyCodes::E, "LEAN_RIGHT");
-        hid::Mouse mouse(window.get_handle());
-
-        auto &gfx = window.get_graphics();
-        win::ImguiWindow imgui_window{gfx};
+        hid::Mouse mouse(window.p_window);
 
         gfx::data::Camera camera{};
         camera.far = 500.0f;
@@ -69,27 +72,48 @@ int main()
 
         std::vector<gfx::data::PointLight::Data> point_lights{};
 
-        std::optional<scene::SceneGraph> scene;
-        scene.emplace(gfx, phys, camera);
+        for (uint32_t x = 0; x < 5; x++)
+        {
+            for (uint32_t y = 0; y < 5; y++)
+            {
+                point_lights.push_back({
+                    .position = {x * 30, 2, y * 30},
+                    .intensity = 100.0f,
+                    .color = {(float)x / 10.0f, (float)y / 10.0f, 1.0},
+                    .constant{1.0},
+                    .linear{0.35},
+                    .exponent{0.44},
+                });
+            }
+        }
 
+        scene::SceneGraph scene(gfx, phys, camera);
 
-        const scene::data::Model &scene_model = scene->import_model("res/models/human_base.glb", scene::data::ModelImportMode::Binary);
+        const scene::data::Model &scene_model = scene.import_model("res/models/human_base.glb", scene::data::ModelImportMode::Binary);
 
-        scene::Node *animated_node = scene->instanciate_model(scene_model, {0, 0, 0});
-        scene->add_component(animated_node, std::make_unique<scene::components::Animator>(*scene, *animated_node, scene_model));
-        animated_node->set_position({50, 10, 50});
-        animated_node->set_name("Player");
-        scene->add_component(animated_node, std::make_unique<scene::components::CharacterController>(*scene, *animated_node, phys));
-        scene->add_component(animated_node, std::make_unique<FPSCharacterController>(*scene, *animated_node, phys, camera));
+        scene::Node *animated_node = scene.instanciate_model(scene_model, {0, 0, 0});
+        scene.add_component(animated_node, std::make_unique<scene::components::Animator>(scene, *animated_node, scene_model));
+        animated_node->position = {50, 10, 50};
+        animated_node->name = "Player";
+        scene.add_component(animated_node, std::make_unique<scene::components::CharacterController>(scene, *animated_node, phys));
+        scene.add_component(animated_node, std::make_unique<FPSCharacterController>(scene, *animated_node, phys, camera));
 
-        auto terrain = scene->create_node();
-        terrain->set_name("TErrain");
-        scene->add_component(terrain, std::make_unique<scene::components::Terrain>(*scene, *terrain, gfx, 64, 17, 64, 1.0, 0, 1, 0.3f));
+        auto terrain = scene.create_node();
+        terrain->name = "TErrain";
+        scene.add_component(terrain, std::make_unique<scene::components::Terrain>(scene, *terrain, gfx, 16, 17, 64, 1.0, 0, 1, 0.3f));
 
-        scene->init();
+        auto map = scene.create_node();
+        map->name = "Test map";
+        map->position = {50.0f, 0.0f, 50.0f};
+        scene::components::Map* map_comp = (scene::components::Map*)scene.add_component(map, std::make_unique<scene::components::Map>(scene, *map));
+
+        map_comp->add_aabb_wall({{0.0f, 0.0f, 0.0f}, {10.0f, 1.0f, 10.0f}});
+        map_comp->add_aabb_wall({{0.0f, 10.0f, 10.0f}, {10.0f, 10.0f, 1.0f}});
+
+        scene.init();
 
         auto previous = std::chrono::high_resolution_clock::now();
-        uint64_t lag = 0;
+        uint64_t lag = 0; 
 
         double tick_time_in_seconds = 1.0 / 128.0;
         uint64_t tick_time_in_nanoseconds = tick_time_in_seconds * 1E9;
@@ -100,20 +124,20 @@ int main()
             auto elapsed = std::chrono::nanoseconds(current - previous);
             previous = current;
             lag += elapsed.count();
- 
+
             while (lag >= tick_time_in_nanoseconds)
             {
                 gfx.final_ambient->update(tick_time_in_seconds);
-                
+
                 phys.update(tick_time_in_seconds);
-                scene->get_physics().update(tick_time_in_seconds);
-                scene->get_animation().update(tick_time_in_seconds);
-                scene->get_generic().update(tick_time_in_seconds, keyboard, mouse);
+                scene.physics.update(tick_time_in_seconds);
+                scene.animation.update(tick_time_in_seconds);
+                scene.generic.update(tick_time_in_seconds, keyboard, mouse);
 
-                scene->build_node_transform();
+                scene.build_node_transform();
 
-                scene->get_generic().late_update(tick_time_in_seconds, keyboard, mouse);
-                scene->get_animation().late_update(tick_time_in_seconds);
+                scene.generic.late_update(tick_time_in_seconds, keyboard, mouse);
+                scene.animation.late_update(tick_time_in_seconds);
                 lag -= tick_time_in_nanoseconds;
             }
 
@@ -121,22 +145,23 @@ int main()
             win::update();
 
             imgui_window.clear();
-            imgui_window.draw(camera, window, *scene);
+            imgui_window.draw(camera, window, scene);
             imgui_window.end_frame();
 
             auto cmd = gfx.clear(camera);
 
             const auto &g_buffer = *gfx.geometry_buffer;
 
-
             g_buffer.begin_shadowpass(cmd);
-            scene->get_renderer().render_depth(cmd);
-            scene->get_terrain_renderer().render_depth(cmd);
+            scene.renderer.render_depth(cmd);
+            scene.terrain_renderer.render_depth(cmd);
+            scene.map_renderer.render_depth(cmd);
             g_buffer.end(cmd);
 
             g_buffer.begin_mainpass(cmd);
-            scene->get_renderer().render(cmd);
-            scene->get_terrain_renderer().render(cmd);
+            scene.renderer.render(cmd);
+            scene.terrain_renderer.render(cmd);
+            scene.map_renderer.render(cmd);
             g_buffer.end(cmd);
 
             g_buffer.begin_ssaopass(cmd);
@@ -149,13 +174,17 @@ int main()
             final_ambient->process(cmd);
             directional_light->process(cmd);
 
+            for (const auto &point_light : point_lights)
+            {
+                gfx.point_light->process(cmd, point_light);
+            }
+            //gfx.debug_renderer->process(cmd);
             g_buffer.end(cmd);
 
             gfx.end_frame(cmd);
         }
 
         gfx.wait();
-        scene.reset();
     }
     catch (gfx::GraphicsException &e)
     {
