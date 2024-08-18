@@ -5,16 +5,16 @@
 
 layout(location = 0) in vec3 in_pos;
 layout(location = 1) in vec3 in_normal;
+layout(location = 2) in vec2 in_uvs; 
 
 
 layout(location = 0) out VSOutput
 {
     vec3 world_pos;
     vec3 normal;
+    vec2 uv;
 } vs_out;
 
-
- 
 
 layout(push_constant, std140) uniform PushConstant {
     mat4x4 model_transform;
@@ -27,4 +27,5 @@ void main()
 	gl_Position = descriptor_set_0_ubo.projection * p_view;
     vs_out.world_pos = p.xyz;
     vs_out.normal = mat3x3(ps.model_transform) * in_normal;
+    vs_out.uv = in_uvs;
 }

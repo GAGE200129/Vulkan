@@ -72,20 +72,20 @@ int main()
 
         std::vector<gfx::data::PointLight::Data> point_lights{};
 
-        for (uint32_t x = 0; x < 5; x++)
-        {
-            for (uint32_t y = 0; y < 5; y++)
-            {
-                point_lights.push_back({
-                    .position = {x * 30, 2, y * 30},
-                    .intensity = 100.0f,
-                    .color = {(float)x / 10.0f, (float)y / 10.0f, 1.0},
-                    .constant{1.0},
-                    .linear{0.35},
-                    .exponent{0.44},
-                });
-            }
-        }
+        // for (uint32_t x = 0; x < 5; x++)
+        // {
+        //     for (uint32_t y = 0; y < 5; y++)
+        //     {
+        //         point_lights.push_back({
+        //             .position = {x * 30, 2, y * 30},
+        //             .intensity = 100.0f,
+        //             .color = {(float)x / 10.0f, (float)y / 10.0f, 1.0},
+        //             .constant{1.0},
+        //             .linear{0.35},
+        //             .exponent{0.44},
+        //         });
+        //     }
+        // }
 
         scene::SceneGraph scene(gfx, phys, camera);
 
@@ -107,8 +107,22 @@ int main()
         map->position = {50.0f, 0.0f, 50.0f};
         scene::components::Map* map_comp = (scene::components::Map*)scene.add_component(map, std::make_unique<scene::components::Map>(scene, *map));
 
-        map_comp->add_aabb_wall({{0.0f, 0.0f, 0.0f}, {10.0f, 1.0f, 10.0f}});
+        scene::components::AABBWall aabb_wall{};
+        aabb_wall.a = {0.0f, 0.0f, 0.0f};
+        aabb_wall.b = {10.0f, 1.0f, 10.0f};
+        aabb_wall.top.texture = "res/textures/grass_tiled.jpg";
+        aabb_wall.top.uv_scale = {10.0f, 10.0f};
+        aabb_wall.left.texture = "res/textures/x.jpg";
+        aabb_wall.left.uv_scale = {10.0f, 10.0f};
+
+        scene::components::StaticModel static_model{};
+        static_model.model_path = "res/models/toothless.glb";
+
+        map_comp->add_aabb_wall(aabb_wall);
         map_comp->add_aabb_wall({{0.0f, 10.0f, 10.0f}, {10.0f, 10.0f, 1.0f}});
+        map_comp->add_aabb_wall({{0.0f, 10.0f, -10.0f}, {10.0f, 10.0f, 1.0f}});
+        map_comp->add_static_model(static_model);
+        
 
         scene.init();
 

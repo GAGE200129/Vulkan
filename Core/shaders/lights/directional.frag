@@ -61,7 +61,7 @@ void main()
     float current_depth = proj_coords.z;
     //float sampled_depth = texture(directional_light_map, vec3(proj_coords.xy, layer)).r; 
     
-    float bias = max(0.05 * (1.0 - dot(n, -descriptor_set_0_ubo.directional_light_direction)), 0.005);
+    float bias = max(0.01 * (1.0 - dot(n, -descriptor_set_0_ubo.directional_light_direction)), 0.001);
     bias *= 1.0 / (descriptor_set_0_ubo.directional_light_cascade_planes[layer] * 0.5f);
 
     float shadow = 0.0;

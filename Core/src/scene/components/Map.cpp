@@ -16,4 +16,9 @@ namespace gage::scene::components
     {
         aabb_walls.push_back(wall);
     }
+
+    void Map::add_static_model(StaticModel model)
+    {
+        static_models.push_back(model);
+    }
 }

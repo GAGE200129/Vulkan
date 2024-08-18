@@ -7,7 +7,10 @@ layout(location = 0) in VSOutput
 {
     vec3 world_pos;
     vec3 normal;
+    vec2 uv;
 } fs_in; 
+
+layout(set = 1, binding = 0) uniform sampler2D descriptor_set_1_texture;
   
 
 
@@ -21,6 +24,6 @@ layout (location = 2) out vec3 out_g_buffer_metalic_roughness;
 void main()
 {
     out_g_buffer_normal = normalize(fs_in.normal);
-    out_g_buffer_albedo = vec3(1, 0, 0);
+    out_g_buffer_albedo = texture(descriptor_set_1_texture, fs_in.uv).rgb;
     out_g_buffer_metalic_roughness = vec3(1, 1, 1);
 }

@@ -16,8 +16,9 @@ namespace gage::gfx::data
         ~CPUBuffer();
 
         CPUBuffer(const CPUBuffer&) = delete;
-        CPUBuffer operator=(const CPUBuffer&) = delete;
         CPUBuffer(CPUBuffer&&) = default;
+        CPUBuffer operator=(const CPUBuffer&) = delete;
+        CPUBuffer& operator=(CPUBuffer&&) = default;
 
 
 

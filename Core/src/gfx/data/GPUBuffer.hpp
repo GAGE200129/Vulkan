@@ -16,8 +16,9 @@ namespace gage::gfx::data
         ~GPUBuffer();
 
         GPUBuffer(const GPUBuffer&) = delete;
-        GPUBuffer operator=(const GPUBuffer&) = delete;
         GPUBuffer(GPUBuffer&&) = default;
+        GPUBuffer operator=(const GPUBuffer&) = delete;
+        GPUBuffer& operator=(GPUBuffer&&) = default;
 
         VkBuffer get_buffer_handle() const;
     private:

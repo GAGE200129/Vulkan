@@ -28,6 +28,7 @@ namespace gage::gfx::data
         Image(Image&&) = default;
         Image(const Image&) = delete;
         Image operator=(const Image&) = delete;
+        Image& operator=(Image&&) = default;
         ~Image();
 
         VkImage get_image() const;
