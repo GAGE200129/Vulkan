@@ -88,6 +88,6 @@ namespace gage::scene::data
 
     ModelMaterial::~ModelMaterial()
     {
-        vkFreeDescriptorSets(gfx.device, gfx.desc_pool, 1, &descriptor_set);
+        vkFreeDescriptorSets(gfx.device.device, gfx.desc_pool.pool, 1, &descriptor_set);
     }
 }

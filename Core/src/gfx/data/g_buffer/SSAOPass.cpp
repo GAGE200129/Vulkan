@@ -43,16 +43,16 @@ namespace gage::gfx::data::g_buffer
         image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
         image_ci.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
         image_ci.format = FORMAT;
-        vk_check(vkCreateImage(gfx.device, &image_ci, nullptr, &image));
+        vk_check(vkCreateImage(gfx.device.device, &image_ci, nullptr, &image));
 
         VkMemoryRequirements mem_reqs{};
-        vkGetImageMemoryRequirements(gfx.device, image, &mem_reqs);
+        vkGetImageMemoryRequirements(gfx.device.device, image, &mem_reqs);
         VkMemoryAllocateInfo mem_alloc_info{};
         mem_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         mem_alloc_info.allocationSize = mem_reqs.size;
-        mem_alloc_info.memoryTypeIndex = utils::find_memory_type(gfx.physical_device, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        vk_check(vkAllocateMemory(gfx.device, &mem_alloc_info, nullptr, &image_memory));
-        vk_check(vkBindImageMemory(gfx.device, image, image_memory, 0));
+        mem_alloc_info.memoryTypeIndex = utils::find_memory_type(gfx.device.physical_device, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        vk_check(vkAllocateMemory(gfx.device.device, &mem_alloc_info, nullptr, &image_memory));
+        vk_check(vkBindImageMemory(gfx.device.device, image, image_memory, 0));
 
         VkImageViewCreateInfo image_view_ci = {};
         image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -68,7 +68,7 @@ namespace gage::gfx::data::g_buffer
         image_view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         image_view_ci.format = FORMAT;
         image_view_ci.image = image;
-        vk_check(vkCreateImageView(gfx.device, &image_view_ci, nullptr, &image_view));
+        vk_check(vkCreateImageView(gfx.device.device, &image_view_ci, nullptr, &image_view));
     }
 
     void SSAOPass::create_render_pass()
@@ -124,7 +124,7 @@ namespace gage::gfx::data::g_buffer
             ci.pSubpasses = &subpass;
             ci.dependencyCount = dependencies.size();
             ci.pDependencies = dependencies.data();
-            vk_check(vkCreateRenderPass(gfx.device, &ci, nullptr, &render_pass));
+            vk_check(vkCreateRenderPass(gfx.device.device, &ci, nullptr, &render_pass));
     }
 
     void SSAOPass::create_framebuffer()
@@ -140,23 +140,23 @@ namespace gage::gfx::data::g_buffer
         ci.width = gfx.draw_extent.width;
         ci.height = gfx.draw_extent.height;
         ci.layers = 1;
-        vk_check(vkCreateFramebuffer(gfx.device, &ci, nullptr, &framebuffer));
+        vk_check(vkCreateFramebuffer(gfx.device.device, &ci, nullptr, &framebuffer));
     }
 
     void SSAOPass::destroy_image()
     {
-        vkDestroyImage(gfx.device, image, nullptr);
-        vkDestroyImageView(gfx.device, image_view, nullptr);
-        vkFreeMemory(gfx.device, image_memory, nullptr);
+        vkDestroyImage(gfx.device.device, image, nullptr);
+        vkDestroyImageView(gfx.device.device, image_view, nullptr);
+        vkFreeMemory(gfx.device.device, image_memory, nullptr);
 
     }
     void SSAOPass::destroy_render_pass()
     {
-        vkDestroyRenderPass(gfx.device, render_pass, nullptr);
+        vkDestroyRenderPass(gfx.device.device, render_pass, nullptr);
     }
     void SSAOPass::destroy_framebuffer()
     {
-        vkDestroyFramebuffer(gfx.device, framebuffer, nullptr);
+        vkDestroyFramebuffer(gfx.device.device, framebuffer, nullptr);
     }
 
 }

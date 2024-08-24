@@ -72,12 +72,7 @@ namespace gage::phys
 
     Physics::~Physics()
     {
-        for (const auto &body_id : bodies)
-        {
-            p_body_interface->RemoveBody(*body_id);
-            p_body_interface->DestroyBody(*body_id);
-        }
-        bodies.clear();
+        
     }
 
     JPH::BodyInterface *Physics::get_body_interface()
@@ -101,9 +96,9 @@ namespace gage::phys
     {
         // Create 'player' character
         JPH::Ref<JPH::CharacterSettings> settings = new JPH::CharacterSettings();
-        settings->mMaxSlopeAngle = JPH::DegreesToRadians(45.0f);
+        settings->mMaxSlopeAngle = JPH::DegreesToRadians(80.0f);
         settings->mLayer = Layers::MOVING;
-        settings->mShape = JPH::RotatedTranslatedShapeSettings(JPH::Vec3(0, 0.9f, 0.0), JPH::Quat(0, 0, 0, 1), JPH::CapsuleShapeSettings(1.8f, 0.3f).Create().Get()).Create().Get();
+        settings->mShape = JPH::RotatedTranslatedShapeSettings(JPH::Vec3(0, 0.0f, 0.0), JPH::Quat(0, 0, 0, 1), JPH::CapsuleShapeSettings(0.9f, 0.8f).Create().Get()).Create().Get();
         settings->mFriction = 0.2f;
 
         // settings->mShape = JPH::CapsuleShapeSettings(1.8f, 0.3f).Create().Get();

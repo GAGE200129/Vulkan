@@ -1,11 +1,28 @@
 #pragma once
 
 #include <stack>
-#include <vk_mem_alloc.h>
 #include <vector>
 #include <functional>
 
+#include <vk_mem_alloc.h>
+
 #include "Exception.hpp"
+#include "data/Instance.hpp"
+#include "data/Device.hpp"
+#include "data/Swapchain.hpp"
+#include "data/DescriptorPool.hpp"
+#include "data/CommandPool.hpp"
+#include "data/FrameData.hpp"
+#include "data/Allocator.hpp"
+#include "data/GlobalDescriptorSetLayout.hpp"
+#include "data/g_buffer/GBuffer.hpp"
+#include "data/Camera.hpp"
+#include "data/AmbientLight.hpp"
+#include "data/DirectionalLight.hpp"
+#include "data/PointLight.hpp"
+#include "data/SSAO.hpp"
+#include "data/Swapchain.hpp"
+#include "data/Default.hpp"
 
 namespace vkb
 {
@@ -22,26 +39,9 @@ namespace gage::gfx::data
 {
     class Camera;
 
-    class Swapchain;
     class GPUBuffer;
-    class CPUBuffer;
-    class DescriptorSet;
     class Image;
-    class ShadowPipeline;
-    class AmbientLight;
-    class DirectionalLight;
-    class PointLight;
-    class SSAO;
-    class Sky;
 
-    namespace g_buffer
-    {
-        class GBuffer;
-        class MainPass;
-        class ShadowPass;
-        class LightPass;
-        class SSAOPass;
-    }
 }
 
 struct GLFWwindow;
@@ -54,24 +54,8 @@ namespace gage::gfx
         static constexpr int FRAMES_IN_FLIGHT = 2;
         static constexpr uint32_t CASCADE_COUNT{3};
 
-        const std::vector<const char *> ENABLED_INSTANCE_EXTENSIONS{
-
-        };
-        const std::vector<const char *> ENABLED_DEVICE_EXTENSIONS{
-
-        };
-
-        struct FrameData
-        {
-            VkSemaphore present_semaphore{};
-            VkSemaphore render_semaphore{};
-            VkFence render_fence{};
-            VkCommandBuffer cmd{};
-            VkDescriptorSet global_set{};
-            VkBuffer global_buffer{};
-            VmaAllocation global_alloc{};
-            VmaAllocationInfo global_alloc_info{};
-        };
+        static const std::vector<const char *> ENABLED_INSTANCE_EXTENSIONS;
+        static const std::vector<const char *> ENABLED_DEVICE_EXTENSIONS;
 
         struct GlobalUniform
         {
@@ -97,7 +81,7 @@ namespace gage::gfx
             glm::vec4 directional_light_cascade_planes[CASCADE_COUNT]{{10, 0, 0, 0}, {30, 0, 0, 0}, {50, 0, 0, 0}};
         };
     public:
-        Graphics(GLFWwindow *window, std::string app_name);
+        Graphics(GLFWwindow *window, uint32_t width, uint32_t height, std::string app_name);
         Graphics(const Graphics &) = delete;
         void operator=(const Graphics &) = delete;
         ~Graphics();
@@ -117,60 +101,38 @@ namespace gage::gfx
 
     private:
         glm::mat4x4 calculate_directional_light_proj_view(const data::Camera &camera, float near, float far);
-        void create_default_image_sampler();
-        void destroy_default_image_sampler();
 
     public:
         std::string app_name{};
-        std::stack<std::function<void()>> delete_stack{};
-
-        VkInstance instance{};
-        VkDebugUtilsMessengerEXT debug_messenger{};
-        VkSurfaceKHR surface{};
-        VkDevice device{};
-        VkPhysicalDevice physical_device{};
-
         VkExtent2D draw_extent{};
         VkExtent2D draw_extent_temp{};
-        float draw_extent_scale{1.0f};
-        bool resize_requested{};
+        data::Instance instance;
+        data::Device device;
+        data::Swapchain swapchain;
+        data::DescriptorPool desc_pool;
+        data::GlobalDescriptorSetLayout global_desc_layout;
+        data::CommandPool cmd_pool;
+        data::Allocator allocator;
+        data::Default defaults;
+        data::FrameData frame_datas[FRAMES_IN_FLIGHT];
 
-        uint32_t swapchain_image_index{};
+        uint32_t directional_light_shadow_map_resolution;
+        uint32_t directional_light_shadow_map_resolution_temp;
 
-        std::unique_ptr<data::Swapchain> swapchain{};
-
-        VkDescriptorPool desc_pool{};
-        VkDescriptorSetLayout global_set_layout{};
-
-        VkCommandPool cmd_pool{};
-
-        VkQueue queue{};
-        uint32_t queue_family{};
-
+        data::g_buffer::GBuffer geometry_buffer;
+        data::AmbientLight final_ambient;
+        data::DirectionalLight directional_light;
+        data::PointLight point_light;
+        data::SSAO ssao;
         
-
-        FrameData frame_datas[FRAMES_IN_FLIGHT]{};
-        GlobalUniform global_uniform{};
+        
+        
 
         uint32_t frame_index{};
 
-        VmaAllocator allocator{};
+        GlobalUniform global_uniform{};
+        float draw_extent_scale{1.0f};
+        bool resize_requested{};
 
-        // Pipelines
-        uint32_t directional_light_shadow_map_resolution{2048};
-        uint32_t directional_light_shadow_map_resolution_temp{2048};
-        float directional_light_shadow_map_distance{50.0f};
-        bool directional_light_shadow_map_resize_requested{};
-        std::unique_ptr<data::g_buffer::GBuffer> geometry_buffer{};
-        std::unique_ptr<data::AmbientLight> final_ambient{};
-        std::unique_ptr<data::DirectionalLight> directional_light{};
-        std::unique_ptr<data::PointLight> point_light{};
-        std::unique_ptr<data::SSAO> ssao{};
-
-        // Default data
-        VkImage default_image{};
-        VkImageView default_image_view{};
-        VmaAllocation default_image_alloc{};
-        VkSampler default_sampler{};
     };
 }

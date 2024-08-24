@@ -51,7 +51,7 @@ int main()
         phys::Physics phys;
 
         win::Window window(800, 600, "Hello world");
-        gfx::Graphics gfx(window.p_window, "VulkanEngine");
+        gfx::Graphics gfx(window.p_window, 800, 600, "VulkanEngine");
         win::ImguiWindow imgui_window(gfx);
 
         hid::Keyboard keyboard(window.p_window);
@@ -100,7 +100,7 @@ int main()
 
         auto terrain = scene.create_node();
         terrain->name = "TErrain";
-        scene.add_component(terrain, std::make_unique<scene::components::Terrain>(scene, *terrain, gfx, 16, 17, 64, 1.0, 0, 1, 0.3f));
+        scene.add_component(terrain, std::make_unique<scene::components::Terrain>(scene, *terrain, gfx, 64, 17, 64, 1.0, -50, 50, 0.1f));
 
         auto map = scene.create_node();
         map->name = "Test map";
@@ -117,6 +117,7 @@ int main()
 
         scene::components::StaticModel static_model{};
         static_model.model_path = "res/models/toothless.glb";
+        static_model.offset = {0, 2, 0};
 
         map_comp->add_aabb_wall(aabb_wall);
         map_comp->add_aabb_wall({{0.0f, 10.0f, 10.0f}, {10.0f, 10.0f, 1.0f}});
@@ -141,7 +142,7 @@ int main()
 
             while (lag >= tick_time_in_nanoseconds)
             {
-                gfx.final_ambient->update(tick_time_in_seconds);
+                gfx.final_ambient.update(tick_time_in_seconds);
 
                 phys.update(tick_time_in_seconds);
                 scene.physics.update(tick_time_in_seconds);
@@ -164,7 +165,7 @@ int main()
 
             auto cmd = gfx.clear(camera);
 
-            const auto &g_buffer = *gfx.geometry_buffer;
+            const auto &g_buffer = gfx.geometry_buffer;
 
             g_buffer.begin_shadowpass(cmd);
             scene.renderer.render_depth(cmd);
@@ -179,18 +180,18 @@ int main()
             g_buffer.end(cmd);
 
             g_buffer.begin_ssaopass(cmd);
-            gfx.ssao->process(cmd);
+            gfx.ssao.process(cmd);
             g_buffer.end(cmd);
 
             const auto &final_ambient = gfx.final_ambient;
             const auto &directional_light = gfx.directional_light;
             g_buffer.begin_lightpass(cmd);
-            final_ambient->process(cmd);
-            directional_light->process(cmd);
+            final_ambient.process(cmd);
+            directional_light.process(cmd);
 
             for (const auto &point_light : point_lights)
             {
-                gfx.point_light->process(cmd, point_light);
+                gfx.point_light.process(cmd, point_light);
             }
             //gfx.debug_renderer->process(cmd);
             g_buffer.end(cmd);

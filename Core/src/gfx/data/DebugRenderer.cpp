@@ -17,10 +17,10 @@ namespace gage::gfx::data
     }
     DebugRenderer::~DebugRenderer()
     {
-        vkDestroyDescriptorSetLayout(gfx.device, desc_layout, nullptr);
-        vkFreeDescriptorSets(gfx.device, gfx.desc_pool, 1, &desc);
-        vkDestroyPipelineLayout(gfx.device, pipeline_layout, nullptr);
-        vkDestroyPipeline(gfx.device, pipeline, nullptr);
+        vkDestroyDescriptorSetLayout(gfx.device.device, desc_layout, nullptr);
+        vkFreeDescriptorSets(gfx.device.device, gfx.desc_pool.pool, 1, &desc);
+        vkDestroyPipelineLayout(gfx.device.device, pipeline_layout, nullptr);
+        vkDestroyPipeline(gfx.device.device, pipeline, nullptr);
     }
 
     void DebugRenderer::process(VkCommandBuffer cmd) const
@@ -59,7 +59,7 @@ namespace gage::gfx::data
             ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
             ci.bindingCount = bindings.size();
             ci.pBindings = bindings.data();
-            vk_check(vkCreateDescriptorSetLayout(gfx.device, &ci, nullptr, &desc_layout));
+            vk_check(vkCreateDescriptorSetLayout(gfx.device.device, &ci, nullptr, &desc_layout));
         }
 
 
@@ -68,10 +68,10 @@ namespace gage::gfx::data
             // Allocate descriptor set
             VkDescriptorSetAllocateInfo ai{};
             ai.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-            ai.descriptorPool = gfx.desc_pool;
+            ai.descriptorPool = gfx.desc_pool.pool;
             ai.pSetLayouts = &desc_layout;
             ai.descriptorSetCount = 1;
-            vk_check(vkAllocateDescriptorSets(gfx.device, &ai, &desc));
+            vk_check(vkAllocateDescriptorSets(gfx.device.device, &ai, &desc));
 
 
         }
@@ -79,7 +79,7 @@ namespace gage::gfx::data
         // Create pipeline layout
         {
 
-            std::vector<VkDescriptorSetLayout> layouts = {gfx.global_set_layout, desc_layout};
+            std::vector<VkDescriptorSetLayout> layouts = {gfx.global_desc_layout.layout, desc_layout};
             std::vector<VkPushConstantRange> push_constants = 
             {
                 {
@@ -94,7 +94,7 @@ namespace gage::gfx::data
             ci.setLayoutCount = layouts.size();
             ci.pushConstantRangeCount = push_constants.size();
             ci.pPushConstantRanges = push_constants.data();
-            vk_check(vkCreatePipelineLayout(gfx.device, &ci, nullptr, &pipeline_layout));
+            vk_check(vkCreatePipelineLayout(gfx.device.device, &ci, nullptr, &pipeline_layout));
         }
 
         // Create pipeline
@@ -192,7 +192,7 @@ namespace gage::gfx::data
             // Vertex shader
             shader_module_ci.codeSize = vertex_binary.size();
             shader_module_ci.pCode = (uint32_t *)vertex_binary.data();
-            vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &vertex_shader));
+            vk_check(vkCreateShaderModule(gfx.device.device, &shader_module_ci, nullptr, &vertex_shader));
             shader_stage_ci.module = vertex_shader;
             shader_stage_ci.pName = "main";
             shader_stage_ci.stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -201,7 +201,7 @@ namespace gage::gfx::data
             // Fragment shader
             shader_module_ci.codeSize = fragment_binary.size();
             shader_module_ci.pCode = (uint32_t *)fragment_binary.data();
-            vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &fragment_shader));
+            vk_check(vkCreateShaderModule(gfx.device.device, &shader_module_ci, nullptr, &fragment_shader));
             shader_stage_ci.module = fragment_shader;
             shader_stage_ci.pName = "main";
             shader_stage_ci.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -231,12 +231,12 @@ namespace gage::gfx::data
             ci.pDynamicState = &dynamic_state_ci;
             ci.pDepthStencilState = &depth_stencil;
             ci.layout = pipeline_layout;
-            ci.renderPass = gfx.geometry_buffer->get_lightpass_render_pass();
+            ci.renderPass = gfx.geometry_buffer.get_lightpass_render_pass();
 
-            vk_check(vkCreateGraphicsPipelines(gfx.device, VK_NULL_HANDLE, 1, &ci, nullptr, &pipeline));
+            vk_check(vkCreateGraphicsPipelines(gfx.device.device, VK_NULL_HANDLE, 1, &ci, nullptr, &pipeline));
 
-            vkDestroyShaderModule(gfx.device, vertex_shader, nullptr);
-            vkDestroyShaderModule(gfx.device, fragment_shader, nullptr);
+            vkDestroyShaderModule(gfx.device.device, vertex_shader, nullptr);
+            vkDestroyShaderModule(gfx.device.device, fragment_shader, nullptr);
         }
     }
 
@@ -252,8 +252,8 @@ namespace gage::gfx::data
 
 
         //Link depth to g buffer
-        img_info.sampler = gfx.default_sampler;
-        img_info.imageView = gfx.geometry_buffer->get_depth_view();
+        img_info.sampler = gfx.defaults.sampler;
+        img_info.imageView = gfx.geometry_buffer.get_depth_view();
         descriptor_write.dstSet = desc;
         descriptor_write.dstBinding = 0;
         descriptor_write.dstArrayElement = 0;
@@ -262,11 +262,11 @@ namespace gage::gfx::data
         descriptor_write.pBufferInfo = nullptr;
         descriptor_write.pImageInfo = &img_info;
         descriptor_write.pTexelBufferView = nullptr;
-        vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
+        vkUpdateDescriptorSets(gfx.device.device, 1, &descriptor_write, 0, nullptr);
 
         // Link to normal of g buffer
-        img_info.sampler = gfx.default_sampler;
-        img_info.imageView = gfx.geometry_buffer->get_normal_view();
+        img_info.sampler = gfx.defaults.sampler;
+        img_info.imageView = gfx.geometry_buffer.get_normal_view();
         descriptor_write.dstSet = desc;
         descriptor_write.dstBinding = 0;
         descriptor_write.dstArrayElement = 1;
@@ -275,11 +275,11 @@ namespace gage::gfx::data
         descriptor_write.pBufferInfo = nullptr;
         descriptor_write.pImageInfo = &img_info;
         descriptor_write.pTexelBufferView = nullptr;
-        vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
+        vkUpdateDescriptorSets(gfx.device.device, 1, &descriptor_write, 0, nullptr);
 
         // // Link to albedo g_buffer
         // img_info.sampler = gfx.default_sampler;
-        // img_info.imageView = gfx.geometry_buffer->get_albedo_view();
+        // img_info.imageView = gfx.geometry_buffer.get_albedo_view();
         // descriptor_write.dstSet = desc;
         // descriptor_write.dstBinding = 0;
         // descriptor_write.dstArrayElement = 2;
@@ -288,11 +288,11 @@ namespace gage::gfx::data
         // descriptor_write.pBufferInfo = nullptr;
         // descriptor_write.pImageInfo = &img_info;
         // descriptor_write.pTexelBufferView = nullptr;
-        // vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
+        // vkUpdateDescriptorSets(gfx.device.device, 1, &descriptor_write, 0, nullptr);
 
         // // Link to mr g_buffer
         // img_info.sampler = gfx.default_sampler;
-        // img_info.imageView = gfx.geometry_buffer->get_mr_view();
+        // img_info.imageView = gfx.geometry_buffer.get_mr_view();
         // descriptor_write.dstSet = desc;
         // descriptor_write.dstBinding = 0;
         // descriptor_write.dstArrayElement = 3;
@@ -301,7 +301,7 @@ namespace gage::gfx::data
         // descriptor_write.pBufferInfo = nullptr;
         // descriptor_write.pImageInfo = &img_info;
         // descriptor_write.pTexelBufferView = nullptr;
-        // vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
+        // vkUpdateDescriptorSets(gfx.device.device, 1, &descriptor_write, 0, nullptr);
     }
 
 }

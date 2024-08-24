@@ -21,12 +21,12 @@ namespace gage::gfx::data
 
         VkBuffer staging_buffer{};
         VmaAllocation staging_allocation{};
-        vk_check(vmaCreateBuffer(gfx.allocator, &staging_buffer_info, &staging_alloc_info, &staging_buffer, &staging_allocation, nullptr));
+        vk_check(vmaCreateBuffer(gfx.allocator.allocator, &staging_buffer_info, &staging_alloc_info, &staging_buffer, &staging_allocation, nullptr));
 
         void *mapped;
-        vmaMapMemory(gfx.allocator, staging_allocation, &mapped);
+        vmaMapMemory(gfx.allocator.allocator, staging_allocation, &mapped);
         std::memcpy(mapped, data, size_in_bytes);
-        vmaUnmapMemory(gfx.allocator, staging_allocation);
+        vmaUnmapMemory(gfx.allocator.allocator, staging_allocation);
 
         // Create this buffer
         VkBufferCreateInfo buffer_info = {};
@@ -40,16 +40,16 @@ namespace gage::gfx::data
         VmaAllocationCreateInfo alloc_info = {};
         alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
         alloc_info.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-        vk_check(vmaCreateBuffer(gfx.allocator, &buffer_info, &alloc_info, &buffer_handle, &allocation, &info));
+        vk_check(vmaCreateBuffer(gfx.allocator.allocator, &buffer_info, &alloc_info, &buffer_handle, &allocation, &info));
 
         VkCommandBufferAllocateInfo cmd_alloc_info{};
         cmd_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        cmd_alloc_info.commandPool = gfx.cmd_pool;
+        cmd_alloc_info.commandPool = gfx.cmd_pool.pool;
         cmd_alloc_info.commandBufferCount = 1;
         cmd_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
         VkCommandBuffer cmd{};
-        vk_check(vkAllocateCommandBuffers(gfx.device, &cmd_alloc_info, &cmd));
+        vk_check(vkAllocateCommandBuffers(gfx.device.device, &cmd_alloc_info, &cmd));
 
         // Copy to buffer
         VkCommandBufferBeginInfo transfer_begin_info{};
@@ -67,17 +67,17 @@ namespace gage::gfx::data
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &cmd;
 
-        vkQueueSubmit(gfx.queue, 1, &submit_info, nullptr);
-        vkQueueWaitIdle(gfx.queue);
+        vkQueueSubmit(gfx.device.queue, 1, &submit_info, nullptr);
+        vkQueueWaitIdle(gfx.device.queue);
 
-        vmaDestroyBuffer(gfx.allocator, staging_buffer, staging_allocation);
-        vkFreeCommandBuffers(gfx.device, gfx.cmd_pool, 1, &cmd);
+        vmaDestroyBuffer(gfx.allocator.allocator, staging_buffer, staging_allocation);
+        vkFreeCommandBuffers(gfx.device.device, gfx.cmd_pool.pool, 1, &cmd);
     }
 
     GPUBuffer::~GPUBuffer()
     {
         log().trace("Deallocating vulkan gpu buffer: size: {} bytes", info.size);
-        vmaDestroyBuffer(gfx.allocator, buffer_handle, allocation);
+        vmaDestroyBuffer(gfx.allocator.allocator, buffer_handle, allocation);
     }
 
     VkBuffer GPUBuffer::get_buffer_handle() const

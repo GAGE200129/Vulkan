@@ -30,7 +30,7 @@ namespace gage::gfx::data
             alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
             alloc_ci.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 
-            vk_check(vmaCreateImage(gfx.allocator, &img_ci, &alloc_ci, &image, &allocation, nullptr));
+            vk_check(vmaCreateImage(gfx.allocator.allocator, &img_ci, &alloc_ci, &image, &allocation, nullptr));
         }
 
         // Copy to gpu
@@ -47,18 +47,18 @@ namespace gage::gfx::data
             VkBuffer staging_buffer{};
             VmaAllocation staging_allocation{};
             VmaAllocationInfo staging_info{};
-            vk_check(vmaCreateBuffer(gfx.allocator, &staging_buffer_info, &staging_alloc_info, &staging_buffer, &staging_allocation, &staging_info));
+            vk_check(vmaCreateBuffer(gfx.allocator.allocator, &staging_buffer_info, &staging_alloc_info, &staging_buffer, &staging_allocation, &staging_info));
             std::memcpy(staging_info.pMappedData, ci.image_data, ci.size_in_bytes);
 
             // Allocate cmd buffer
             VkCommandBufferAllocateInfo cmd_alloc_info{};
             cmd_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-            cmd_alloc_info.commandPool = gfx.cmd_pool;
+            cmd_alloc_info.commandPool = gfx.cmd_pool.pool;
             cmd_alloc_info.commandBufferCount = 1;
             cmd_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
             VkCommandBuffer cmd{};
-            vk_check(vkAllocateCommandBuffers(gfx.device, &cmd_alloc_info, &cmd));
+            vk_check(vkAllocateCommandBuffers(gfx.device.device, &cmd_alloc_info, &cmd));
 
             VkCommandBufferBeginInfo transfer_begin_info{};
             transfer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -151,12 +151,12 @@ namespace gage::gfx::data
             submit_info.commandBufferCount = 1;
             submit_info.pCommandBuffers = &cmd;
 
-            vkQueueSubmit(gfx.queue, 1, &submit_info, nullptr);
-            vkQueueWaitIdle(gfx.queue);
+            vkQueueSubmit(gfx.device.queue, 1, &submit_info, nullptr);
+            vkQueueWaitIdle(gfx.device.queue);
 
             // Cleanup resources
-            vmaDestroyBuffer(gfx.allocator, staging_buffer, staging_allocation);
-            vkFreeCommandBuffers(gfx.device, gfx.cmd_pool, 1, &cmd);
+            vmaDestroyBuffer(gfx.allocator.allocator, staging_buffer, staging_allocation);
+            vkFreeCommandBuffers(gfx.device.device, gfx.cmd_pool.pool, 1, &cmd);
         }
 
         // Create image view
@@ -172,7 +172,7 @@ namespace gage::gfx::data
             view_info.subresourceRange.baseArrayLayer = 0;
             view_info.subresourceRange.layerCount = 1;
 
-            vk_check(vkCreateImageView(gfx.device, &view_info, nullptr, &image_view));
+            vk_check(vkCreateImageView(gfx.device.device, &view_info, nullptr, &image_view));
         }
 
         // Sampler
@@ -195,15 +195,15 @@ namespace gage::gfx::data
             sampler_info.minLod = 0.0f;
             sampler_info.maxLod = ci.mip_levels;
 
-            vk_check(vkCreateSampler(gfx.device, &sampler_info, nullptr, &sampler));
+            vk_check(vkCreateSampler(gfx.device.device, &sampler_info, nullptr, &sampler));
         }
     }
     Image::~Image()
     {
         log().trace("Deallocating image");
-        vkDestroySampler(gfx.device, sampler, nullptr);
-        vmaDestroyImage(gfx.allocator, image, allocation);
-        vkDestroyImageView(gfx.device, image_view, nullptr);
+        vkDestroySampler(gfx.device.device, sampler, nullptr);
+        vmaDestroyImage(gfx.allocator.allocator, image, allocation);
+        vkDestroyImageView(gfx.device.device, image_view, nullptr);
     }
     void Image::generate_mip_maps(VkCommandBuffer cmd, uint32_t mip_levels, uint32_t width, uint32_t height)
     {

@@ -148,11 +148,11 @@ namespace gage::win
 
             ImGui::ColorEdit3("Ambient: color", &ubo.ambient_light_color.x);
             ImGui::DragFloat("Ambient: intensity", &ubo.ambient_light_intensity, 0.01f, 0.0f, 10.0f);
-            ImGui::DragFloat("Ambient: sky scale", &gfx.final_ambient->fs_ps.fbm_scale, 0.01f, 0.0f, 10.01f);
-            ImGui::DragFloat("Ambient: sky factor", &gfx.final_ambient->fs_ps.fbm_factor, 0.01f, 0.0f, 10.01f);
-            ImGui::DragFloat("Ambient: sky height", &gfx.final_ambient->fs_ps.height, 0.01f, 0.0f, 10.01f);
-            ImGui::DragFloat("Ambient: SSAO radius", &gfx.ssao->fs_ps.radius, 0.01f, 0.001f, 1.0f);
-            ImGui::DragFloat("Ambient: SSAO bias", &gfx.ssao->fs_ps.bias, 0.001f, 0.001f, 1.0f);
+            ImGui::DragFloat("Ambient: sky scale", &gfx.final_ambient.fs_ps.fbm_scale, 0.01f, 0.0f, 10.01f);
+            ImGui::DragFloat("Ambient: sky factor", &gfx.final_ambient.fs_ps.fbm_factor, 0.01f, 0.0f, 10.01f);
+            ImGui::DragFloat("Ambient: sky height", &gfx.final_ambient.fs_ps.height, 0.01f, 0.0f, 10.01f);
+            ImGui::DragFloat("Ambient: SSAO radius", &gfx.ssao.fs_ps.radius, 0.01f, 0.001f, 1.0f);
+            ImGui::DragFloat("Ambient: SSAO bias", &gfx.ssao.fs_ps.bias, 0.001f, 0.001f, 1.0f);
     
             ImGui::DragFloat("Ambient: Fog begin", &ubo.ambient_fog_begin, 0.1f, 10.0f, 10000.0f);
             ImGui::DragFloat("Ambient: Fog end", &ubo.ambient_fog_end, 0.1f, 10.0f, 10000.0f);

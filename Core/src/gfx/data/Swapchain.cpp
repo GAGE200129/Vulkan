@@ -3,13 +3,19 @@
 
 #include <Core/src/utils/VulkanHelper.hpp>
 
-#include "../Graphics.hpp"
+#include "Device.hpp"
+#include "Instance.hpp"
+
+#include "../Exception.hpp"
 
 namespace gage::gfx::data
 {
-    Swapchain::Swapchain(Graphics &gfx) : gfx(gfx)
+    Swapchain::Swapchain(const Instance& instance, const Device& device, VkExtent2D draw_extent) :
+        instance(instance),
+        device(device),
+        draw_extent(draw_extent)
     {
-        vkb::SwapchainBuilder swapchainBuilder{gfx.physical_device, gfx.device, gfx.surface};
+        vkb::SwapchainBuilder swapchainBuilder{device.physical_device, device.device, instance.surface};
         auto result = swapchainBuilder
                           //.use_default_format_selection()
                           .set_desired_format(VkSurfaceFormatKHR{
@@ -17,7 +23,7 @@ namespace gage::gfx::data
                               .colorSpace = COLOR_SPACE})
                           // use vsync present mode
                           .set_desired_present_mode(PRESENT_MODE)
-                          .set_desired_extent(gfx.draw_extent.width, gfx.draw_extent.height)
+                          .set_desired_extent(draw_extent.width, draw_extent.height)
                           .set_desired_min_image_count(vkb::SwapchainBuilder::BufferMode::DOUBLE_BUFFERING)
                           .add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
                           .build();
@@ -37,12 +43,12 @@ namespace gage::gfx::data
     }
     Swapchain::~Swapchain()
     {
-        vkDestroySwapchainKHR(gfx.device, swapchain, nullptr);
+        vkDestroySwapchainKHR(device.device, swapchain, nullptr);
 
         // destroy swapchain resources
         for (size_t i = 0; i < image_views.size(); i++)
         {
-            vkDestroyImageView(gfx.device, image_views[i], nullptr);
+            vkDestroyImageView(device.device, image_views[i], nullptr);
         }
     }
 
@@ -52,15 +58,15 @@ namespace gage::gfx::data
         images.clear();
         image_views.clear();
         
-        vkDestroySwapchainKHR(gfx.device, swapchain, nullptr);
+        vkDestroySwapchainKHR(device.device, swapchain, nullptr);
 
         // destroy swapchain resources
         for (size_t i = 0; i < image_views.size(); i++)
         {
-            vkDestroyImageView(gfx.device, image_views[i], nullptr);
+            vkDestroyImageView(device.device, image_views[i], nullptr);
         }
 
-        vkb::SwapchainBuilder swapchainBuilder{gfx.physical_device, gfx.device, gfx.surface};
+        vkb::SwapchainBuilder swapchainBuilder{device.physical_device, device.device, instance.surface};
         auto result = swapchainBuilder
                           //.use_default_format_selection()
                           .set_desired_format(VkSurfaceFormatKHR{
@@ -68,7 +74,7 @@ namespace gage::gfx::data
                               .colorSpace = COLOR_SPACE})
                           // use vsync present mode
                           .set_desired_present_mode(PRESENT_MODE)
-                          .set_desired_extent(gfx.draw_extent.width, gfx.draw_extent.height)
+                          .set_desired_extent(draw_extent.width, draw_extent.height)
                           .set_desired_min_image_count(vkb::SwapchainBuilder::BufferMode::DOUBLE_BUFFERING)
                           .add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
                           .build();

@@ -44,9 +44,6 @@ namespace gage::phys
         std::unique_ptr<ObjectVsBroadPhaseLayerFilter> object_vs_broadphase_layer_filter;
         std::unique_ptr<ObjectLayerPairFilter> object_vs_object_layer_filter;
 
-        JPH::BodyID* floor{};
-
-        std::vector<std::unique_ptr<JPH::BodyID>> bodies{};
         std::vector<std::unique_ptr<JPH::Character>> characters{};
     };
 }

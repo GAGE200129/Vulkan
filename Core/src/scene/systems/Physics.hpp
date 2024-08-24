@@ -62,6 +62,8 @@ namespace gage::scene::systems
         void add_terrain_renderer(std::shared_ptr<components::Terrain> terrain_renderer);
         void add_map(std::shared_ptr<components::Map> map);
     private:
+        void extract_bounding_box(const std::string& file_path);
+    private:
         phys::Physics& phys;
         std::vector<std::unique_ptr<components::CharacterController>> character_controllers; 
         std::vector<Terrain> terrain_renderers;

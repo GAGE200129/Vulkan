@@ -43,18 +43,18 @@ namespace gage::gfx::data::g_buffer
         image_ci.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
         image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
 
-        vk_check(vkCreateImage(gfx.device, &image_ci, nullptr, &shadowpass_image));
+        vk_check(vkCreateImage(gfx.device.device, &image_ci, nullptr, &shadowpass_image));
 
         VkMemoryRequirements mem_reqs{};
-        vkGetImageMemoryRequirements(gfx.device, shadowpass_image, &mem_reqs);
+        vkGetImageMemoryRequirements(gfx.device.device, shadowpass_image, &mem_reqs);
 
         VkMemoryAllocateInfo mem_alloc_info{};
         mem_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         mem_alloc_info.allocationSize = mem_reqs.size;
-        mem_alloc_info.memoryTypeIndex = utils::find_memory_type(gfx.physical_device, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        mem_alloc_info.memoryTypeIndex = utils::find_memory_type(gfx.device.physical_device, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-        vk_check(vkAllocateMemory(gfx.device, &mem_alloc_info, nullptr, &shadowpass_image_memory));
-        vk_check(vkBindImageMemory(gfx.device, shadowpass_image, shadowpass_image_memory, 0));
+        vk_check(vkAllocateMemory(gfx.device.device, &mem_alloc_info, nullptr, &shadowpass_image_memory));
+        vk_check(vkBindImageMemory(gfx.device.device, shadowpass_image, shadowpass_image_memory, 0));
 
         VkImageViewCreateInfo image_view_ci = {};
         image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -71,13 +71,13 @@ namespace gage::gfx::data::g_buffer
         image_view_ci.subresourceRange.layerCount = gfx.CASCADE_COUNT; // Layers
         image_view_ci.subresourceRange.levelCount = 1;
 
-        vk_check(vkCreateImageView(gfx.device, &image_view_ci, nullptr, &shadowpass_image_view));
+        vk_check(vkCreateImageView(gfx.device.device, &image_view_ci, nullptr, &shadowpass_image_view));
 
         // Link to global set
         for (uint32_t i = 0; i < Graphics::FRAMES_IN_FLIGHT; i++)
         {
             VkDescriptorImageInfo image_info{};
-            image_info.sampler = gfx.default_sampler;
+            image_info.sampler = gfx.defaults.sampler;
             image_info.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
             image_info.imageView = shadowpass_image_view;
 
@@ -88,7 +88,7 @@ namespace gage::gfx::data::g_buffer
             descriptor_write.dstBinding = 1;
             descriptor_write.dstSet = gfx.frame_datas[i].global_set;
             descriptor_write.pImageInfo = &image_info;
-            vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
+            vkUpdateDescriptorSets(gfx.device.device, 1, &descriptor_write, 0, nullptr);
         }
     }
     void ShadowPass::create_render_pass()
@@ -141,7 +141,7 @@ namespace gage::gfx::data::g_buffer
         ci.dependencyCount = dependencies.size();
         ci.pDependencies = dependencies.data();
 
-        vk_check(vkCreateRenderPass(gfx.device, &ci, nullptr, &shadowpass_renderpass));
+        vk_check(vkCreateRenderPass(gfx.device.device, &ci, nullptr, &shadowpass_renderpass));
     }
     void ShadowPass::create_framebuffer()
     {
@@ -153,20 +153,20 @@ namespace gage::gfx::data::g_buffer
         ci.width = gfx.directional_light_shadow_map_resolution;
         ci.height = gfx.directional_light_shadow_map_resolution;
         ci.layers = gfx.CASCADE_COUNT;
-        vk_check(vkCreateFramebuffer(gfx.device, &ci, nullptr, &shadowpass_framebuffer));
+        vk_check(vkCreateFramebuffer(gfx.device.device, &ci, nullptr, &shadowpass_framebuffer));
     }
     void ShadowPass::destroy_image()
     {
-        vkDestroyImage(gfx.device, shadowpass_image, nullptr);
-        vkDestroyImageView(gfx.device, shadowpass_image_view, nullptr);
-        vkFreeMemory(gfx.device, shadowpass_image_memory, nullptr);
+        vkDestroyImage(gfx.device.device, shadowpass_image, nullptr);
+        vkDestroyImageView(gfx.device.device, shadowpass_image_view, nullptr);
+        vkFreeMemory(gfx.device.device, shadowpass_image_memory, nullptr);
     }
     void ShadowPass::destroy_render_pass()
     {
-        vkDestroyRenderPass(gfx.device, shadowpass_renderpass, nullptr);
+        vkDestroyRenderPass(gfx.device.device, shadowpass_renderpass, nullptr);
     }
     void ShadowPass::destroy_framebuffer()
     {
-         vkDestroyFramebuffer(gfx.device, shadowpass_framebuffer, nullptr);
+         vkDestroyFramebuffer(gfx.device.device, shadowpass_framebuffer, nullptr);
     }
 }

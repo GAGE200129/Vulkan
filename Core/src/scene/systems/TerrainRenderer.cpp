@@ -19,12 +19,12 @@ namespace gage::scene::systems
     }
     TerrainRenderer::~TerrainRenderer()
     {
-        vkDestroyPipelineLayout(gfx.device, depth_pipeline_layout, nullptr);
-        vkDestroyPipeline(gfx.device, depth_pipeline, nullptr);
+        vkDestroyPipelineLayout(gfx.device.device, depth_pipeline_layout, nullptr);
+        vkDestroyPipeline(gfx.device.device, depth_pipeline, nullptr);
 
-        vkDestroyDescriptorSetLayout(gfx.device, desc_layout, nullptr);
-        vkDestroyPipelineLayout(gfx.device, pipeline_layout, nullptr);
-        vkDestroyPipeline(gfx.device, pipeline, nullptr);
+        vkDestroyDescriptorSetLayout(gfx.device.device, desc_layout, nullptr);
+        vkDestroyPipelineLayout(gfx.device.device, pipeline_layout, nullptr);
+        vkDestroyPipeline(gfx.device.device, pipeline, nullptr);
     }
 
     void TerrainRenderer::init()
@@ -77,7 +77,7 @@ namespace gage::scene::systems
     {
         for (const auto &terrain : terrains)
         {
-            vkFreeDescriptorSets(gfx.device, gfx.desc_pool, 1, &terrain.descriptor);
+            vkFreeDescriptorSets(gfx.device.device, gfx.desc_pool.pool, 1, &terrain.descriptor);
         }
         terrains.clear();
     }
@@ -220,9 +220,9 @@ namespace gage::scene::systems
         VkDescriptorSetAllocateInfo alloc_info{};
         alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         alloc_info.descriptorSetCount = 1;
-        alloc_info.descriptorPool = gfx.desc_pool;
+        alloc_info.descriptorPool = gfx.desc_pool.pool;
         alloc_info.pSetLayouts = &desc_layout;
-        vk_check(vkAllocateDescriptorSets(gfx.device, &alloc_info, &res));
+        vk_check(vkAllocateDescriptorSets(gfx.device.device, &alloc_info, &res));
 
         // // Set 1 binding 0 = uniform buffer
         // VkDescriptorBufferInfo buffer_desc_info{};
@@ -240,7 +240,7 @@ namespace gage::scene::systems
         // descriptor_write.pBufferInfo = &buffer_desc_info;
         // descriptor_write.pImageInfo = nullptr;
         // descriptor_write.pTexelBufferView = nullptr;
-        // vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
+        // vkUpdateDescriptorSets(gfx.device.device, 1, &descriptor_write, 0, nullptr);
 
         // Set 1 binding 0 = texture
 
@@ -257,7 +257,7 @@ namespace gage::scene::systems
         descriptor_write.pBufferInfo = nullptr;
         descriptor_write.pImageInfo = &img_info;
         descriptor_write.pTexelBufferView = nullptr;
-        vkUpdateDescriptorSets(gfx.device, 1, &descriptor_write, 0, nullptr);
+        vkUpdateDescriptorSets(gfx.device.device, 1, &descriptor_write, 0, nullptr);
 
         return res;
     }
@@ -275,21 +275,21 @@ namespace gage::scene::systems
         layout_ci.bindingCount = instance_bindings.size();
         layout_ci.pBindings = instance_bindings.data();
         layout_ci.flags = 0;
-        vk_check(vkCreateDescriptorSetLayout(gfx.device, &layout_ci, nullptr, &desc_layout));
+        vk_check(vkCreateDescriptorSetLayout(gfx.device.device, &layout_ci, nullptr, &desc_layout));
         std::vector<VkPushConstantRange> push_constants{
             VkPushConstantRange{
                 VK_SHADER_STAGE_ALL,
                 0,
                 sizeof(glm::mat4x4)}};
 
-        std::vector<VkDescriptorSetLayout> layouts = {gfx.global_set_layout, desc_layout};
+        std::vector<VkDescriptorSetLayout> layouts = {gfx.global_desc_layout.layout, desc_layout};
         VkPipelineLayoutCreateInfo pipeline_layout_info = {}; 
         pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipeline_layout_info.pushConstantRangeCount = push_constants.size();
         pipeline_layout_info.pPushConstantRanges = push_constants.data();
         pipeline_layout_info.pSetLayouts = layouts.data();
         pipeline_layout_info.setLayoutCount = layouts.size();
-        vk_check(vkCreatePipelineLayout(gfx.device, &pipeline_layout_info, nullptr, &pipeline_layout));
+        vk_check(vkCreatePipelineLayout(gfx.device.device, &pipeline_layout_info, nullptr, &pipeline_layout));
 
         // Create pipelie
         std::vector<VkVertexInputBindingDescription> vertex_bindings{
@@ -447,7 +447,7 @@ namespace gage::scene::systems
         // Vertex shader
         shader_module_ci.codeSize = vertex_binary.size();
         shader_module_ci.pCode = (uint32_t *)vertex_binary.data();
-        vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &vertex_shader));
+        vk_check(vkCreateShaderModule(gfx.device.device, &shader_module_ci, nullptr, &vertex_shader));
         shader_stage_ci.module = vertex_shader;
         shader_stage_ci.pName = "main";
         shader_stage_ci.stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -456,7 +456,7 @@ namespace gage::scene::systems
         // Geometry shader
         // shader_module_ci.codeSize = geometry_binary.size();
         // shader_module_ci.pCode = (uint32_t *)geometry_binary.data();
-        // vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &geometry_shader));
+        // vk_check(vkCreateShaderModule(gfx.device.device, &shader_module_ci, nullptr, &geometry_shader));
         // shader_stage_ci.module = geometry_shader;
         // shader_stage_ci.pName = "main";
         // shader_stage_ci.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
@@ -465,7 +465,7 @@ namespace gage::scene::systems
         // Fragment shader
         shader_module_ci.codeSize = fragment_binary.size();
         shader_module_ci.pCode = (uint32_t *)fragment_binary.data();
-        vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &fragment_shader));
+        vk_check(vkCreateShaderModule(gfx.device.device, &shader_module_ci, nullptr, &fragment_shader));
         shader_stage_ci.module = fragment_shader;
         shader_stage_ci.pName = "main";
         shader_stage_ci.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -501,13 +501,13 @@ namespace gage::scene::systems
         pipeline_info.pDynamicState = &dynamic_state_ci;
         pipeline_info.pDepthStencilState = &depth_stencil;
         pipeline_info.layout = pipeline_layout;
-        pipeline_info.renderPass = gfx.geometry_buffer->get_mainpass_render_pass();
+        pipeline_info.renderPass = gfx.geometry_buffer.get_mainpass_render_pass();
 
-        vk_check(vkCreateGraphicsPipelines(gfx.device, nullptr, 1, &pipeline_info, nullptr, &pipeline));
+        vk_check(vkCreateGraphicsPipelines(gfx.device.device, nullptr, 1, &pipeline_info, nullptr, &pipeline));
 
-        vkDestroyShaderModule(gfx.device, vertex_shader, nullptr);
-        // vkDestroyShaderModule(gfx.device, geometry_shader, nullptr);
-        vkDestroyShaderModule(gfx.device, fragment_shader, nullptr);
+        vkDestroyShaderModule(gfx.device.device, vertex_shader, nullptr);
+        // vkDestroyShaderModule(gfx.device.device, geometry_shader, nullptr);
+        vkDestroyShaderModule(gfx.device.device, fragment_shader, nullptr);
     }
 
 
@@ -515,14 +515,14 @@ namespace gage::scene::systems
     {
         std::vector<VkPushConstantRange> push_constants{};
 
-        std::vector<VkDescriptorSetLayout> layouts = {gfx.global_set_layout};
+        std::vector<VkDescriptorSetLayout> layouts = {gfx.global_desc_layout.layout};
         VkPipelineLayoutCreateInfo pipeline_layout_info = {};
         pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipeline_layout_info.pushConstantRangeCount = push_constants.size();
         pipeline_layout_info.pPushConstantRanges = push_constants.data();
         pipeline_layout_info.pSetLayouts = layouts.data();
         pipeline_layout_info.setLayoutCount = layouts.size();
-        vk_check(vkCreatePipelineLayout(gfx.device, &pipeline_layout_info, nullptr, &depth_pipeline_layout));
+        vk_check(vkCreatePipelineLayout(gfx.device.device, &pipeline_layout_info, nullptr, &depth_pipeline_layout));
 
         // Create pipelie
         std::vector<VkVertexInputBindingDescription> vertex_bindings{
@@ -551,7 +551,7 @@ namespace gage::scene::systems
         rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth = 1.f;
-        rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
+        rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
         rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
         VkPipelineMultisampleStateCreateInfo multisampling{};
@@ -630,7 +630,7 @@ namespace gage::scene::systems
         // Vertex shader
         shader_module_ci.codeSize = vertex_binary.size();
         shader_module_ci.pCode = (uint32_t *)vertex_binary.data();
-        vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &vertex_shader));
+        vk_check(vkCreateShaderModule(gfx.device.device, &shader_module_ci, nullptr, &vertex_shader));
         shader_stage_ci.module = vertex_shader;
         shader_stage_ci.pName = "main";
         shader_stage_ci.stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -639,7 +639,7 @@ namespace gage::scene::systems
         // Geometry shader
         shader_module_ci.codeSize = geometry_binary.size();
         shader_module_ci.pCode = (uint32_t *)geometry_binary.data();
-        vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &geometry_shader));
+        vk_check(vkCreateShaderModule(gfx.device.device, &shader_module_ci, nullptr, &geometry_shader));
         shader_stage_ci.module = geometry_shader;
         shader_stage_ci.pName = "main";
         shader_stage_ci.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
@@ -648,7 +648,7 @@ namespace gage::scene::systems
         // Fragment shader
         shader_module_ci.codeSize = fragment_binary.size();
         shader_module_ci.pCode = (uint32_t *)fragment_binary.data();
-        vk_check(vkCreateShaderModule(gfx.device, &shader_module_ci, nullptr, &fragment_shader));
+        vk_check(vkCreateShaderModule(gfx.device.device, &shader_module_ci, nullptr, &fragment_shader));
         shader_stage_ci.module = fragment_shader;
         shader_stage_ci.pName = "main";
         shader_stage_ci.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -678,12 +678,12 @@ namespace gage::scene::systems
         pipeline_info.pDynamicState = &dynamic_state_ci;
         pipeline_info.pDepthStencilState = &depth_stencil;
         pipeline_info.layout = depth_pipeline_layout;
-        pipeline_info.renderPass = gfx.geometry_buffer->get_shadowpass_render_pass();
+        pipeline_info.renderPass = gfx.geometry_buffer.get_shadowpass_render_pass();
 
-        vk_check(vkCreateGraphicsPipelines(gfx.device, nullptr, 1, &pipeline_info, nullptr, &depth_pipeline));
+        vk_check(vkCreateGraphicsPipelines(gfx.device.device, nullptr, 1, &pipeline_info, nullptr, &depth_pipeline));
 
-        vkDestroyShaderModule(gfx.device, vertex_shader, nullptr);
-        vkDestroyShaderModule(gfx.device, geometry_shader, nullptr);
-        vkDestroyShaderModule(gfx.device, fragment_shader, nullptr);
+        vkDestroyShaderModule(gfx.device.device, vertex_shader, nullptr);
+        vkDestroyShaderModule(gfx.device.device, geometry_shader, nullptr);
+        vkDestroyShaderModule(gfx.device.device, fragment_shader, nullptr);
     }
 }

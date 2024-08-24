@@ -12,6 +12,7 @@
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+#include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 
 namespace gage::scene::systems
@@ -42,16 +43,63 @@ namespace gage::scene::systems
 
         for (auto &map : maps)
         {
-            if(map.map->aabb_walls.size() == 0)
-                continue;
-            
             JPH::StaticCompoundShapeSettings compound_shape_settings;
             for (const auto &aabb_wall : map.map->aabb_walls)
             {
                 auto offset = aabb_wall.a + map.map->node.position;
                 compound_shape_settings.AddShape(JPH::Vec3(offset.x, offset.y, offset.z), JPH::Quat::sIdentity(),
-                    new JPH::BoxShape(JPH::Vec3(aabb_wall.b.x, aabb_wall.b.y, aabb_wall.b.z)));
+                                                 new JPH::BoxShape(JPH::Vec3(aabb_wall.b.x, aabb_wall.b.y, aabb_wall.b.z)));
             }
+
+            // Static models
+            for (const auto &static_model : map.map->static_models)
+            {
+                tinygltf::Model model;
+                tinygltf::TinyGLTF loader;
+                std::string err;
+                std::string warn;
+                loader.SetImageLoader(tinygltf::LoadImageData, nullptr);
+                loader.SetImageWriter(tinygltf::WriteImageData, nullptr);
+                if (!loader.LoadBinaryFromFile(&model, &err, &warn, static_model.model_path))
+                {
+                    log().critical("Physics failed to import scene: {} | {} | {}", static_model.model_path, warn, err);
+                    throw SceneException{};
+                }
+
+                const tinygltf::Mesh &mesh = model.meshes.at(0);
+                auto extract_buffer_from_accessor = [&](const tinygltf::Accessor &accessor)
+                    -> std::vector<unsigned char>
+                {
+                    const auto &buffer_view = model.bufferViews.at(accessor.bufferView);
+                    const auto &buffer = model.buffers.at(buffer_view.buffer);
+
+                    std::vector<unsigned char> result(buffer_view.byteLength);
+                    std::memcpy(result.data(), buffer.data.data() + buffer_view.byteOffset, buffer_view.byteLength);
+
+                    return result;
+                };
+
+                std::vector<JPH::Vec3> positions;
+                for (const auto &primitive : mesh.primitives)
+                {
+                    const auto &position_accessor = model.accessors.at(primitive.attributes.at("POSITION"));
+                    std::vector<unsigned char> position_buffer = extract_buffer_from_accessor(position_accessor);
+
+                    for (uint32_t i = 0; i < position_accessor.count; i++)
+                    {
+                        glm::vec3 position{};
+                        std::memcpy(&position.x, position_buffer.data() + i * sizeof(glm::vec3), sizeof(glm::vec3));
+                        positions.push_back(JPH::Vec3(position.x, position.y, position.z));
+                    }
+                }
+
+                JPH::ConvexHullShapeSettings shape_setting(positions.data(), positions.size());
+
+                glm::vec3 offset = static_model.offset + map.map->node.position;
+                compound_shape_settings.AddShape(JPH::Vec3(offset.x, offset.y, offset.z), JPH::Quat::sIdentity(),
+                                                 shape_setting.Create().Get());
+            }
+
             JPH::BodyCreationSettings setting(compound_shape_settings.Create().Get(),
                                               JPH::RVec3(0.0, -1.0, 0.0),
                                               JPH::Quat::sIdentity(), JPH::EMotionType::Static, phys::Layers::NON_MOVING);
@@ -70,6 +118,12 @@ namespace gage::scene::systems
         {
             this->phys.get_body_interface()->RemoveBody(terrain_renderer.height_map_body);
             this->phys.get_body_interface()->DestroyBody(terrain_renderer.height_map_body);
+        }
+
+         for (const auto &map : maps)
+        {
+            this->phys.get_body_interface()->RemoveBody(map.body);
+            this->phys.get_body_interface()->DestroyBody(map.body);
         }
     }
 

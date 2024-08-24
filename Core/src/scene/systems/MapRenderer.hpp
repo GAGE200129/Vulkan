@@ -84,6 +84,8 @@ namespace gage::scene::systems
     private:
         void create_pipeline();
         void create_depth_pipeline();
+        void process_aabb_wall(const components::AABBWall& aabb_wall);
+        void create_new_static_model(const std::string& model_path);
 
     private:
         const gfx::Graphics &gfx;

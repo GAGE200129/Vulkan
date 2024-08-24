@@ -43,16 +43,16 @@ namespace gage::gfx::data::g_buffer
         image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
         image_ci.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         image_ci.format = COLOR_FORMAT;
-        vk_check(vkCreateImage(gfx.device, &image_ci, nullptr, &finalpass_image));
+        vk_check(vkCreateImage(gfx.device.device, &image_ci, nullptr, &finalpass_image));
 
         VkMemoryRequirements mem_reqs{};
-        vkGetImageMemoryRequirements(gfx.device, finalpass_image, &mem_reqs);
+        vkGetImageMemoryRequirements(gfx.device.device, finalpass_image, &mem_reqs);
         VkMemoryAllocateInfo mem_alloc_info{};
         mem_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         mem_alloc_info.allocationSize = mem_reqs.size;
-        mem_alloc_info.memoryTypeIndex = utils::find_memory_type(gfx.physical_device, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        vk_check(vkAllocateMemory(gfx.device, &mem_alloc_info, nullptr, &finalpass_image_memory));
-        vk_check(vkBindImageMemory(gfx.device, finalpass_image, finalpass_image_memory, 0));
+        mem_alloc_info.memoryTypeIndex = utils::find_memory_type(gfx.device.physical_device, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        vk_check(vkAllocateMemory(gfx.device.device, &mem_alloc_info, nullptr, &finalpass_image_memory));
+        vk_check(vkBindImageMemory(gfx.device.device, finalpass_image, finalpass_image_memory, 0));
 
         VkImageViewCreateInfo image_view_ci = {};
         image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -68,7 +68,7 @@ namespace gage::gfx::data::g_buffer
         image_view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         image_view_ci.format = COLOR_FORMAT;
         image_view_ci.image = finalpass_image;
-        vk_check(vkCreateImageView(gfx.device, &image_view_ci, nullptr, &finalpass_image_view));
+        vk_check(vkCreateImageView(gfx.device.device, &image_view_ci, nullptr, &finalpass_image_view));
     }
 
     void LightPass::create_render_pass()
@@ -124,7 +124,7 @@ namespace gage::gfx::data::g_buffer
             ci.pSubpasses = &subpass;
             ci.dependencyCount = dependencies.size();
             ci.pDependencies = dependencies.data();
-            vk_check(vkCreateRenderPass(gfx.device, &ci, nullptr, &finalpass_renderpass));
+            vk_check(vkCreateRenderPass(gfx.device.device, &ci, nullptr, &finalpass_renderpass));
     }
 
     void LightPass::create_framebuffer()
@@ -139,23 +139,23 @@ namespace gage::gfx::data::g_buffer
         ci.width = gfx.draw_extent.width;
         ci.height = gfx.draw_extent.height;
         ci.layers = 1;
-        vk_check(vkCreateFramebuffer(gfx.device, &ci, nullptr, &finalpass_framebuffer));
+        vk_check(vkCreateFramebuffer(gfx.device.device, &ci, nullptr, &finalpass_framebuffer));
     }
 
     void LightPass::destroy_image()
     {
-          vkDestroyImage(gfx.device, finalpass_image, nullptr);
-        vkDestroyImageView(gfx.device, finalpass_image_view, nullptr);
-        vkFreeMemory(gfx.device, finalpass_image_memory, nullptr);
+          vkDestroyImage(gfx.device.device, finalpass_image, nullptr);
+        vkDestroyImageView(gfx.device.device, finalpass_image_view, nullptr);
+        vkFreeMemory(gfx.device.device, finalpass_image_memory, nullptr);
 
     }
     void LightPass::destroy_render_pass()
     {
-        vkDestroyRenderPass(gfx.device, finalpass_renderpass, nullptr);
+        vkDestroyRenderPass(gfx.device.device, finalpass_renderpass, nullptr);
     }
     void LightPass::destroy_framebuffer()
     {
-        vkDestroyFramebuffer(gfx.device, finalpass_framebuffer, nullptr);
+        vkDestroyFramebuffer(gfx.device.device, finalpass_framebuffer, nullptr);
     }
 
 }
