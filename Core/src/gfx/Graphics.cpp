@@ -72,7 +72,7 @@ namespace gage::gfx
         vk_check(vkResetFences(device.device, 1, &render_fence));
 
         // Check for swapchain recreation
-        if (resize_requested)
+        if (draw_extent.width != draw_extent_temp.width || draw_extent.height != draw_extent_temp.height)
         {
             vkDeviceWaitIdle(device.device);
             draw_extent = draw_extent_temp;
@@ -82,7 +82,6 @@ namespace gage::gfx
             directional_light.reset();
             point_light.reset();
             ssao.reset();
-            resize_requested = false;
         }
 
         if (directional_light_shadow_map_resolution != directional_light_shadow_map_resolution_temp)
@@ -321,7 +320,6 @@ namespace gage::gfx
     {
         draw_extent_temp.width = width;
         draw_extent_temp.height = height;
-        resize_requested = true;
     }
     void Graphics::resize_shadow_map(uint32_t shadow_map_size)
     {

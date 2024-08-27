@@ -25,10 +25,20 @@ namespace gage::gfx::data
     {
     public:
         Image(const Graphics& gfx, ImageCreateInfo ci);
-        Image(Image&&) = default;
+        Image(Image&& other) : gfx(other.gfx)
+        {
+            this->image = other.image;
+            this->image_view = other.image_view;
+            this->allocation = other.allocation;
+            this->sampler = other.sampler;
+            other.image = VK_NULL_HANDLE;
+            other.image_view = VK_NULL_HANDLE;
+            other.allocation = VK_NULL_HANDLE;
+            other.sampler = VK_NULL_HANDLE;
+        }
         Image(const Image&) = delete;
         Image operator=(const Image&) = delete;
-        Image& operator=(Image&&) = default;
+        Image& operator=(Image&&) = delete;
         ~Image();
 
         VkImage get_image() const;

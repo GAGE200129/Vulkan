@@ -1,10 +1,7 @@
 #pragma once
 
-#include <stack>
 #include <vector>
-#include <functional>
 
-#include <vk_mem_alloc.h>
 
 #include "Exception.hpp"
 #include "data/Instance.hpp"
@@ -24,23 +21,9 @@
 #include "data/Swapchain.hpp"
 #include "data/Default.hpp"
 
-namespace vkb
-{
-    template <typename T>
-    class Result;
-}
-
-namespace gage::gfx::bind
-{
-    class IBindable;
-}
-
 namespace gage::gfx::data
 {
     class Camera;
-
-    class GPUBuffer;
-    class Image;
 
 }
 
@@ -84,6 +67,8 @@ namespace gage::gfx
         Graphics(GLFWwindow *window, uint32_t width, uint32_t height, std::string app_name);
         Graphics(const Graphics &) = delete;
         void operator=(const Graphics &) = delete;
+        Graphics(Graphics&&) = delete;
+        Graphics& operator=(Graphics&&) = delete;
         ~Graphics();
 
         void wait();
@@ -132,7 +117,6 @@ namespace gage::gfx
 
         GlobalUniform global_uniform{};
         float draw_extent_scale{1.0f};
-        bool resize_requested{};
 
     };
 }

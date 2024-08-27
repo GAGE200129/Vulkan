@@ -16,9 +16,16 @@ namespace gage::gfx::data
         ~GPUBuffer();
 
         GPUBuffer(const GPUBuffer&) = delete;
-        GPUBuffer(GPUBuffer&&) = default;
         GPUBuffer operator=(const GPUBuffer&) = delete;
-        GPUBuffer& operator=(GPUBuffer&&) = default;
+        GPUBuffer& operator=(GPUBuffer&&) = delete;
+
+        GPUBuffer(GPUBuffer&& other) : gfx(other.gfx)
+        {
+            this->buffer_handle = other.buffer_handle;
+            this->allocation = other.allocation;
+            other.buffer_handle = VK_NULL_HANDLE;
+            other.allocation = VK_NULL_HANDLE;
+        }
 
         VkBuffer get_buffer_handle() const;
     private:

@@ -30,6 +30,13 @@ namespace gage::scene::components
     {
         std::string model_path{};
         glm::vec3 offset{0, 0, 0};
+        glm::quat rotation{0.0, 0.0, 0.0, 1.0};
+    };
+
+    struct PhysicsModel
+    {
+        std::string model_path{};
+        glm::vec3 offset{0, 0, 0};
         glm::quat rotation{1.0, 0.0, 0.0, 0.0};
     };
     class Map final : public IComponent
@@ -42,11 +49,13 @@ namespace gage::scene::components
         
         void add_aabb_wall(AABBWall wall);
         void add_static_model(StaticModel model);
+        void add_physics_model(PhysicsModel model);
         //Debug
         void render_imgui() {};
         const char* get_name() const { return "Map"; };
     public:
         std::vector<AABBWall> aabb_walls{};
         std::vector<StaticModel> static_models{};
+        std::vector<std::unique_ptr<PhysicsModel>> physics_models{};
     };
 }

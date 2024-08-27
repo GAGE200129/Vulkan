@@ -21,4 +21,11 @@ namespace gage::scene::components
     {
         static_models.push_back(model);
     }
+
+    void Map::add_physics_model(PhysicsModel model)
+    {
+        auto new_model = std::make_unique<PhysicsModel>();
+        *new_model = model;// copy
+        physics_models.push_back(std::move(new_model));
+    }
 }

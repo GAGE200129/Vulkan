@@ -16,9 +16,15 @@ namespace gage::gfx::data
         ~CPUBuffer();
 
         CPUBuffer(const CPUBuffer&) = delete;
-        CPUBuffer(CPUBuffer&&) = default;
         CPUBuffer operator=(const CPUBuffer&) = delete;
-        CPUBuffer& operator=(CPUBuffer&&) = default;
+        CPUBuffer& operator=(CPUBuffer&&) = delete;
+        CPUBuffer(CPUBuffer&& other) : gfx(other.gfx)
+        {
+            this->buffer_handle = other.buffer_handle;
+            this->allocation = other.allocation;
+            other.buffer_handle = VK_NULL_HANDLE;
+            other.allocation = VK_NULL_HANDLE;
+        }
 
 
 

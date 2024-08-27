@@ -23,12 +23,12 @@ namespace gage::scene::data
     {
     public:
         ModelMeshPrimitive(uint32_t vertex_count, 
-            std::unique_ptr<gfx::data::GPUBuffer> index_buffer,
-            std::unique_ptr<gfx::data::GPUBuffer> position_buffer,
-            std::unique_ptr<gfx::data::GPUBuffer> normal_buffer,
-            std::unique_ptr<gfx::data::GPUBuffer> texcoord_buffer,
-            std::unique_ptr<gfx::data::GPUBuffer> bone_id_buffer, 
-            std::unique_ptr<gfx::data::GPUBuffer> bone_weight_buffer,
+            gfx::data::GPUBuffer index_buffer,
+            gfx::data::GPUBuffer position_buffer,
+            gfx::data::GPUBuffer normal_buffer,
+            gfx::data::GPUBuffer texcoord_buffer,
+            gfx::data::GPUBuffer bone_id_buffer, 
+            gfx::data::GPUBuffer bone_weight_buffer,
             uint32_t material_index,
             bool has_skin) :
             vertex_count(vertex_count),
@@ -44,16 +44,17 @@ namespace gage::scene::data
         ~ModelMeshPrimitive();
 
         ModelMeshPrimitive(ModelMeshPrimitive&&) = default;
+        ModelMeshPrimitive& operator=(ModelMeshPrimitive&&) = default;
         ModelMeshPrimitive(const ModelMeshPrimitive&) = delete;
         ModelMeshPrimitive operator=(const ModelMeshPrimitive&) = delete;
     public:
         uint32_t vertex_count{};
-        std::unique_ptr<gfx::data::GPUBuffer> index_buffer{}; 
-        std::unique_ptr<gfx::data::GPUBuffer> position_buffer{}; 
-        std::unique_ptr<gfx::data::GPUBuffer> normal_buffer{}; 
-        std::unique_ptr<gfx::data::GPUBuffer> texcoord_buffer{};
-        std::unique_ptr<gfx::data::GPUBuffer> bone_id_buffer{};
-        std::unique_ptr<gfx::data::GPUBuffer> bone_weight_buffer{};
+        gfx::data::GPUBuffer index_buffer; 
+        gfx::data::GPUBuffer position_buffer; 
+        gfx::data::GPUBuffer normal_buffer; 
+        gfx::data::GPUBuffer texcoord_buffer;
+        gfx::data::GPUBuffer bone_id_buffer;
+        gfx::data::GPUBuffer bone_weight_buffer;
         int32_t material_index{};
         bool has_skin{};
     };
