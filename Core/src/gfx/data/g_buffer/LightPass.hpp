@@ -13,7 +13,7 @@ namespace gage::gfx::data::g_buffer
     {
         friend class GBuffer;
     public:
-        LightPass(Graphics& gfx);
+        LightPass(const Graphics& gfx);
         ~LightPass();
 
         void reset();
@@ -27,10 +27,10 @@ namespace gage::gfx::data::g_buffer
         void destroy_render_pass();
         void destroy_framebuffer();
     private:
-        Graphics& gfx;
+        const Graphics& gfx;
 
         static constexpr VkFormat COLOR_FORMAT = {VK_FORMAT_B8G8R8A8_UNORM};
-
+    public:
         VkRenderPass finalpass_renderpass{};
         VkFramebuffer finalpass_framebuffer{};
 

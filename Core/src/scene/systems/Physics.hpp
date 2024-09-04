@@ -3,6 +3,7 @@
 #include "../components/CharacterController.hpp"
 #include "../components/Terrain.hpp"
 #include "../components/Map.hpp"
+#include "../components/RigidBody.hpp"
 #include <vector>
 #include <memory>
 
@@ -60,6 +61,7 @@ namespace gage::scene::systems
         static GroundState character_get_ground_state(components::CharacterController* character);
 
         void add_terrain_renderer(std::shared_ptr<components::Terrain> terrain_renderer);
+        void add_rigid_body(std::unique_ptr<components::RigidBody> rigid_body);
         void add_map(std::shared_ptr<components::Map> map);
     private:
         void extract_bounding_box(const std::string& file_path);
@@ -68,5 +70,6 @@ namespace gage::scene::systems
         std::vector<std::unique_ptr<components::CharacterController>> character_controllers; 
         std::vector<Terrain> terrain_renderers;
         std::vector<Map> maps;
+        std::vector<std::unique_ptr<components::RigidBody>> rigid_bodies;
     };
 }

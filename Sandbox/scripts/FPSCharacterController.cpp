@@ -18,7 +18,7 @@
 
 using namespace gage;
 
-FPSCharacterController::FPSCharacterController(scene::SceneGraph &scene, scene::Node &node, phys::Physics &phys, gfx::data::Camera &camera) : Script(scene, node),
+FPSCharacterController::FPSCharacterController(scene::SceneGraph &scene, scene::Node &node,  gfx::data::Camera &camera) : Script(scene, node),
                                                                                                                                               camera(camera)
 {
 }

@@ -22,6 +22,7 @@
 #include <Core/src/scene/SceneGraph.hpp>
 #include <Core/src/scene/components/Animator.hpp>
 #include <Core/src/scene/components/Map.hpp>
+#include <Core/src/scene/components/RigidBody.hpp>
 #include "scripts/FPSCharacterController.hpp"
 
 #include <Core/src/hid/hid.hpp>
@@ -90,13 +91,14 @@ int main()
         scene::SceneGraph scene(gfx, phys, camera);
 
         const scene::data::Model &scene_model = scene.import_model("res/models/human_base.glb", scene::data::ModelImportMode::Binary);
+        const scene::data::Model &box_model = scene.import_model("res/models/box_textured.glb", scene::data::ModelImportMode::Binary);
 
         scene::Node *animated_node = scene.instanciate_model(scene_model, {0, 0, 0});
         scene.add_component(animated_node, std::make_unique<scene::components::Animator>(scene, *animated_node, scene_model));
         animated_node->position = {50, 10, 50};
         animated_node->name = "Player";
-        scene.add_component(animated_node, std::make_unique<scene::components::CharacterController>(scene, *animated_node, phys));
-        scene.add_component(animated_node, std::make_unique<FPSCharacterController>(scene, *animated_node, phys, camera));
+        scene.add_component(animated_node, std::make_unique<scene::components::CharacterController>(scene, *animated_node));
+        scene.add_component(animated_node, std::make_unique<FPSCharacterController>(scene, *animated_node, camera));
 
         auto terrain = scene.create_node();
         terrain->name = "TErrain";
@@ -123,6 +125,10 @@ int main()
         map_comp->add_aabb_wall({{0.0f, 10.0f, 10.0f}, {10.0f, 10.0f, 1.0f}});
         map_comp->add_aabb_wall({{0.0f, 10.0f, -10.0f}, {10.0f, 10.0f, 1.0f}});
         map_comp->add_static_model(static_model);
+
+        scene::Node* physics_body = scene.instanciate_model(box_model, {50, 3, 50});
+        scene.add_component(physics_body, std::make_unique<scene::components::RigidBody>(scene, *physics_body, 
+            std::make_unique<scene::components::BoxShape>(glm::vec3{0, 0, 0}, glm::vec3{1, 1, 1})));
         
 
         scene.init();
@@ -130,7 +136,7 @@ int main()
         auto previous = std::chrono::high_resolution_clock::now();
         uint64_t lag = 0; 
 
-        double tick_time_in_seconds = 1.0 / 128.0;
+        double tick_time_in_seconds = 1.0 / 64.0;
         uint64_t tick_time_in_nanoseconds = tick_time_in_seconds * 1E9;
 
         while (!window.is_closing())

@@ -7,7 +7,8 @@
 
 namespace gage::gfx::data::g_buffer
 {
-    LightPass::LightPass(Graphics &gfx) : gfx(gfx)
+    LightPass::LightPass(const Graphics &gfx) : 
+        gfx(gfx)
     {
         create_image();
         create_render_pass();

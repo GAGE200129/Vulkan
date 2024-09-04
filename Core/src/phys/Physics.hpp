@@ -34,7 +34,7 @@ namespace gage::phys
 
         JPH::Character* create_character(const glm::vec3& position, const glm::quat& rotation);
         void destroy_character(JPH::Character* character);
-    private:
+    public:
         JPH::BodyInterface *p_body_interface{};
         const JPH::BodyLockInterface *p_body_lock_interface{};
         std::unique_ptr<JPH::PhysicsSystem> physics_system;

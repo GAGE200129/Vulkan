@@ -7,7 +7,7 @@
 
 namespace gage::gfx::data::g_buffer
 {
-    ShadowPass::ShadowPass(Graphics& gfx) :
+    ShadowPass::ShadowPass(const Graphics& gfx) :
         gfx(gfx)
     {
         create_image();

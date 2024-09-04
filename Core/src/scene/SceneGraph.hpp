@@ -80,6 +80,7 @@ namespace gage::scene
         systems::Animation animation;
         systems::Physics physics;
         systems::Generic generic;
+        Node* root_node{};
         std::vector<std::unique_ptr<Node>> nodes{};
         std::vector<std::unique_ptr<data::Model>> models{};
     };

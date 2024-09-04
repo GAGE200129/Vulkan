@@ -13,6 +13,7 @@
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 #include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
+#include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 
 namespace gage::scene::systems
@@ -25,7 +26,24 @@ namespace gage::scene::systems
     {
         for (auto &character_controller : character_controllers)
         {
-            character_controller->character = phys.create_character(character_controller->node.position, character_controller->node.rotation);
+             // Create 'player' character
+            JPH::CharacterSettings settings;
+            settings.mMaxSlopeAngle = JPH::DegreesToRadians(80.0f);
+            settings.mLayer = phys::Layers::MOVING;
+            settings.mShape = JPH::RotatedTranslatedShapeSettings(JPH::Vec3(0, 0.0f, 0.0), JPH::Quat(0, 0, 0, 1), 
+                JPH::CapsuleShapeSettings(0.9f, 0.8f).Create().Get()).Create().Get();
+            settings.mFriction = 0.2f;
+
+            // settings->mShape = JPH::CapsuleShapeSettings(1.8f, 0.3f).Create().Get();
+            std::unique_ptr<JPH::Character> character = std::make_unique<JPH::Character>(
+                &settings,
+                JPH::Vec3Arg(character_controller->node.position.x, character_controller->node.position.y, character_controller->node.position.z),
+                JPH::QuatArg(character_controller->node.rotation.x, character_controller->node.rotation.y, character_controller->node.rotation.z, character_controller->node.rotation.w),
+                0, this->phys.physics_system.get());
+            character->AddToPhysicsSystem(JPH::EActivation::Activate);
+
+            
+            character_controller->character = std::move(character);
         }
 
         for (auto &terrain_renderer : terrain_renderers)
@@ -105,14 +123,22 @@ namespace gage::scene::systems
                                               JPH::Quat::sIdentity(), JPH::EMotionType::Static, phys::Layers::NON_MOVING);
             map.body = this->phys.get_body_interface()->CreateAndAddBody(setting, JPH::EActivation::DontActivate);
         }
+
+        for(auto& rigid_body : rigid_bodies)
+        {
+            JPH::BodyCreationSettings setting(rigid_body->shape->generate_shape().Get(),
+                                              JPH::RVec3(rigid_body->node.position.x, rigid_body->node.position.y, rigid_body->node.position.z),
+                                              JPH::Quat(rigid_body->node.rotation.x, rigid_body->node.rotation.y, rigid_body->node.rotation.z, rigid_body->node.rotation.w),
+                                              JPH::EMotionType::Dynamic, phys::Layers::MOVING);
+
+            setting.mMassPropertiesOverride.mMass = 0.01;
+            setting.mRestitution = 1.0;
+            rigid_body->body = this->phys.get_body_interface()->CreateAndAddBody(setting, JPH::EActivation::Activate);
+        }
     }
 
     void Physics::shutdown()
     {
-        for (auto &character_controller : character_controllers)
-        {
-            phys.destroy_character(character_controller->character);
-        }
 
         for (const auto &terrain_renderer : terrain_renderers)
         {
@@ -129,6 +155,17 @@ namespace gage::scene::systems
 
     void Physics::update(float delta)
     {
+        for (auto &rigid_body : rigid_bodies)
+        {
+            //Extract body id
+            JPH::Vec3 position = phys.get_body_interface()->GetCenterOfMassPosition(rigid_body->body);
+            JPH::Quat rotation = phys.get_body_interface()->GetRotation(rigid_body->body);
+            rigid_body->node.position = glm::vec3{position.GetX(), position.GetY(), position.GetZ()};
+            rigid_body->node.rotation.x = rotation.GetX();
+            rigid_body->node.rotation.y = rotation.GetY();
+            rigid_body->node.rotation.z = rotation.GetZ();
+            rigid_body->node.rotation.w = rotation.GetW();
+        }
         for (auto &character_controller : character_controllers)
         {
             character_controller->character->PostSimulation(0.1f);
@@ -175,6 +212,11 @@ namespace gage::scene::systems
         terrain_renderer_additional_datas.terrain_renderer = terrain_renderer;
 
         terrain_renderers.push_back(std::move(terrain_renderer_additional_datas));
+    }
+
+    void Physics::add_rigid_body(std::unique_ptr<components::RigidBody> rigid_body)
+    {
+        rigid_bodies.push_back(std::move(rigid_body));
     }
 
     void Physics::character_add_impulse(components::CharacterController *character, const glm::vec3 &vel)

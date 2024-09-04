@@ -17,7 +17,7 @@ namespace gage::gfx::data::g_buffer
     class GBuffer
     {
     public:
-        GBuffer(Graphics& gfx);
+        GBuffer(const Graphics& gfx);
         ~GBuffer();
 
         void begin_shadowpass(VkCommandBuffer cmd) const;
@@ -43,7 +43,8 @@ namespace gage::gfx::data::g_buffer
         void reset_shadowmap();
 
     private:
-        Graphics& gfx;
+        const Graphics& gfx;
+    public:
         MainPass main_pass;
         ShadowPass shadow_pass;
         LightPass light_pass;

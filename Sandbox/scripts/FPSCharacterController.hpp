@@ -19,7 +19,7 @@ class FPSCharacterController final : public gage::scene::components::Script
 {
 
 public:
-    FPSCharacterController(gage::scene::SceneGraph &scene, gage::scene::Node &node, gage::phys::Physics &phys, gage::gfx::data::Camera &camera);
+    FPSCharacterController(gage::scene::SceneGraph &scene, gage::scene::Node &node, gage::gfx::data::Camera &camera);
 
     void init() final;
     void update(float delta, const gage::hid::Keyboard &keyboard, const gage::hid::Mouse &mouse) final;

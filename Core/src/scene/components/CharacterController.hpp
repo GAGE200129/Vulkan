@@ -26,16 +26,15 @@ namespace gage::scene::components
         friend class systems::Physics;
 
     public:
-        CharacterController(SceneGraph& scene, Node& node, phys::Physics& phys);
-
+        CharacterController(SceneGraph& scene, Node& node);
+        ~CharacterController();
 
         nlohmann::json to_json() const final;
         void render_imgui() override;
         inline const char* get_name() const override { return "CharacterController"; };
 
     protected:
-        phys::Physics& phys;
-        JPH::Character* character;
+        std::unique_ptr<JPH::Character> character;
 
     };
 }

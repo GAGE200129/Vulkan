@@ -7,7 +7,8 @@
 
 namespace gage::gfx::data::g_buffer
 {
-    MainPass::MainPass(Graphics &gfx) : gfx(gfx)
+    MainPass::MainPass(const Graphics &gfx) :
+        gfx(gfx)
     {
         create_image();
         create_render_pass();

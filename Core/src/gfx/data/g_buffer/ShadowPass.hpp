@@ -13,7 +13,7 @@ namespace gage::gfx::data::g_buffer
     {
         friend class GBuffer;
     public:
-        ShadowPass(Graphics& gfx);
+        ShadowPass(const Graphics& gfx);
         ~ShadowPass();
 
         void reset();
@@ -26,10 +26,10 @@ namespace gage::gfx::data::g_buffer
         void destroy_render_pass();
         void destroy_framebuffer();
     private:
-        Graphics& gfx;
+        const Graphics& gfx;
 
         static constexpr VkFormat SHADOW_FORMAT = {VK_FORMAT_D32_SFLOAT};
-
+    public:
         VkRenderPass shadowpass_renderpass{};
         VkFramebuffer shadowpass_framebuffer{};
 

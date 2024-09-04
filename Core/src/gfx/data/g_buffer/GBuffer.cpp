@@ -8,11 +8,12 @@
 
 namespace gage::gfx::data::g_buffer
 {
-    GBuffer::GBuffer(Graphics &gfx) : gfx(gfx),
-                                      main_pass(gfx),
-                                      shadow_pass(gfx),
-                                      light_pass(gfx),
-                                      ssao_pass(gfx)
+    GBuffer::GBuffer(const Graphics &gfx) : 
+        gfx(gfx),
+        main_pass(gfx),
+        shadow_pass(gfx),
+        light_pass(gfx),
+        ssao_pass(gfx)
     {
     }
     GBuffer::~GBuffer()

@@ -5,6 +5,8 @@
 
 #include "components/MeshRenderer.hpp"
 #include "components/Animator.hpp"
+#include "components/RigidBody.hpp"
+#include "components/CharacterController.hpp"
 
 #include <Core/src/gfx/Graphics.hpp>
 #include <imgui/imgui.h>
@@ -68,18 +70,18 @@ namespace tinygltf
 
 namespace gage::scene
 {
-    SceneGraph::SceneGraph(const gfx::Graphics &gfx, phys::Physics &phys, gfx::data::Camera &camera) : gfx(gfx),
-                                                                                                       renderer(gfx),
-                                                                                                       terrain_renderer(gfx, camera),
-                                                                                                       map_renderer(gfx),
-                                                                                                       physics(phys)
+    SceneGraph::SceneGraph(const gfx::Graphics &gfx, phys::Physics &phys, gfx::data::Camera &camera) : 
+        gfx(gfx),
+        renderer(gfx),
+        terrain_renderer(gfx, camera),
+        map_renderer(gfx),
+        physics(phys)
     {
         // Create root node
-        id = 0;
-        auto node = std::make_unique<Node>(*this, id);
+        auto node = std::make_unique<Node>(*this, id++);
         node->name = ROOT_NAME;
+        this->root_node = node.get();
         nodes.push_back(std::move(node));
-        id++;
     }
     SceneGraph::~SceneGraph()
     {
@@ -182,7 +184,7 @@ namespace gage::scene
     // Every node created will be the child of the root node
     Node *SceneGraph::create_node()
     {
-        auto node = std::make_unique<Node>(*this, id);
+        auto node = std::make_unique<Node>(*this, id++);
         auto node_ptr = node.get();
 
         auto root_node = nodes.at(0).get();
@@ -190,7 +192,6 @@ namespace gage::scene
         root_node->children.push_back(node_ptr);
 
         nodes.push_back(std::move(node));
-        id++;
 
         return node_ptr;
     }
@@ -210,37 +211,42 @@ namespace gage::scene
 
     void* SceneGraph::add_component(Node *node, std::unique_ptr<components::IComponent> component)
     {
-        // Release component
+        // Release the ptr
         components::IComponent *ptr = component.release();
         node->add_component_ptr(ptr);
 
-        if (std::strcmp(ptr->get_name(), "MeshRenderer") == 0)
+        if (std::strcmp(ptr->get_name(), "MeshRenderer") == 0) // Renderer will own this component
         {
             renderer.add_pbr_mesh_renderer(std::unique_ptr<components::MeshRenderer>(static_cast<components::MeshRenderer *>(ptr)));
         }
-        else if (std::strcmp(ptr->get_name(), "Terrain") == 0) // this component will be shared
+        else if (std::strcmp(ptr->get_name(), "Terrain") == 0) // Terrain will be shared with physics and terrain
         {
             auto terrain = std::shared_ptr<components::Terrain>(static_cast<components::Terrain *>(ptr));
             terrain_renderer.add_terrain(terrain);
             physics.add_terrain_renderer(terrain);
         }
-        else if (std::strcmp(ptr->get_name(), "Animator") == 0)
+        else if (std::strcmp(ptr->get_name(), "Animator") == 0) // Animator will owned by Animation
         {
             animation.add_animator(std::unique_ptr<components::Animator>(static_cast<components::Animator *>(ptr)));
         }
-        else if (std::strcmp(ptr->get_name(), "CharacterController") == 0)
+        else if (std::strcmp(ptr->get_name(), "CharacterController") == 0) // CharacterController will be owned by physics
         {
             physics.add_character_controller(std::unique_ptr<components::CharacterController>(static_cast<components::CharacterController *>(ptr)));
         }
-        else if (std::strcmp(ptr->get_name(), "Script") == 0)
+        else if (std::strcmp(ptr->get_name(), "Script") == 0) // Script will be owned by generic
         {
             generic.add_script(std::unique_ptr<components::Script>(static_cast<components::Script *>(ptr)));
         }
-        else if (std::strcmp(ptr->get_name(), "Map") == 0)
+        else if (std::strcmp(ptr->get_name(), "Map") == 0) //Map will be shared by MapRenderer and Physics
         {
             auto map = std::shared_ptr<components::Map>(static_cast<components::Map*>(ptr));
             map_renderer.add_map(map);
             physics.add_map(map);
+        }
+
+        else if (std::strcmp(ptr->get_name(), "RigidBody") == 0) //Owned by physics
+        {
+            physics.add_rigid_body(std::unique_ptr<components::RigidBody>(static_cast<components::RigidBody*>(ptr)));
         }
         else
         {

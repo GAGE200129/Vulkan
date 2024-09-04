@@ -13,7 +13,7 @@ namespace gage::gfx::data::g_buffer
     {
         friend class GBuffer;
     public:
-        MainPass(Graphics& gfx);
+        MainPass(const Graphics& gfx);
         ~MainPass();
 
         void reset();
@@ -27,14 +27,14 @@ namespace gage::gfx::data::g_buffer
         void destroy_render_pass();
         void destroy_framebuffer();
     private:
-        Graphics& gfx;
+        const Graphics& gfx;
 
         static constexpr VkFormat NORMAL_FORMAT = {VK_FORMAT_R16G16B16_SFLOAT};
         static constexpr VkFormat ALBEDO_FORMAT = {VK_FORMAT_R16G16B16_SFLOAT};
         static constexpr VkFormat METALIC_ROUGHENSS_FORMAT = {VK_FORMAT_R16G16B16_SFLOAT};
         static constexpr VkFormat DEPTH_FORMAT = {VK_FORMAT_D24_UNORM_S8_UINT};
         
-
+    public:
         VkRenderPass render_pass{};
         VkFramebuffer framebuffer{};
 

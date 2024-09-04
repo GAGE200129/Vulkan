@@ -15,7 +15,7 @@ namespace gage::gfx::data::g_buffer
     {
         friend class GBuffer;
     public:
-        SSAOPass(Graphics& gfx);
+        SSAOPass(const Graphics& gfx);
         ~SSAOPass();
 
         void reset();
@@ -29,10 +29,10 @@ namespace gage::gfx::data::g_buffer
         void destroy_render_pass();
         void destroy_framebuffer();
     private:
-        Graphics& gfx;
+        const Graphics& gfx;
 
         static constexpr VkFormat FORMAT = {VK_FORMAT_R32_SFLOAT};
-
+    public:
         VkImage image{};
         VkImageView image_view{};
         VkDeviceMemory image_memory{};

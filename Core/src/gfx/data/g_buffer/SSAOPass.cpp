@@ -7,7 +7,8 @@
 
 namespace gage::gfx::data::g_buffer
 {
-    SSAOPass::SSAOPass(Graphics &gfx) : gfx(gfx)
+    SSAOPass::SSAOPass(const Graphics &gfx) : 
+        gfx(gfx)
     {
         create_image();
         create_render_pass();
