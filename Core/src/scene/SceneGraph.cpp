@@ -70,12 +70,12 @@ namespace tinygltf
 
 namespace gage::scene
 {
-    SceneGraph::SceneGraph(const gfx::Graphics &gfx, phys::Physics &phys, gfx::data::Camera &camera) : 
+    SceneGraph::SceneGraph(const gfx::Graphics &gfx, gfx::data::Camera &camera) : 
         gfx(gfx),
         renderer(gfx),
         terrain_renderer(gfx, camera),
         map_renderer(gfx),
-        physics(phys)
+        physics()
     {
         // Create root node
         auto node = std::make_unique<Node>(*this, id++);

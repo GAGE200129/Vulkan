@@ -5,33 +5,89 @@
 #include "../Node.hpp"
 #include "../data/Model.hpp"
 
-#include <Core/src/phys/Physics.hpp>
-#include <Core/src/phys/Layers.hpp>
-#include <Jolt/Physics/Character/Character.h>
-#include <Jolt/Physics/Collision/Shape/HeightFieldShape.h>
-#include <Jolt/Physics/Collision/Shape/BoxShape.h>
-#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
-#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
-#include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
-#include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
-#include <Jolt/Physics/Body/BodyCreationSettings.h>
+
+
+static void TraceImpl(const char *inFMT, ...)
+{
+    // Format the message
+    va_list list;
+    va_start(list, inFMT);
+    char buffer[1024];
+    vsnprintf(buffer, sizeof(buffer), inFMT, list);
+    va_end(list);
+
+    // Print to the TTY
+    // logger.trace(std::string(buffer));
+}
 
 namespace gage::scene::systems
 {
-    Physics::Physics(phys::Physics &phys) : phys(phys)
+
+    JoltIniter::JoltIniter()
     {
+        JPH::RegisterDefaultAllocator();
+        JPH::Trace = TraceImpl;
+        JPH_IF_ENABLE_ASSERTS(AssertFailed = AssertFailedImpl;)
+
+        JPH::Factory::sInstance = new JPH::Factory();
+        JPH::RegisterTypes();
+    }
+    JoltIniter::~JoltIniter()
+    {
+        JPH::UnregisterTypes();
+        delete JPH::Factory::sInstance;
+        JPH::Factory::sInstance = nullptr;
+    }
+    Physics::Physics() : 
+                        jolt_initer(),
+                        physics_system(),
+                        temp_allocator(10 * 1024 * 1024),
+                        job_system(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, 1),
+                        broad_phase_layer_interface(),
+                        object_vs_broadphase_layer_filter(),
+                        object_vs_object_layer_filter(),
+                        body_interface(physics_system.GetBodyInterface())
+    {
+        // This is the max amount of rigid bodies that you can add to the physics system. If you try to add more you'll get an error.
+        // Note: This value is low because this is a simple test. For a real project use something in the order of 65536.
+        const uint cMaxBodies = 1024;
+
+        // This determines how many mutexes to allocate to protect rigid bodies from concurrent access. Set it to 0 for the default settings.
+        const uint cNumBodyMutexes = 0;
+
+        // This is the max amount of body pairs that can be queued at any time (the broad phase will detect overlapping
+        // body pairs based on their bounding boxes and will insert them into a queue for the narrowphase). If you make this buffer
+        // too small the queue will fill up and the broad phase jobs will start to do narrow phase work. This is slightly less efficient.
+        // Note: This value is low because this is a simple test. For a real project use something in the order of 65536.
+        const uint cMaxBodyPairs = 1024;
+
+        // This is the maximum size of the contact constraint buffer. If more contacts (collisions between bodies) are detected than this
+        // number then these contacts will be ignored and bodies will start interpenetrating / fall through the world.
+        // Note: This value is low because this is a simple test. For a real project use something in the order of 10240.
+        const uint cMaxContactConstraints = 1024;
+
+        // Now we can create the actual physics system.
+        physics_system.Init(cMaxBodies,
+                            cNumBodyMutexes,
+                            cMaxBodyPairs,
+                            cMaxContactConstraints,
+                            broad_phase_layer_interface,
+                            object_vs_broadphase_layer_filter,
+                            object_vs_object_layer_filter);
     }
 
     void Physics::init()
     {
         for (auto &character_controller : character_controllers)
         {
-             // Create 'player' character
+            // Create 'player' character
             JPH::CharacterSettings settings;
             settings.mMaxSlopeAngle = JPH::DegreesToRadians(80.0f);
-            settings.mLayer = phys::Layers::MOVING;
-            settings.mShape = JPH::RotatedTranslatedShapeSettings(JPH::Vec3(0, 0.0f, 0.0), JPH::Quat(0, 0, 0, 1), 
-                JPH::CapsuleShapeSettings(0.9f, 0.8f).Create().Get()).Create().Get();
+            settings.mLayer = Layers::MOVING;
+            settings.mShape = JPH::RotatedTranslatedShapeSettings(JPH::Vec3(0, 0.0f, 0.0), JPH::Quat(0, 0, 0, 1),
+                                                                  JPH::CapsuleShapeSettings(0.9f, 0.8f).Create().Get())
+                                  .Create()
+                                  .Get();
             settings.mFriction = 0.2f;
 
             // settings->mShape = JPH::CapsuleShapeSettings(1.8f, 0.3f).Create().Get();
@@ -39,10 +95,9 @@ namespace gage::scene::systems
                 &settings,
                 JPH::Vec3Arg(character_controller->node.position.x, character_controller->node.position.y, character_controller->node.position.z),
                 JPH::QuatArg(character_controller->node.rotation.x, character_controller->node.rotation.y, character_controller->node.rotation.z, character_controller->node.rotation.w),
-                0, this->phys.physics_system.get());
+                0, &physics_system);
             character->AddToPhysicsSystem(JPH::EActivation::Activate);
 
-            
             character_controller->character = std::move(character);
         }
 
@@ -53,10 +108,10 @@ namespace gage::scene::systems
             JPH::HeightFieldShapeSettings shape_settings(terrain_renderer.terrain_renderer->height_map.data(), JPH::Vec3(0, 0, 0), JPH::Vec3(1, 1, 1), terrain_renderer.terrain_renderer->size);
             JPH::BodyCreationSettings setting(shape_settings.Create().Get(),
                                               JPH::RVec3(0.0, -1.0, 0.0),
-                                              JPH::Quat::sIdentity(), JPH::EMotionType::Static, phys::Layers::NON_MOVING);
+                                              JPH::Quat::sIdentity(), JPH::EMotionType::Static, Layers::NON_MOVING);
             setting.mFriction = 0.2f;
 
-            terrain_renderer.height_map_body = this->phys.get_body_interface()->CreateAndAddBody(setting, JPH::EActivation::DontActivate);
+            terrain_renderer.height_map_body = body_interface.CreateAndAddBody(setting, JPH::EActivation::DontActivate);
         }
 
         for (auto &map : maps)
@@ -120,20 +175,20 @@ namespace gage::scene::systems
 
             JPH::BodyCreationSettings setting(compound_shape_settings.Create().Get(),
                                               JPH::RVec3(0.0, -1.0, 0.0),
-                                              JPH::Quat::sIdentity(), JPH::EMotionType::Static, phys::Layers::NON_MOVING);
-            map.body = this->phys.get_body_interface()->CreateAndAddBody(setting, JPH::EActivation::DontActivate);
+                                              JPH::Quat::sIdentity(), JPH::EMotionType::Static, Layers::NON_MOVING);
+            map.body = body_interface.CreateAndAddBody(setting, JPH::EActivation::DontActivate);
         }
 
-        for(auto& rigid_body : rigid_bodies)
+        for (auto &rigid_body : rigid_bodies)
         {
             JPH::BodyCreationSettings setting(rigid_body->shape->generate_shape().Get(),
                                               JPH::RVec3(rigid_body->node.position.x, rigid_body->node.position.y, rigid_body->node.position.z),
                                               JPH::Quat(rigid_body->node.rotation.x, rigid_body->node.rotation.y, rigid_body->node.rotation.z, rigid_body->node.rotation.w),
-                                              JPH::EMotionType::Dynamic, phys::Layers::MOVING);
+                                              JPH::EMotionType::Dynamic, Layers::MOVING);
 
             setting.mMassPropertiesOverride.mMass = 0.01;
-            setting.mRestitution = 1.0;
-            rigid_body->body = this->phys.get_body_interface()->CreateAndAddBody(setting, JPH::EActivation::Activate);
+            setting.mRestitution = 0.1;
+            rigid_body->body = body_interface.CreateAndAddBody(setting, JPH::EActivation::Activate);
         }
     }
 
@@ -142,24 +197,27 @@ namespace gage::scene::systems
 
         for (const auto &terrain_renderer : terrain_renderers)
         {
-            this->phys.get_body_interface()->RemoveBody(terrain_renderer.height_map_body);
-            this->phys.get_body_interface()->DestroyBody(terrain_renderer.height_map_body);
+            body_interface.RemoveBody(terrain_renderer.height_map_body);
+            body_interface.DestroyBody(terrain_renderer.height_map_body);
         }
 
-         for (const auto &map : maps)
+        for (const auto &map : maps)
         {
-            this->phys.get_body_interface()->RemoveBody(map.body);
-            this->phys.get_body_interface()->DestroyBody(map.body);
+            body_interface.RemoveBody(map.body);
+            body_interface.DestroyBody(map.body);
         }
     }
 
     void Physics::update(float delta)
     {
+        const int cCollisionSteps = 1;
+        physics_system.Update(delta, cCollisionSteps, &temp_allocator, &job_system);
+
         for (auto &rigid_body : rigid_bodies)
         {
-            //Extract body id
-            JPH::Vec3 position = phys.get_body_interface()->GetCenterOfMassPosition(rigid_body->body);
-            JPH::Quat rotation = phys.get_body_interface()->GetRotation(rigid_body->body);
+            // Extract body id
+            JPH::Vec3 position = body_interface.GetCenterOfMassPosition(rigid_body->body);
+            JPH::Quat rotation = body_interface.GetRotation(rigid_body->body);
             rigid_body->node.position = glm::vec3{position.GetX(), position.GetY(), position.GetZ()};
             rigid_body->node.rotation.x = rotation.GetX();
             rigid_body->node.rotation.y = rotation.GetY();
@@ -174,8 +232,7 @@ namespace gage::scene::systems
 
             {
                 JPH::CharacterBase::EGroundState state = character_controller->character->GetGroundState();
-                const JPH::BodyLockInterface *lock_interface = phys.get_body_lock_interface();
-                JPH::BodyLockWrite lock(*lock_interface, character_controller->character->GetBodyID());
+                JPH::BodyLockWrite lock(physics_system.GetBodyLockInterface(), character_controller->character->GetBodyID());
                 if (lock.Succeeded())
                 {
                     JPH::Body &body = lock.GetBody();
@@ -200,6 +257,7 @@ namespace gage::scene::systems
             }
         }
     }
+
 
     void Physics::add_character_controller(std::unique_ptr<components::CharacterController> character_controller)
     {

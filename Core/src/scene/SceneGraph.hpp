@@ -22,11 +22,6 @@ namespace gage::gfx
     class Graphics;
 }
 
-namespace gage::phys
-{
-    class Physics;
-}
-
 namespace tinygltf
 {
     class Model;
@@ -49,7 +44,7 @@ namespace gage::scene
     public:
         static constexpr std::string_view ROOT_NAME = "ROOT";
     public:
-        SceneGraph(const gfx::Graphics& gfx, phys::Physics& phys, gfx::data::Camera& camera);
+        SceneGraph(const gfx::Graphics& gfx, gfx::data::Camera& camera);
         ~SceneGraph();
 
         void render_imgui();

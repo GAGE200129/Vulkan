@@ -10,12 +10,11 @@
 #include <glm/vec3.hpp>
 
 #include <Jolt/Jolt.h>
-#include <Jolt/Physics/Body/BodyID.h>
+#include <Jolt/Core/TempAllocator.h>
+#include <Jolt/Core/JobSystemThreadPool.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayer.h>
 
-namespace gage::phys
-{
-    class Physics;
-}
 
 namespace gage::scene
 {
@@ -25,6 +24,87 @@ namespace gage::scene
 
 namespace gage::scene::systems
 {
+    namespace Layers 
+    {
+        static constexpr JPH::ObjectLayer NON_MOVING = 0;
+        static constexpr JPH::ObjectLayer MOVING = 1;
+        static constexpr JPH::ObjectLayer NUM_LAYERS = 2;
+    };
+    namespace BroadPhaseLayers
+    {
+        static constexpr JPH::BroadPhaseLayer NON_MOVING(0);
+        static constexpr JPH::BroadPhaseLayer MOVING(1);
+        static constexpr uint32_t NUM_LAYERS(2);
+    };
+
+    class ObjectVsBroadPhaseLayerFilter : public JPH::ObjectVsBroadPhaseLayerFilter
+    {
+    public:
+        virtual bool ShouldCollide(JPH::ObjectLayer inLayer1, JPH::BroadPhaseLayer inLayer2) const override
+        {
+            switch (inLayer1)
+            {
+            case Layers::NON_MOVING:
+                return inLayer2 == BroadPhaseLayers::MOVING;
+            case Layers::MOVING:
+                return true;
+            default:
+                assert(false);
+                return false;
+            }
+        }
+    };
+
+    class ObjectLayerPairFilter : public JPH::ObjectLayerPairFilter
+    {
+    public:
+        virtual bool ShouldCollide(JPH::ObjectLayer inObject1, JPH::ObjectLayer inObject2) const override
+        {
+            switch (inObject1)
+            {
+            case Layers::NON_MOVING:
+                return inObject2 == Layers::MOVING; // Non moving only collides with moving
+            case Layers::MOVING:
+                return true; // Moving collides with everything
+            default:
+                assert(false);
+                return false;
+            }
+        }
+    };
+
+    class BPLayerInterface final : public JPH::BroadPhaseLayerInterface
+    {
+    public:
+        BPLayerInterface()
+        {
+            // Create a mapping table from object to broad phase layer
+            mObjectToBroadPhase[Layers::NON_MOVING] = BroadPhaseLayers::NON_MOVING;
+            mObjectToBroadPhase[Layers::MOVING] = BroadPhaseLayers::MOVING; 
+        
+        }
+        virtual uint GetNumBroadPhaseLayers() const override
+        {
+            return BroadPhaseLayers::NUM_LAYERS;
+        }
+
+        virtual JPH::BroadPhaseLayer GetBroadPhaseLayer(JPH::ObjectLayer inLayer) const override
+        {
+            assert(inLayer < Layers::NUM_LAYERS);
+            return mObjectToBroadPhase[inLayer];
+        }
+
+    private:
+        JPH::BroadPhaseLayer mObjectToBroadPhase[Layers::NUM_LAYERS];
+    };
+
+    class JoltIniter
+    {
+    public:
+        JoltIniter();
+        ~JoltIniter();
+    };
+
     class Physics
     {
         friend class scene::SceneGraph;
@@ -47,7 +127,7 @@ namespace gage::scene::systems
             AIR
         };
     public:
-        Physics(phys::Physics& phys);
+        Physics();
         ~Physics() = default;
         
         void init();
@@ -66,7 +146,15 @@ namespace gage::scene::systems
     private:
         void extract_bounding_box(const std::string& file_path);
     private:
-        phys::Physics& phys;
+        JoltIniter jolt_initer;
+        JPH::PhysicsSystem physics_system;
+        JPH::TempAllocatorImpl temp_allocator;
+        JPH::JobSystemThreadPool job_system;
+        BPLayerInterface broad_phase_layer_interface;
+        ObjectVsBroadPhaseLayerFilter object_vs_broadphase_layer_filter;
+        ObjectLayerPairFilter object_vs_object_layer_filter;
+        JPH::BodyInterface& body_interface;
+
         std::vector<std::unique_ptr<components::CharacterController>> character_controllers; 
         std::vector<Terrain> terrain_renderers;
         std::vector<Map> maps;

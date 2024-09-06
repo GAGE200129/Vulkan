@@ -13,10 +13,7 @@
 #include <Core/src/gfx/data/SSAO.hpp>
 #include <Core/src/gfx/Graphics.hpp>
 #include <Core/src/gfx/data/DebugRenderer.hpp>
-#include <Core/src/utils/Cvar.hpp>
 
-#include <Core/src/phys/phys.hpp>
-#include <Core/src/phys/Physics.hpp>
 
 #include <Core/src/scene/scene.hpp>
 #include <Core/src/scene/SceneGraph.hpp>
@@ -43,14 +40,10 @@ int main()
 {
     gfx::init();
     win::init();
-    phys::init();
     scene::init();
     hid::init();
     try
     {
-
-        phys::Physics phys;
-
         win::Window window(800, 600, "Hello world");
         gfx::Graphics gfx(window.p_window, 800, 600, "VulkanEngine");
         win::ImguiWindow imgui_window(gfx);
@@ -88,7 +81,7 @@ int main()
         //     }
         // }
 
-        scene::SceneGraph scene(gfx, phys, camera);
+        scene::SceneGraph scene(gfx, camera);
 
         const scene::data::Model &scene_model = scene.import_model("res/models/human_base.glb", scene::data::ModelImportMode::Binary);
         const scene::data::Model &box_model = scene.import_model("res/models/box_textured.glb", scene::data::ModelImportMode::Binary);
@@ -149,8 +142,7 @@ int main()
             while (lag >= tick_time_in_nanoseconds)
             {
                 gfx.final_ambient.update(tick_time_in_seconds);
-
-                phys.update(tick_time_in_seconds);
+                
                 scene.physics.update(tick_time_in_seconds);
                 scene.animation.update(tick_time_in_seconds);
                 scene.generic.update(tick_time_in_seconds, keyboard, mouse);
@@ -227,7 +219,6 @@ int main()
     scene::shutdown();
     gfx::shutdown();
     win::shutdown();
-    phys::shutdown();
 
     return 0;
 }

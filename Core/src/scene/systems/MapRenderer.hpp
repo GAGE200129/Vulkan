@@ -9,7 +9,6 @@
 
 #include <vulkan/vulkan.h>
 #include <glm/mat4x4.hpp>
-#include <Core/ThirdParty/tiny_gltf.h>
 
 namespace gage::gfx
 {

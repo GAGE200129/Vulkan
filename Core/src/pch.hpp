@@ -14,7 +14,7 @@
 #include <VkBootstrap.h>
 #include <vulkan/vk_enum_string_helper.h>
 
-#include <stb_image.h>
+#include <stb/stb_image.h>
 #include <tiny_gltf.h>
 
 #include <cstring>
@@ -52,6 +52,15 @@
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Body/BodyID.h>
+#include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayer.h>
+#include <Jolt/Physics/Character/Character.h>
+#include <Jolt/Physics/Collision/Shape/HeightFieldShape.h>
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+#include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
+#include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+#include <Jolt/Physics/Body/BodyCreationSettings.h>
  
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>

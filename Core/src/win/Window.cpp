@@ -3,7 +3,6 @@
 
 #include "Exception.hpp"
 
-#include <Core/src/utils/Cvar.hpp>
 #include <Core/src/gfx/Graphics.hpp>
 
 namespace gage::win
