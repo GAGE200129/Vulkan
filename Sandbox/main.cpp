@@ -58,6 +58,7 @@ int main()
         keyboard.register_action(hid::KeyCodes::LEFT_ALT, "WALK");
         keyboard.register_action(hid::KeyCodes::Q, "LEAN_LEFT");
         keyboard.register_action(hid::KeyCodes::E, "LEAN_RIGHT");
+        keyboard.register_action(hid::KeyCodes::V, "FLY");
         hid::Mouse mouse(window.p_window);
 
         gfx::data::Camera camera{};
@@ -84,17 +85,18 @@ int main()
         scene::SceneGraph scene(gfx, camera);
 
         const scene::data::Model &scene_model = scene.import_model("res/models/human_base.glb", scene::data::ModelImportMode::Binary);
+        const scene::data::Model &toothless_model = scene.import_model("res/models/toothless.glb", scene::data::ModelImportMode::Binary);
         const scene::data::Model &box_model = scene.import_model("res/models/box_textured.glb", scene::data::ModelImportMode::Binary);
 
         scene::Node *animated_node = scene.instanciate_model(scene_model, {0, 0, 0});
-        scene.add_component(animated_node, std::make_unique<scene::components::Animator>(scene, *animated_node, scene_model));
         animated_node->position = {50, 10, 50};
         animated_node->name = "Player";
+        scene.add_component(animated_node, std::make_unique<scene::components::Animator>(scene, *animated_node, scene_model));
         scene.add_component(animated_node, std::make_unique<scene::components::CharacterController>(scene, *animated_node));
-        scene.add_component(animated_node, std::make_unique<FPSCharacterController>(scene, *animated_node, camera));
+        scene.add_component(animated_node, std::make_unique<FPSCharacterController>(scene, *animated_node, scene.physics, camera));
 
         auto terrain = scene.create_node();
-        terrain->name = "TErrain";
+        terrain->name = "Terrain";
         scene.add_component(terrain, std::make_unique<scene::components::Terrain>(scene, *terrain, gfx, 64, 17, 64, 1.0, -50, 50, 0.1f));
 
         auto map = scene.create_node();
@@ -112,18 +114,27 @@ int main()
 
         scene::components::StaticModel static_model{};
         static_model.model_path = "res/models/toothless.glb";
-        static_model.offset = {0, 2, 0};
 
         map_comp->add_aabb_wall(aabb_wall);
         map_comp->add_aabb_wall({{0.0f, 10.0f, 10.0f}, {10.0f, 10.0f, 1.0f}});
         map_comp->add_aabb_wall({{0.0f, 10.0f, -10.0f}, {10.0f, 10.0f, 1.0f}});
+        static_model.offset = {0, 2, 0};
+        map_comp->add_static_model(static_model);
+        static_model.offset = {1, 2, 0};
+        map_comp->add_static_model(static_model);
+        static_model.offset = {2, 2, 0};
+        map_comp->add_static_model(static_model);
+        static_model.offset = {3, 2, 0};
         map_comp->add_static_model(static_model);
 
         scene::Node* physics_body = scene.instanciate_model(box_model, {50, 3, 50});
         scene.add_component(physics_body, std::make_unique<scene::components::RigidBody>(scene, *physics_body, 
             std::make_unique<scene::components::BoxShape>(glm::vec3{0, 0, 0}, glm::vec3{1, 1, 1})));
         
-
+        scene::Node* node = scene.instanciate_model(toothless_model, {50, 10, 50});
+        scene::components::Animator* component = 
+            (scene::components::Animator*)scene.add_component(node, std::make_unique<scene::components::Animator>(scene, *node, toothless_model));
+        scene.add_component(node, std::make_unique<scene::components::CharacterController>(scene, *node));
         scene.init();
 
         auto previous = std::chrono::high_resolution_clock::now();
@@ -155,6 +166,7 @@ int main()
             }
 
             mouse.update();
+            keyboard.update();
             win::update();
 
             imgui_window.clear();

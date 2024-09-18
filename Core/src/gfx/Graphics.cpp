@@ -295,7 +295,7 @@ namespace gage::gfx
             max.z = glm::max(max.z, frustum_corner.z);
         }
 
-        constexpr float zMult = 5.0f;
+        constexpr float zMult = 20.0f;
         if (min.z < 0)
         {
             min.z *= zMult;

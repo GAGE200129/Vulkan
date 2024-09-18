@@ -139,6 +139,7 @@ namespace gage::scene::systems
         static void character_set_velocity(components::CharacterController* character, const glm::vec3& vel);
         static glm::vec3 character_get_velocity(components::CharacterController* character);
         static GroundState character_get_ground_state(components::CharacterController* character);
+        void character_set_gravity_factor(components::CharacterController* character, const float gravity_factor) const;
 
         void add_terrain_renderer(std::shared_ptr<components::Terrain> terrain_renderer);
         void add_rigid_body(std::unique_ptr<components::RigidBody> rigid_body);
@@ -147,6 +148,7 @@ namespace gage::scene::systems
         void extract_bounding_box(const std::string& file_path);
     private:
         JoltIniter jolt_initer;
+    public:
         JPH::PhysicsSystem physics_system;
         JPH::TempAllocatorImpl temp_allocator;
         JPH::JobSystemThreadPool job_system;

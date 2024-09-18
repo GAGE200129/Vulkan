@@ -10,14 +10,12 @@
 #include <vulkan/vulkan.h>
 #include <glm/mat4x4.hpp>
 
+#include <Core/src/gfx/data/GPUBuffer.hpp>
+#include <Core/src/gfx/data/Image.hpp>
+
 namespace gage::gfx
 {
     class Graphics;
-    namespace data
-    {
-        class GPUBuffer;
-        class Image;
-    }
 }
 
 namespace gage::scene::systems
@@ -54,7 +52,11 @@ namespace gage::scene::systems
         class StaticModelData
         {
         public:
-            StaticModelData() = default;
+            StaticModelData(gfx::data::GPUBuffer vertex_buffer, gfx::data::GPUBuffer index_buffer, uint32_t vertex_count) :
+                vertex_buffer(std::move(vertex_buffer)),
+                index_buffer(std::move(index_buffer)),
+                vertex_count(vertex_count)
+            {}
             ~StaticModelData() = default;
 
             StaticModelData(const StaticModelData&) = delete;
@@ -62,9 +64,9 @@ namespace gage::scene::systems
             StaticModelData& operator=(StaticModelData&&) = default;
             StaticModelData(StaticModelData&&) = default;
         public:
-            std::unique_ptr<gfx::data::GPUBuffer> vertex_buffer{};
-            std::unique_ptr<gfx::data::GPUBuffer> index_buffer{};
-            uint32_t vertex_count{0};  
+            gfx::data::GPUBuffer vertex_buffer;
+            gfx::data::GPUBuffer index_buffer;
+            uint32_t vertex_count;  
         };
 
 

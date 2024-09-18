@@ -9,7 +9,7 @@ namespace gage::gfx::data
     class Camera;
 }
 
-namespace gage::phys
+namespace gage::scene::systems
 {
     class Physics;
 }
@@ -17,9 +17,13 @@ namespace gage::phys
 
 class FPSCharacterController final : public gage::scene::components::Script
 {
-
+    enum class State
+    {
+        FLYING,
+        NORMAL
+    };
 public:
-    FPSCharacterController(gage::scene::SceneGraph &scene, gage::scene::Node &node, gage::gfx::data::Camera &camera);
+    FPSCharacterController(gage::scene::SceneGraph &scene, gage::scene::Node &node, const gage::scene::systems::Physics& phys, gage::gfx::data::Camera &camera);
 
     void init() final;
     void update(float delta, const gage::hid::Keyboard &keyboard, const gage::hid::Mouse &mouse) final;
@@ -28,7 +32,10 @@ public:
 
     nlohmann::json to_json() const final;
 private:
+    const gage::scene::systems::Physics& phys;
     gage::gfx::data::Camera &camera;
+
+    State current_state{State::NORMAL};
 
     gage::scene::components::CharacterController* character_controller{};
     gage::scene::components::Animator* animator{};

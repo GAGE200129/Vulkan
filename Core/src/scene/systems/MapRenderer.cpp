@@ -6,8 +6,7 @@
 #include <Core/src/gfx/Graphics.hpp>
 #include <Core/src/utils/FileLoader.hpp>
 #include <Core/src/gfx/data/g_buffer/GBuffer.hpp>
-#include <Core/src/gfx/data/GPUBuffer.hpp>
-#include <Core/src/gfx/data/Image.hpp>
+
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -107,7 +106,7 @@ namespace gage::scene::systems
             for (const auto &model_path : map->static_models)
             {
                 const auto &model = model_path_to_model_map.at(model_path.model_path);
-                VkBuffer buffers[] ={model.vertex_buffer->get_buffer_handle()};
+                VkBuffer buffers[] ={model.vertex_buffer.get_buffer_handle()};
                 VkDeviceSize offsets[] ={0};
 
                 glm::mat4x4 offset = map->node.global_transform;
@@ -115,7 +114,7 @@ namespace gage::scene::systems
 
                 vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), glm::value_ptr(offset));
                 vkCmdBindVertexBuffers(cmd, 0, sizeof(buffers) / sizeof(buffers[0]), buffers, offsets);
-                vkCmdBindIndexBuffer(cmd, model.index_buffer->get_buffer_handle(), 0, VK_INDEX_TYPE_UINT32);
+                vkCmdBindIndexBuffer(cmd, model.index_buffer.get_buffer_handle(), 0, VK_INDEX_TYPE_UINT32);
                 vkCmdDrawIndexed(cmd, model.vertex_count, 1, 0, 0, 0);
             }
         }
@@ -161,7 +160,7 @@ namespace gage::scene::systems
                 const auto &model = model_path_to_model_map.at(model_path.model_path);
                 VkBuffer buffers[] =
                     {
-                        model.vertex_buffer->get_buffer_handle()};
+                        model.vertex_buffer.get_buffer_handle()};
                 VkDeviceSize offsets[] =
                     {0};
                 glm::mat4x4 offset = map->node.global_transform;
@@ -169,7 +168,7 @@ namespace gage::scene::systems
             
                 vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(glm::mat4x4), glm::value_ptr(offset));
                 vkCmdBindVertexBuffers(cmd, 0, sizeof(buffers) / sizeof(buffers[0]), buffers, offsets);
-                vkCmdBindIndexBuffer(cmd, model.index_buffer->get_buffer_handle(), 0, VK_INDEX_TYPE_UINT32);
+                vkCmdBindIndexBuffer(cmd, model.index_buffer.get_buffer_handle(), 0, VK_INDEX_TYPE_UINT32);
                 vkCmdDrawIndexed(cmd, model.vertex_count, 1, 0, 0, 0);
             }
         }
@@ -783,8 +782,6 @@ namespace gage::scene::systems
         tinygltf::TinyGLTF loader;
         std::string err;
         std::string warn;
-        loader.SetImageLoader(tinygltf::LoadImageData, nullptr);
-        loader.SetImageWriter(tinygltf::WriteImageData, nullptr);
         if (!loader.LoadBinaryFromFile(&model, &err, &warn, model_path))
         {
             log().critical("Failed to import scene: {} | {} | {}", model_path, warn, err);
@@ -919,10 +916,11 @@ namespace gage::scene::systems
             vertices.push_back({positions.at(i), normals.at(i), texcoords.at(i)});
         }
 
-        StaticModelData data;
-        data.vertex_buffer = std::make_unique<gfx::data::GPUBuffer>(gfx, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(MapVertex) * vertices.size(), vertices.data());
-        data.index_buffer = std::make_unique<gfx::data::GPUBuffer>(gfx, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sizeof(uint32_t) * indices.size(), indices.data());
-        data.vertex_count = indices.size();
+        StaticModelData data(
+            gfx::data::GPUBuffer(gfx, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(MapVertex) * vertices.size(), vertices.data()),
+            gfx::data::GPUBuffer(gfx, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sizeof(uint32_t) * indices.size(), indices.data()),
+            indices.size()
+        );
 
         model_path_to_model_map.insert({model_path, std::move(data)});
     }

@@ -5,8 +5,6 @@
 #include "../Node.hpp"
 #include "../data/Model.hpp"
 
-
-
 static void TraceImpl(const char *inFMT, ...)
 {
     // Format the message
@@ -38,15 +36,14 @@ namespace gage::scene::systems
         delete JPH::Factory::sInstance;
         JPH::Factory::sInstance = nullptr;
     }
-    Physics::Physics() : 
-                        jolt_initer(),
-                        physics_system(),
-                        temp_allocator(10 * 1024 * 1024),
-                        job_system(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, 1),
-                        broad_phase_layer_interface(),
-                        object_vs_broadphase_layer_filter(),
-                        object_vs_object_layer_filter(),
-                        body_interface(physics_system.GetBodyInterface())
+    Physics::Physics() : jolt_initer(),
+                         physics_system(),
+                         temp_allocator(10 * 1024 * 1024),
+                         job_system(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, 1),
+                         broad_phase_layer_interface(),
+                         object_vs_broadphase_layer_filter(),
+                         object_vs_object_layer_filter(),
+                         body_interface(physics_system.GetBodyInterface())
     {
         // This is the max amount of rigid bodies that you can add to the physics system. If you try to add more you'll get an error.
         // Note: This value is low because this is a simple test. For a real project use something in the order of 65536.
@@ -85,7 +82,7 @@ namespace gage::scene::systems
             settings.mMaxSlopeAngle = JPH::DegreesToRadians(80.0f);
             settings.mLayer = Layers::MOVING;
             settings.mShape = JPH::RotatedTranslatedShapeSettings(JPH::Vec3(0, 0.0f, 0.0), JPH::Quat(0, 0, 0, 1),
-                                                                  JPH::CapsuleShapeSettings(0.9f, 0.8f).Create().Get())
+                                                                  JPH::CapsuleShapeSettings(0.6f, 0.6f).Create().Get())
                                   .Create()
                                   .Get();
             settings.mFriction = 0.2f;
@@ -131,8 +128,6 @@ namespace gage::scene::systems
                 tinygltf::TinyGLTF loader;
                 std::string err;
                 std::string warn;
-                loader.SetImageLoader(tinygltf::LoadImageData, nullptr);
-                loader.SetImageWriter(tinygltf::WriteImageData, nullptr);
                 if (!loader.LoadBinaryFromFile(&model, &err, &warn, static_model.model_path))
                 {
                     log().critical("Physics failed to import scene: {} | {} | {}", static_model.model_path, warn, err);
@@ -230,34 +225,31 @@ namespace gage::scene::systems
             auto position = character_controller->character->GetPosition(false);
             character_controller->node.position = {position.GetX(), position.GetY(), position.GetZ()};
 
+            JPH::CharacterBase::EGroundState state = character_controller->character->GetGroundState();
+            JPH::BodyLockWrite lock(physics_system.GetBodyLockInterface(), character_controller->character->GetBodyID());
+            if (lock.Succeeded())
             {
-                JPH::CharacterBase::EGroundState state = character_controller->character->GetGroundState();
-                JPH::BodyLockWrite lock(physics_system.GetBodyLockInterface(), character_controller->character->GetBodyID());
-                if (lock.Succeeded())
+                JPH::Body &body = lock.GetBody();
+
+                switch (state)
                 {
-                    JPH::Body &body = lock.GetBody();
+                case JPH::CharacterBase::EGroundState::InAir:
+                {
+                    body.GetMotionProperties()->SetLinearDamping(1.0f);
+                    break;
+                }
 
-                    switch (state)
-                    {
-                    case JPH::CharacterBase::EGroundState::InAir:
-                    {
-                        body.GetMotionProperties()->SetLinearDamping(0.0f);
-                        break;
-                    }
-
-                    case JPH::CharacterBase::EGroundState::NotSupported:
-                    case JPH::CharacterBase::EGroundState::OnGround:
-                    case JPH::CharacterBase::EGroundState::OnSteepGround:
-                    {
-                        body.GetMotionProperties()->SetLinearDamping(5.0f);
-                        break;
-                    }
-                    }
+                case JPH::CharacterBase::EGroundState::NotSupported:
+                case JPH::CharacterBase::EGroundState::OnGround:
+                case JPH::CharacterBase::EGroundState::OnSteepGround:
+                {
+                    body.GetMotionProperties()->SetLinearDamping(5.0f);
+                    break;
+                }
                 }
             }
         }
     }
-
 
     void Physics::add_character_controller(std::unique_ptr<components::CharacterController> character_controller)
     {
@@ -290,6 +282,11 @@ namespace gage::scene::systems
         auto velocity = character->character->GetLinearVelocity(false);
 
         return glm::vec3{velocity.GetX(), velocity.GetY(), velocity.GetZ()};
+    }
+
+    void Physics::character_set_gravity_factor(components::CharacterController *character, const float gravity_factor) const
+    {
+        body_interface.SetGravityFactor(character->character->GetBodyID(), gravity_factor);
     }
     Physics::GroundState Physics::character_get_ground_state(components::CharacterController *character)
     {

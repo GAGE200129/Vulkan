@@ -43,10 +43,13 @@ namespace gage::hid
     public:
         Keyboard(GLFWwindow* p_window);
         ~Keyboard();
+
+        void update();
         
         void register_action(KeyCodes ey_code, const std::string& name);
 
         bool get_action(const std::string& name) const;
+        bool get_action_once(const std::string& name) const;
         bool is_key_down(uint32_t glfw_key_code) const;
         
 

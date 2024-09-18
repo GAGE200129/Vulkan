@@ -33,7 +33,7 @@ namespace gage::scene::components
         void render_imgui() override;
         inline const char* get_name() const override { return "CharacterController"; };
 
-    protected:
+    public:
         std::unique_ptr<JPH::Character> character;
 
     };
